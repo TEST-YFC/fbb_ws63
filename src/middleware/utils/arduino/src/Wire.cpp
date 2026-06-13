@@ -330,24 +330,49 @@ uint8_t TwoWire::endTransmission(void)
 // End transmission with stop bit control
 uint8_t TwoWire::endTransmission(bool sendStop)
 {
-    if (!_initialized || _tx_length == 0) {
+    if (!_initialized) {
         return I2C_ERROR_OTHER;
     }
 
     // The sendStop parameter needs support by I2C hardware for repeated start conditions.
     (void)sendStop;
 
-    errcode_t ret = _i2c_master_write(_slave_address, _tx_buffer, _tx_length);
-
-    // Reset TX buffer
+    // Allow zero-length transmissions: this is the standard Arduino I2C
+    // scanner pattern (beginTransmission(addr); endTransmission();) used to
+    // probe whether a device ACKs its address. The SDK's uapi_i2c_master_write
+    // handles zero-length sends (it issues address+STOP with no data bytes).
+    // Reset TX buffer up front so a failed/aborted transaction doesn't leak
+    // stale data into the next call.
+    uint8_t addr = _slave_address;
+    size_t len = _tx_length;
+    const uint8_t *buf = _tx_buffer;
     _tx_index = 0;
     _tx_length = 0;
+    _transmit_status = I2C_SUCCESS;
+
+    errcode_t ret = _i2c_master_write(addr, buf, len);
     if (ret != ERRCODE_SUCC) {
-        // Decode error
-        if (ret == ERRCODE_I2C_TIMEOUT) {
-            return I2C_ERROR_NACK_ON_TRANSMIT;
+        // Decode SDK error codes to Arduino-compatible return values so the
+        // I2C scanner (and user code) can distinguish "no device at this
+        // address" from other failures.
+        switch (ret) {
+            case ERRCODE_I2C_TIMEOUT:
+                // Clock-stretch / SCL stuck timeout
+                _transmit_status = I2C_ERROR_NACK_ON_TRANSMIT;
+                return I2C_ERROR_NACK_ON_TRANSMIT;
+            case ERRCODE_I2C_WAIT_EXCEPTION:
+                // Slave did not acknowledge its address (NACK/ABRT) — the
+                // canonical "no device at this address" case for a scanner.
+                _transmit_status = I2C_ERROR_NACK_ON_ADDRESS;
+                return I2C_ERROR_NACK_ON_ADDRESS;
+            case ERRCODE_I2C_ACK_ERR:
+                // Generic ACK error
+                _transmit_status = I2C_ERROR_NACK_ON_TRANSMIT;
+                return I2C_ERROR_NACK_ON_TRANSMIT;
+            default:
+                _transmit_status = I2C_ERROR_OTHER;
+                return I2C_ERROR_OTHER;
         }
-        return I2C_ERROR_OTHER;
     }
 
     return I2C_SUCCESS;
