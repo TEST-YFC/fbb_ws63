@@ -50,7 +50,7 @@ menu "Open Source"
 endmenu
 
 menu "Project Components"
-    comment "Out-of-tree components added by `fbb add` (path via $FBB_COMPONENTS_KCONFIG)."
-    osource "$(FBB_COMPONENTS_KCONFIG)"
+    comment "Out-of-tree components added by `fbb add` ($FBB_COMPONENTS_KCONFIG = components dir)."
+    osource "$(FBB_COMPONENTS_KCONFIG)/Kconfig"
 endmenu
 
