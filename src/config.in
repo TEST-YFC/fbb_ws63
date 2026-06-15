@@ -49,3 +49,8 @@ menu "Open Source"
     osource "open_source/Kconfig"
 endmenu
 
+menu "Project Components"
+    comment "Out-of-tree components added by `fbb add` ($FBB_COMPONENTS_KCONFIG = components dir)."
+    osource "$(FBB_COMPONENTS_KCONFIG)/Kconfig"
+endmenu
+
