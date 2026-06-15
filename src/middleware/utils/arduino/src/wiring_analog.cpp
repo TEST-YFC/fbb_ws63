@@ -245,6 +245,11 @@ void analogWrite(uint8_t pin, int val)
             return;
         }
         s_pwm_channel_open[pwm_channel] = true;
+#if defined(CONFIG_PWM_USING_V151)
+        // PWM V151: uapi_pwm_start() requires the channel to be in a group.
+        uint8_t grp_ch = pwm_channel;
+        (void)uapi_pwm_set_group(0, &grp_ch, 1);
+#endif
         uapi_pwm_start(pwm_channel);
     } else {
         // Channel already open: update duty cycle

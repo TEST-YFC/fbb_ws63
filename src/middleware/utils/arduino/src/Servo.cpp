@@ -82,11 +82,23 @@ bool Servo::attach(uint8_t pin)
 
             errcode_t ret = uapi_pwm_open(m_channel, &cfg);
             if (ret == ERRCODE_SUCC) {
+#if defined(CONFIG_PWM_USING_V151)
+                // On PWM V151, uapi_pwm_start() requires the channel
+                // to be registered in a group. Register channel into group 0.
+                uint8_t grp_ch = m_channel;
+                ret = uapi_pwm_set_group(0, &grp_ch, 1);
+                if (ret == ERRCODE_SUCC) {
+                    ret = uapi_pwm_start(m_channel);
+                }
+#endif
                 ret = uapi_pwm_start(m_channel);
             }
             if (ret != ERRCODE_SUCC) {
                 // Either open failed (already closed) or start failed (now open), close it
                 uapi_pwm_close(m_channel);
+#if defined(CONFIG_PWM_USING_V151)
+                (void)uapi_pwm_clear_group(0);
+#endif
                 g_channel_allocated &= ~(1 << m_channel);
                 m_channel = INVALID_CHANNEL;
                 m_attached = false;
@@ -152,6 +164,12 @@ void Servo::detach()
     if (m_channel != INVALID_CHANNEL && m_channel < MAX_SERVOS) {
         // Close PWM channel (this should also stop it)
         uapi_pwm_close(m_channel);
+
+#if defined(CONFIG_PWM_USING_V151)
+        // Clear the group entry we added in attach() (PWM V151 requires
+        // channels to be registered in a group before start()).
+        (void)uapi_pwm_clear_group(0);
+#endif
 
         // Mark channel as free
         g_channel_allocated &= ~(1 << m_channel);

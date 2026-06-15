@@ -193,6 +193,11 @@ static bool tone_pwm_start(uint8_t pin, uint8_t pwm_channel, unsigned int freque
         return false;
     }
 
+#if defined(CONFIG_PWM_USING_V151)
+    // PWM V151: uapi_pwm_start() requires the channel to be in a group.
+    uint8_t grp_ch = pwm_channel;
+    (void)uapi_pwm_set_group(0, &grp_ch, 1);
+#endif
     uapi_pwm_start(pwm_channel);
     return true;
 }
@@ -345,6 +350,10 @@ void noTone(uint8_t pin)
         uapi_pwm_stop(pwm_ch);
 #endif
         uapi_pwm_close(pwm_ch);
+#if defined(CONFIG_PWM_USING_V151)
+        // PWM V151: clear the group entry added in tone_pwm_start().
+        (void)uapi_pwm_clear_group(0);
+#endif
     } else
 #endif /* CONFIG_PWM_SUPPORT */
     {

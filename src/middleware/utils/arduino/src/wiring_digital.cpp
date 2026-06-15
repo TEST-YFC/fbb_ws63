@@ -12,6 +12,7 @@
 #include "pins_arduino.h"
 
 #include "driver/gpio.h"
+#include "pinctrl.h"
 
 /* *
  * @brief Configure a pin as input or output
@@ -43,11 +44,24 @@ void pinMode(uint8_t pin, uint8_t mode)
             break;
     }
 
-    uapi_gpio_set_dir((pin_t)hw_pin, dir);
+    // Configure pull-up/pull-down FIRST, then direction.
+    // On ws63, switching GPIO direction can reset pinctrl pull settings, so
+    // apply pull configuration before uapi_gpio_set_dir().
+    pin_pull_t pull;
+    switch (mode) {
+        case INPUT_PULLUP:
+            pull = PIN_PULL_TYPE_UP;
+            break;
+        case INPUT_PULLDOWN:
+            pull = PIN_PULL_TYPE_DOWN;
+            break;
+        default:
+            pull = PIN_PULL_TYPE_DISABLE;
+            break;
+    }
+    uapi_pin_set_pull((pin_t)hw_pin, pull);
 
-    // Handle pull-up/pull-down if needed (ws63 specific)
-    // Note: ws63 may handle pull-up/down through pinctrl
-    (void)mode; // Suppress unused warning for now
+    uapi_gpio_set_dir((pin_t)hw_pin, dir);
 }
 
 /* *

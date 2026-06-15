@@ -119,9 +119,24 @@ static bool _timer_adapter_ensure(timer_index_t index)
 void TimerClass::callbackWrapper(uintptr_t data)
 {
     TimerClass *timer = reinterpret_cast<TimerClass *>(data);
-    if (timer && timer->m_callback) {
-        // Call user callback
+    if (timer == nullptr) {
+        return;
+    }
+
+    // Call user callback first
+    if (timer->m_callback) {
         timer->m_callback();
+    }
+
+    // Re-arm hardware timer to emulate periodic (Arduino) semantics.
+    // The underlying SDK timer is one-shot: it sets is_run=false after the
+    // callback fires, so without re-arming the callback only triggers once.
+    // We restart the timer with the same period/callback to get periodic
+    // behavior that matches Arduino's expectations.
+    if (timer->m_timer_handle != nullptr && timer->m_period_us != 0) {
+        (void)uapi_timer_start(timer->m_timer_handle, timer->m_period_us,
+                               TimerClass::callbackWrapper,
+                               reinterpret_cast<uintptr_t>(timer));
     }
 }
 
@@ -391,8 +406,14 @@ void timerInit(uint32_t period_us, void (*callback)())
         return;
     }
 
+    // Prefer Timer2 for the C-style API because:
+    //   - Timer0 is reserved by LiteOS (systick). Its soft-timer slot count
+    //     is 0 (CONFIG_TIMER_MAX_TIMERS_NUM_0=0), so SDK timer_create() on
+    //     Timer0 either fails or disables the systick handler.
+    //   - Timer1 is used by main.c as the test timebase.
+    //   - Timer2 has 4 soft-timer slots and is otherwise free.
     if (g_default_timer == nullptr) {
-        g_default_timer = &Timer1;
+        g_default_timer = &Timer2;
     }
 
     g_default_timer->initialize(period_us);
