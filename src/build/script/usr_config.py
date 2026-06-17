@@ -89,6 +89,18 @@ def mconfig(command, chip, core, target, output, assignments = None, root=""):
         elif command == 'reloadconfig':
             kconf.load_config()
             print(kconf.write_config())
+        elif command == 'mergeconfig':
+            # Overlay a feature defaults fragment (CONFIG_*=y) onto the current
+            # .config, keeping every other symbol's existing value. The fragment
+            # path comes from FBB_FEATURES_DEFCONFIG; when it is unset (or the
+            # file is absent) this is a pure reload+write no-op, so the default
+            # SDK flows (defconfig/menuconfig/build) never reach it and an
+            # unrelated build is unaffected.
+            kconf.load_config()
+            frag = os.environ.get("FBB_FEATURES_DEFCONFIG")
+            if frag and os.path.exists(frag):
+                kconf.load_config(frag, replace=False)
+            print(kconf.write_config())
         else:
             menuconfig(kconf)   # menu config
     finally:
@@ -103,7 +115,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--command",
         default="menuconfig",
-        choices=["menuconfig", "savemenuconfig", "defconfig", "allyesconfig", "allnoconfig", "setconfig", "openproject"],
+        choices=["menuconfig", "savemenuconfig", "defconfig", "allyesconfig", "allnoconfig", "setconfig", "mergeconfig", "openproject"],
         help="command to be used")
 
     parser.add_argument(
