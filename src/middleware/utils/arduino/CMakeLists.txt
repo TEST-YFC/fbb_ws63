@@ -42,6 +42,7 @@ set(PRIVATE_HEADER
     ${ROOT_DIR}/drivers/chips/${CHIP}/porting/uart
     ${ROOT_DIR}/drivers/chips/${CHIP}/porting/i2c
     ${ROOT_DIR}/drivers/chips/${CHIP}/porting/gpio
+    ${ROOT_DIR}/drivers/chips/${CHIP}/porting/pinctrl
     ${ROOT_DIR}/drivers/chips/${CHIP}/porting/sio
     ${ROOT_DIR}/drivers/chips/${CHIP}/porting/timer
     ${ROOT_DIR}/middleware/chips/${CHIP}/nv/nv_config/include
