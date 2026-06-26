@@ -110,6 +110,11 @@ private:
     bool _using_interrupt;
     uint8_t _interrupt_num;
 
+#if defined(CONFIG_SPI_SUPPORT_MASTER) && (CONFIG_SPI_SUPPORT_MASTER == 1)
+    // Fill a master-mode spi_attr_t from the current configuration.
+    void fillMasterAttr(spi_attr_t *attr) const;
+#endif
+
 public:
     SPIClass();
     ~SPIClass();

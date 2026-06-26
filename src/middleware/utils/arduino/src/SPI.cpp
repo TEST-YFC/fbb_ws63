@@ -10,6 +10,9 @@
 
 #include "SPI.h"
 #include "Arduino.h"
+#if defined(CONFIG_SPI_SUPPORT_MASTER) && (CONFIG_SPI_SUPPORT_MASTER == 1)
+#include "pinctrl.h"
+#endif
 
 #define SPI_INVALID_CS_PIN 255
 #define SPI_TRANSFER_TIMEOUT_MS 100
@@ -17,24 +20,49 @@
 #define SPI_BASE_CLOCK_FREQ 32000000UL
 #define SPI_BYTE_SHIFT 8
 
+#if defined(CONFIG_SPI_SUPPORT_MASTER) && (CONFIG_SPI_SUPPORT_MASTER == 1)
+// SPI master pin assignment. Reuse the peripheral SPI sample's Kconfig values
+// when available (CONFIG_SAMPLE_SUPPORT_SPI_MASTER=y), otherwise fall back to
+// the same defaults the sample declares (DI=11, DO=9, CLK=7, CS=10, mode=3).
+#ifndef CONFIG_SPI_DI_MASTER_PIN
+#define CONFIG_SPI_DI_MASTER_PIN 11
+#endif
+#ifndef CONFIG_SPI_DO_MASTER_PIN
+#define CONFIG_SPI_DO_MASTER_PIN 9
+#endif
+#ifndef CONFIG_SPI_CLK_MASTER_PIN
+#define CONFIG_SPI_CLK_MASTER_PIN 7
+#endif
+#ifndef CONFIG_SPI_CS_MASTER_PIN
+#define CONFIG_SPI_CS_MASTER_PIN 10
+#endif
+#ifndef CONFIG_SPI_MASTER_PIN_MODE
+#define CONFIG_SPI_MASTER_PIN_MODE 3
+#endif
+
+// Arduino SPI abstraction is single-master-single-slave; always select slave 0.
+// If multi-slave support is needed in the future, convert this to a Kconfig item.
+#define SPI_MASTER_SLAVE_NUM 1
+#endif
+
 // Helper: reverse bit order for LSBFIRST support
 // Since WS63 SPI hardware only supports MSB first, we need to reverse bits in software
 static inline uint8_t bit_reverse_uint8(uint8_t data)
 {
     // 0xAA = 10101010b, swap odd/even bits: (data & 10101010) >> 1 | (data & 01010101) << 1
-    data = ((data & 0xAA) >> 1) | ((data & 0x55) << 1);  /* 1 = swap adjacent bits, 0x55 = 01010101b */
-    data = ((data & 0xCC) >> 2) | ((data & 0x33) << 2);  /* 2 = swap bit pairs, 0x33 = 00110011b */
-    data = (data >> 4) | (data << 4);                     /* 4 = swap nibbles across whole byte */
+    data = ((data & 0xAA) >> 1) | ((data & 0x55) << 1); /* 1 = swap adjacent bits, 0x55 = 01010101b */
+    data = ((data & 0xCC) >> 2) | ((data & 0x33) << 2); /* 2 = swap bit pairs, 0x33 = 00110011b */
+    data = (data >> 4) | (data << 4);                   /* 4 = swap nibbles across whole byte */
     return data;
 }
 
 static inline uint16_t bit_reverse_uint16(uint16_t data)
 {
     // 0xAAAA = 1010101010101010b, swap odd/even bits
-    data = ((data & 0xAAAA) >> 1) | ((data & 0x5555) << 1);  /* 1 = swap adjacent bits, 0x5555 = 01010101...b */
-    data = ((data & 0xCCCC) >> 2) | ((data & 0x3333) << 2);  /* 2 = swap bit pairs, 0x3333 = 00110011...b */
-    data = ((data & 0xF0F0) >> 4) | ((data & 0x0F0F) << 4);   /* 4 = swap nibbles, 0xF0F0 = 11110000...b */
-    data = (data >> 8) | (data << 8);                         /* 8 = swap high/low bytes */
+    data = ((data & 0xAAAA) >> 1) | ((data & 0x5555) << 1); /* 1 = swap adjacent bits, 0x5555 = 01010101...b */
+    data = ((data & 0xCCCC) >> 2) | ((data & 0x3333) << 2); /* 2 = swap bit pairs, 0x3333 = 00110011...b */
+    data = ((data & 0xF0F0) >> 4) | ((data & 0x0F0F) << 4); /* 4 = swap nibbles, 0xF0F0 = 11110000...b */
+    data = (data >> 8) | (data << 8);                       /* 8 = swap high/low bytes */
     return data;
 }
 
@@ -61,6 +89,49 @@ SPIClass::~SPIClass()
     end();
 }
 
+#if defined(CONFIG_SPI_SUPPORT_MASTER) && (CONFIG_SPI_SUPPORT_MASTER == 1)
+// Populate a master-mode spi_attr_t from the current configuration. Every field
+// must be set explicitly: uapi_spi_init() validates frame_size and uses bus_clk
+// for the baud-rate divider, so a zero-initialised attr (missing frame_size /
+// bus_clk) makes init fail.
+void SPIClass::fillMasterAttr(spi_attr_t *attr) const
+{
+    memset(attr, 0, sizeof(*attr));
+
+    attr->freq_mhz = _clock_freq / 1000000; // 1000000 used to convert Hz to MHz
+    switch (_data_mode) {
+        case SPI_MODE1:
+            attr->clk_polarity = 0;
+            attr->clk_phase = 1;
+            break;
+        case SPI_MODE2:
+            attr->clk_polarity = 1;
+            attr->clk_phase = 0;
+            break;
+        case SPI_MODE3:
+            attr->clk_polarity = 1;
+            attr->clk_phase = 1;
+            break;
+        case SPI_MODE0:
+        default:
+            attr->clk_polarity = 0;
+            attr->clk_phase = 0;
+            break;
+    }
+
+    attr->is_slave = false;
+    attr->slave_num = SPI_MASTER_SLAVE_NUM;
+    attr->bus_clk = SPI_BASE_CLOCK_FREQ;
+    attr->frame_format = 0;
+    attr->spi_frame_format = HAL_SPI_FRAME_FORMAT_STANDARD;
+    attr->frame_size = HAL_SPI_FRAME_SIZE_8;
+    attr->tmod = 0;
+    attr->sste = 0;
+    // Note: WS63 SPI hardware does not support LSB/MSB first selection.
+    // LSBFIRST is handled in software via bit reversal in transfer functions.
+}
+#endif
+
 // Initialize SPI
 void SPIClass::begin()
 {
@@ -83,36 +154,16 @@ void SPIClass::begin(uint8_t cs_pin)
     }
 
 #if defined(CONFIG_SPI_SUPPORT_MASTER) && (CONFIG_SPI_SUPPORT_MASTER == 1)
+    // Configure SPI pinmux (CLK/DI/DO/CS) before init. Without this the pads
+    // stay in their default GPIO function and no signal reaches the bus.
+    uapi_pin_set_mode((pin_t)CONFIG_SPI_DI_MASTER_PIN, (pin_mode_t)CONFIG_SPI_MASTER_PIN_MODE);
+    uapi_pin_set_mode((pin_t)CONFIG_SPI_DO_MASTER_PIN, (pin_mode_t)CONFIG_SPI_MASTER_PIN_MODE);
+    uapi_pin_set_mode((pin_t)CONFIG_SPI_CLK_MASTER_PIN, (pin_mode_t)CONFIG_SPI_MASTER_PIN_MODE);
+    uapi_pin_set_mode((pin_t)CONFIG_SPI_CS_MASTER_PIN, (pin_mode_t)CONFIG_SPI_MASTER_PIN_MODE);
+
     // Configure SPI attributes
     spi_attr_t attr;
-    memset(&attr, 0, sizeof(attr));
-
-    // freq_mhz is in MHz, convert from Hz
-    attr.freq_mhz = _clock_freq / 1000000; // 1000000 used to convert Hz to MHz
-
-    // Set data mode - SPI_MODE values: bit2=CPOL, bit1=CPHA
-    switch (_data_mode) {
-        case SPI_MODE1:
-            attr.clk_polarity = 0;
-            attr.clk_phase = 1;
-            break;
-        case SPI_MODE2:
-            attr.clk_polarity = 1;
-            attr.clk_phase = 0;
-            break;
-        case SPI_MODE3:
-            attr.clk_polarity = 1;
-            attr.clk_phase = 1;
-            break;
-        case SPI_MODE0:
-        default:
-            attr.clk_polarity = 0;
-            attr.clk_phase = 0;
-            break;
-    }
-
-    // Note: WS63 SPI hardware does not support LSB/MSB first selection.
-    // LSBFIRST is handled in software via bit reversal in transfer functions.
+    fillMasterAttr(&attr);
 
     // Extra attributes
     spi_extra_attr_t extra_attr;
@@ -155,8 +206,8 @@ void SPIClass::beginTransaction(SPISettings settings)
     if (settings._bitOrder != LSBFIRST && settings._bitOrder != MSBFIRST) {
         return;
     }
-    if (settings._dataMode != SPI_MODE0 && settings._dataMode != SPI_MODE1 &&
-        settings._dataMode != SPI_MODE2 && settings._dataMode != SPI_MODE3) {
+    if (settings._dataMode != SPI_MODE0 && settings._dataMode != SPI_MODE1 && settings._dataMode != SPI_MODE2 &&
+        settings._dataMode != SPI_MODE3) {
         return;
     }
 
@@ -181,32 +232,7 @@ void SPIClass::beginTransaction(SPISettings settings)
         uapi_spi_deinit(SPI_BUS_0);
 
         spi_attr_t attr;
-        memset(&attr, 0, sizeof(attr));
-        // freq_mhz is in MHz, convert from Hz
-        attr.freq_mhz = _clock_freq / 1000000; // 1000000 used to convert Hz to MHz
-
-        switch (_data_mode) {
-            case SPI_MODE1:
-                attr.clk_polarity = 0;
-                attr.clk_phase = 1;
-                break;
-            case SPI_MODE2:
-                attr.clk_polarity = 1;
-                attr.clk_phase = 0;
-                break;
-            case SPI_MODE3:
-                attr.clk_polarity = 1;
-                attr.clk_phase = 1;
-                break;
-            case SPI_MODE0:
-            default:
-                attr.clk_polarity = 0;
-                attr.clk_phase = 0;
-                break;
-        }
-
-        // Note: WS63 SPI hardware does not support LSB/MSB first selection.
-        // LSBFIRST is handled in software via bit reversal in transfer functions.
+        fillMasterAttr(&attr);
 
         spi_extra_attr_t extra_attr;
         memset(&extra_attr, 0, sizeof(extra_attr));
@@ -302,7 +328,7 @@ uint16_t SPIClass::transfer16(uint16_t data)
     if (!_initialized) {
         return 0; // Not initialized, return 0 to indicate error (not loopback)
     }
-    
+
     // Transfer high byte first (MSBFIRST) or low byte first (LSBFIRST)
     uint8_t high;
     uint8_t low;
