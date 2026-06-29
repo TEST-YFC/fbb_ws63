@@ -61,6 +61,11 @@ void pinMode(uint8_t pin, uint8_t mode)
     }
     uapi_pin_set_pull((pin_t)hw_pin, pull);
 
+    // Restore the pin to GPIO function. If a prior analogWrite()/tone()
+    // left the pin in an alternate pinmux (e.g. PWM = PIN_MODE_1), the GPIO
+    // direction/level registers have no effect until the mux is reset.
+    uapi_pin_set_mode((pin_t)hw_pin, PIN_MODE_0);
+
     uapi_gpio_set_dir((pin_t)hw_pin, dir);
 }
 

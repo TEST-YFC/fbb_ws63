@@ -10,7 +10,7 @@
 
 #include "Arduino.h"
 #include "pins_arduino.h"
-
+#include "pinctrl.h"
 #include "driver/gpio.h"
 #if defined(CONFIG_PWM_SUPPORT)
 #include "driver/pwm.h"
@@ -29,6 +29,8 @@
 #define MILLISECONDS_PER_SECOND 1000U
 #define PWM_DEFAULT_CLOCK_FREQ 1000000U
 #define PWM_MAX_AUTO_STOP_CYCLES 32767U
+// V151 period register (high_time + low_time) is 16-bit (max 65535).
+#define PWM_PERIOD_MAX 65535U
 #define MAX_PWM_CHANNELS 16U
 #define TONE_BURST_CYCLES 100U
 #define TONE_UPDATE_BURST_CYCLES 10U
@@ -153,6 +155,15 @@ unsigned long pulseInLong(uint8_t pin, uint8_t state, unsigned long timeout)
 #if defined(CONFIG_PWM_SUPPORT)
 static bool tone_pwm_start(uint8_t pin, uint8_t pwm_channel, unsigned int frequency, unsigned long duration)
 {
+    // Ungate PWM clock and set pinmux to PWM before opening.
+    if (uapi_pwm_init() != ERRCODE_SUCC) {
+        return false; // PWM clock not enabled
+    }
+    uint8_t hw_pin = digitalPinToPin(pin);
+    if (hw_pin != NOT_A_PIN) {
+        uapi_pin_set_mode((pin_t)hw_pin, PIN_MODE_1);  // pinmux to PWM
+    }
+
     // Get PWM working frequency (Hz) — this is the PWM clock frequency
     uint32_t pwm_freq = uapi_pwm_get_frequency(pwm_channel);
     if (pwm_freq == 0) {
@@ -164,6 +175,13 @@ static bool tone_pwm_start(uint8_t pin, uint8_t pwm_channel, unsigned int freque
     uint32_t total_cycles = pwm_freq / frequency;
     if (total_cycles == 0) {
         return false; // Frequency too high for PWM clock
+    }
+    // Cap total_cycles to V151 16-bit period register limit.
+    // Low-frequency tones will shift to a higher carrier; the on/off semantics
+    // remain correct for buzzers/LEDs. For exact low-frequency pitch, use
+    // software PWM (bit-bang path below).
+    if (total_cycles > PWM_PERIOD_MAX) {
+        total_cycles = PWM_PERIOD_MAX;
     }
 
     // 50% duty cycle for square wave
@@ -194,11 +212,15 @@ static bool tone_pwm_start(uint8_t pin, uint8_t pwm_channel, unsigned int freque
     }
 
 #if defined(CONFIG_PWM_USING_V151)
-    // PWM V151: uapi_pwm_start() requires the channel to be in a group.
+    // PWM V151: use the canonical set_group + start_group sequence.
+    // Clear group first because set_group rejects a channel already in a group.
     uint8_t grp_ch = pwm_channel;
+    (void)uapi_pwm_clear_group(0);
     (void)uapi_pwm_set_group(0, &grp_ch, 1);
-#endif
+    (void)uapi_pwm_start_group(0);
+#else
     uapi_pwm_start(pwm_channel);
+#endif
     return true;
 }
 #endif /* CONFIG_PWM_SUPPORT */
@@ -354,6 +376,13 @@ void noTone(uint8_t pin)
         // PWM V151: clear the group entry added in tone_pwm_start().
         (void)uapi_pwm_clear_group(0);
 #endif
+        // Restore the pin to GPIO mode (tone_pwm_start switched it to PWM).
+        // Without this, later digitalWrite/pinMode has no effect on the pad.
+        uint8_t hw_pin = digitalPinToPin(pin);
+        if (hw_pin != NOT_A_PIN) {
+            uapi_pin_set_mode((pin_t)hw_pin, PIN_MODE_0);
+            uapi_gpio_set_val((pin_t)hw_pin, GPIO_LEVEL_LOW);
+        }
     } else
 #endif /* CONFIG_PWM_SUPPORT */
     {

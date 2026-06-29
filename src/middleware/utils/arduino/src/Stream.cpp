@@ -113,14 +113,20 @@ long Stream::parseInt(char ignore)
     c = peekNextDigit(ignore, false);
     if (c < 0)
         return 0; // Timeout
+                                                                             
+    if (c == '-') {                                                                                                                                                       
+        isNegative = true;                                                                                                                                                
+    } else if (c >= '0' && c <= '9') {                                                                                                                                    
+        value = value * DECIMAL_BASE + (c - '0');                                                                                                                         
+    }                                                                           
+    // (peekNextDigit uses timedPeek which peeks without consuming;
+    read();
 
     do {
-        if (c == '-') {
-            isNegative = true;
-        } else if (c >= '0' && c <= '9') {
+        c = read();
+        if (c >= '0' && c <= '9') {
             value = value * DECIMAL_BASE + (c - '0');
         }
-        c = read(); // Consume the character
     } while (isdigit(c) || c == ignore);
 
     if (isNegative) {
@@ -146,10 +152,18 @@ float Stream::parseFloat(char ignore)
     if (c < 0)
         return 0.0; // Timeout
 
+    if (c == '-') {
+        isNegative = true;
+    } else if (c == '.') {
+        isFractional = true;
+    } else if (c >= '0' && c <= '9') {
+        result = result * (float)DECIMAL_BASE + (c - '0');
+    }
+    read(); // consume the peeked character
+
     do {
-        if (c == '-') {
-            isNegative = true;
-        } else if (c == '.') {
+        c = read();
+        if (c == '.') {
             isFractional = true;
         } else if (c >= '0' && c <= '9') {
             if (isFractional) {
@@ -159,7 +173,6 @@ float Stream::parseFloat(char ignore)
                 result = result * (float)DECIMAL_BASE + (c - '0');
             }
         }
-        c = read(); // Consume the character
     } while (isdigit(c) || c == '.' || c == ignore);
 
     if (isNegative) {

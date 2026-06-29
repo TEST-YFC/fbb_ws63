@@ -14,9 +14,6 @@
 #include "driver/gpio.h"
 #include "los_hwi.h"
 
-// Maximum number of interrupt pins
-#define MAX_INTERRUPT_PINS 16
-
 // Interrupt handler storage
 typedef struct {
     uint8_t pin;
@@ -98,6 +95,11 @@ void attachInterrupt(uint8_t pin, void (*callback)(void), int mode)
         return; // Invalid pin
     }
 
+    // Check interrupt capability
+    if (digitalPinToInterrupt(pin) == NOT_AN_INTERRUPT) {
+        return; // Pin not interrupt-capable
+    }
+
     if (callback == NULL) {
         return; // Invalid callback
     }
@@ -172,6 +174,18 @@ void detachInterrupt(uint8_t pin)
     uint8_t hw_pin = digitalPinToPin(pin);
     if (hw_pin == NOT_A_PIN) {
         return; // Invalid pin mapping
+    }
+
+    // Check if this pin has a registered handler before acting
+    bool registered = false;
+    for (uint8_t i = 0; i < s_interrupt_count; i++) {
+        if (s_interrupt_handlers[i].pin == pin && s_interrupt_handlers[i].active) {
+            registered = true;
+            break;
+        }
+    }
+    if (!registered) {
+        return; // Not registered, safe no-op
     }
 
     // Disable interrupt first

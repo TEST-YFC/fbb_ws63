@@ -24,7 +24,7 @@ Servo::Servo()
     : m_pin(0),
       m_channel(INVALID_CHANNEL),
       m_attached(false),
-      m_angle(SERVO_CENTER_ANGLE),
+      m_angle(SERVO_MIN_ANGLE),  // Unattached read() returns 0, not 90
       m_pulseWidth(MIN_PULSE_WIDTH),
       m_minPulse(MIN_PULSE_WIDTH),
       m_maxPulse(MAX_PULSE_WIDTH),
@@ -42,6 +42,11 @@ Servo::~Servo()
 // Attach servo to a pin
 bool Servo::attach(uint8_t pin)
 {
+    // Validate pin range
+    if (pin >= NUM_DIGITAL_PINS) {
+        return false;
+    }
+
     if (m_attached) {
         // Already attached, return true
         return true;
@@ -90,8 +95,9 @@ bool Servo::attach(uint8_t pin)
                 if (ret == ERRCODE_SUCC) {
                     ret = uapi_pwm_start(m_channel);
                 }
-#endif
+#else
                 ret = uapi_pwm_start(m_channel);
+#endif
             }
             if (ret != ERRCODE_SUCC) {
                 // Either open failed (already closed) or start failed (now open), close it
@@ -123,8 +129,8 @@ bool Servo::attach(uint8_t pin)
 // Attach servo to a pin with custom min/max pulse width
 bool Servo::attach(uint8_t pin, int min, int max)
 {
-    // Validate pulse width range
-    if (min < MIN_PULSE_WIDTH || max > MAX_PULSE_WIDTH || min >= max) {
+    // Accept custom pulse widths (Arduino allows values beyond default MIN/MAX_PULSE_WIDTH)
+    if (min >= max || min < 0) {
         return false;
     }
 
@@ -136,8 +142,8 @@ bool Servo::attach(uint8_t pin, int min, int max)
 // Attach servo to a pin with custom pulse and angle range
 bool Servo::attach(uint8_t pin, int min, int max, int minAngle, int maxAngle)
 {
-    // Validate pulse width range
-    if (min < MIN_PULSE_WIDTH || max > MAX_PULSE_WIDTH || min >= max) {
+    // Accept custom pulse widths (Arduino allows values beyond default MIN/MAX_PULSE_WIDTH)
+    if (min >= max || min < 0) {
         return false;
     }
 
@@ -191,7 +197,8 @@ void Servo::end()
 }
 
 // Write angle (SERVO_MIN_ANGLE-SERVO_MAX_ANGLE degrees)
-void Servo::write(uint8_t angle)
+// Parameter is int to avoid uint8_t wrap-around of negative values.
+void Servo::write(int angle)
 {
     if (!m_attached) {
         return;
@@ -253,20 +260,21 @@ void Servo::updateDutyRatio(uint16_t pulseWidth)
     // Get PWM frequency
     uint32_t pwm_freq = uapi_pwm_get_frequency(m_channel);
     if (pwm_freq == 0) {
-        pwm_freq = DEFAULT_PWM_FREQ_HZ; // Default 40MHz
+        pwm_freq = DEFAULT_PWM_FREQ_HZ; // Default 1MHz (matches wiring_analog)
     }
 
     // For servo (50Hz), we need to calculate the correct high/low times
     // PWM clock cycles: high_time = pulse_width_us * pwm_freq / MICROSECONDS_PER_SECOND
     uint32_t high_time = ((uint32_t)pulseWidth * pwm_freq) / MICROSECONDS_PER_SECOND;
-    uint32_t low_time = ((SERVO_PERIOD_US - pulseWidth) * pwm_freq) / MICROSECONDS_PER_SECOND; // SERVO_PERIOD_US period
+    // Use uint64_t to avoid overflow: at 1MHz clock, (20000-544)*1000000 exceeds uint32_t.
+    uint64_t low_time = ((uint64_t)(SERVO_PERIOD_US - pulseWidth) * pwm_freq) / MICROSECONDS_PER_SECOND;
 
     // Use uapi_pwm_update_cfg() to update duty cycle in-place (V151 API).
     // uapi_pwm_update_cfg() atomically updates the running PWM config
     // without stopping/closing the channel, avoiding hardware state conflicts.
     pwm_config_t cfg;
     cfg.high_time = high_time;
-    cfg.low_time = low_time;
+    cfg.low_time = (uint32_t)low_time;
     cfg.offset_time = 0;
     cfg.cycles = 0;
     cfg.repeat = true;
@@ -277,7 +285,15 @@ void Servo::updateDutyRatio(uint16_t pulseWidth)
         uapi_pwm_close(m_channel);
         ret = uapi_pwm_open(m_channel, &cfg);
         if (ret == ERRCODE_SUCC) {
+#if defined(CONFIG_PWM_USING_V151)
+            // BUG-033 fix: use group API for V151
+            (void)uapi_pwm_clear_group(0);
+            uint8_t grp_ch = m_channel;
+            (void)uapi_pwm_set_group(0, &grp_ch, 1);
+            ret = uapi_pwm_start_group(0);
+#else
             ret = uapi_pwm_start(m_channel);
+#endif
         }
         if (ret != ERRCODE_SUCC) {
             // Either open failed (already closed) or start failed (now open), close it

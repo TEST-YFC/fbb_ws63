@@ -88,10 +88,10 @@ private:
     uart_bus_t _uart_bus;
     bool _initialized;
 
-    // RX Buffer
+    // RX Buffer (mutable: lazily filled from the SDK FIFO by const available/peek)
     uint8_t *_rx_buffer;
-    volatile uint16_t _rx_head;
-    volatile uint16_t _rx_tail;
+    mutable volatile uint16_t _rx_head;
+    mutable volatile uint16_t _rx_tail;
 
     // TX Buffer (optional - SDK may have internal buffering)
     uint8_t *_tx_buffer;
@@ -104,9 +104,10 @@ private:
 
     // Private methods
     void _init_buffer();
-    void _store_char(uint8_t c, volatile uint16_t *head, volatile uint16_t *tail, uint8_t *buffer, size_t buffer_size);
+    void _store_char(uint8_t c, volatile uint16_t *head, volatile uint16_t *tail, uint8_t *buffer, size_t buffer_size) const;
     int _read_from_buffer();
     int _available_in_buffer() const;
+    void _refill_from_fifo() const;
     void _write_to_buffer(uint8_t c);
 
     // SDK callback for RX (static for C linkage)

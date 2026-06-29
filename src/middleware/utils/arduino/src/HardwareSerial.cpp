@@ -73,7 +73,7 @@ void HardwareSerial::_init_buffer()
 
 // Store character in circular buffer
 void HardwareSerial::_store_char(uint8_t c, volatile uint16_t *head, volatile uint16_t *tail, uint8_t *buffer,
-    size_t buffer_size)
+    size_t buffer_size) const
 {
     if (head == nullptr || tail == nullptr || buffer == nullptr || buffer_size == 0) {
         return;
@@ -266,25 +266,33 @@ void HardwareSerial::end()
     _initialized = false;
 }
 
+// Pull any bytes sitting in the UART RX FIFO into the software ring buffer so
+// that available()/read()/peek() all observe a single, consistent data source
+// (this also covers bytes that arrive between RX-callback firings, or when the
+// callback is inactive). Unifies the previously split peek (buffer) vs read
+// (FIFO) data sources — fixes the peek!=read defect.
+void HardwareSerial::_refill_from_fifo() const
+{
+    if (!_initialized || _rx_buffer == nullptr) {
+        return;
+    }
+    while (!uapi_uart_rx_fifo_is_empty(_uart_bus)) {
+        uint8_t b;
+        if (uapi_uart_read(_uart_bus, &b, 1, 0) <= 0) {
+            break;
+        }
+        _store_char(b, &_rx_head, &_rx_tail, _rx_buffer, SERIAL_RX_BUFFER_SIZE);
+    }
+}
+
 // Check available bytes
 int HardwareSerial::available() const
 {
     if (!_initialized) {
         return 0;
     }
-
-    // Check buffer first
-    int buf_avail = _available_in_buffer();
-    if (buf_avail > 0) {
-        return buf_avail;
-    }
-
-    // Check if RX FIFO has data
-    if (!uapi_uart_rx_fifo_is_empty(_uart_bus)) {
-        return 1;
-    }
-
-    return 0;
+    _refill_from_fifo();
+    return _available_in_buffer();
 }
 
 // Read a byte
@@ -293,30 +301,20 @@ int HardwareSerial::read()
     if (!_initialized) {
         return -1;
     }
-
-    // Try buffer first
-    int c = _read_from_buffer();
-    if (c >= 0) {
-        return c;
-    }
-
-    // Read directly from UART
-    uint8_t byte;
-    int32_t ret = uapi_uart_read(_uart_bus, &byte, 1, 0); // No timeout
-    if (ret > 0) {
-        return byte;
-    }
-
-    return -1;
+    _refill_from_fifo();
+    return _read_from_buffer();
 }
 
 // Peek at next byte
 int HardwareSerial::peek() const
 {
-    if (!_initialized || _rx_head == _rx_tail) {
+    if (!_initialized) {
         return -1;
     }
-
+    _refill_from_fifo();
+    if (_rx_head == _rx_tail) {
+        return -1;
+    }
     return _rx_buffer[_rx_tail];
 }
 
