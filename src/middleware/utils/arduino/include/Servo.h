@@ -37,8 +37,9 @@
 #define SERVO_CENTER_ANGLE 90
 // Microseconds per second constant
 #define MICROSECONDS_PER_SECOND 1000000UL
-// Default PWM clock frequency to assume when driver returns 0
-#define DEFAULT_PWM_FREQ_HZ 40000000UL
+// Default PWM clock frequency to assume when driver returns 0.
+// Must match wiring_analog.cpp PWM_DEFAULT_CLOCK_FREQ (1MHz) for consistency.
+#define DEFAULT_PWM_FREQ_HZ 1000000UL
 
 // Invalid channel (must not conflict with valid channels 0-3)
 #define INVALID_CHANNEL 0xFF
@@ -66,8 +67,8 @@ public:
     // uapi_pwm_init() will be called again on next attach.
     static void end();
 
-    // Write angle (0-180 degrees)
-    void write(uint8_t angle);
+    // Write angle (0-180 degrees, accepts int to avoid uint8_t wrap-around of negative values)
+    void write(int angle);
 
     // Write pulse width directly (microseconds)
     void writeMicroseconds(uint16_t pulse);

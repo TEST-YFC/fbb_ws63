@@ -31,6 +31,9 @@ extern "C" {
 // Alias for compatibility with some Arduino libraries
 #define NUM_ANALOG_PINS NUM_ANALOG_INPUTS
 
+// WS63 exposes 6 ADC channels (ADC0..ADC5); A6/A7 have no hardware channel.
+#define NUM_ADC_CHANNELS 6
+
 /* ============================================================================
  * Pin Number Definitions
  * ============================================================================ */
@@ -128,8 +131,20 @@ static inline uint8_t digitalPinToPWMChannel(uint8_t arduino_pin)
         return NOT_ON_TIMER;
     }
 
-    // PWM channel mapping for ws63
-    return arduino_pin; // Direct mapping for simplicity
+    /* Real Arduino-pin -> PWM channel, from the WS63/HH-D01 pin-mux table:
+     *   D3 =GPIO03=PWM3   D5 =GPIO05=PWM5   D6 =GPIO06=PWM6
+     *   D9 =GPIO09=PWM1   D10=GPIO10=PWM2   D11=GPIO11=PWM3
+     * NOTE: D3 and D11 both route to PWM channel 3 (hardware mux) and are
+     * mutually exclusive at runtime — only one may drive that channel. */
+    switch (arduino_pin) {
+        case D3:  return 3;   /* PWM3 */
+        case D5:  return 5;   /* PWM5 */
+        case D6:  return 6;   /* PWM6 */
+        case D9:  return 1;   /* PWM1 */
+        case D10: return 2;   /* PWM2 */
+        case D11: return 3;   /* PWM3 (shared with D3) */
+        default:  return NOT_ON_TIMER;
+    }
 }
 
 static inline uint8_t analogPinToChannel(uint8_t arduino_pin)
@@ -137,8 +152,11 @@ static inline uint8_t analogPinToChannel(uint8_t arduino_pin)
     if (!IS_ANALOG_PIN(arduino_pin)) {
         return NOT_A_PIN;
     }
-    // ADC channel mapping for ws63
-    return arduino_pin - A0; // Channel 0-7
+    uint8_t ch = (uint8_t)(arduino_pin - A0);   /* A0..A7 -> 0..7 */
+    if (ch >= NUM_ADC_CHANNELS) {               /* WS63 has only ADC0..ADC5 */
+        return NOT_A_PIN;
+    }
+    return ch;
 }
 
 static inline bool pinSupportsPWM(uint8_t arduino_pin)

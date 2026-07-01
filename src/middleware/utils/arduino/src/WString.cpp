@@ -582,8 +582,8 @@ bool String::equals(const String &s) const
 {
     if (_len != s._len)
         return false;
-    if (!_buffer && !s._buffer)
-        return true;
+    if (_len == 0)
+        return true;  // Both empty strings are equal regardless of buffer state
     if (!_buffer || !s._buffer)
         return false;
     return strcmp(_buffer, s._buffer) == 0;
@@ -839,6 +839,8 @@ bool String::operator>(const String &rhs) const
 {
     if (!_buffer && rhs._buffer)
         return false;
+    if (_buffer && !rhs._buffer)
+        return true;  // Non-null buffer is greater than null
     if (!_buffer || !rhs._buffer)
         return false;
     return strcmp(_buffer, rhs._buffer) > 0;

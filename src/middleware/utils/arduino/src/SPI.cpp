@@ -210,7 +210,9 @@ void SPIClass::beginTransaction(SPISettings settings)
         settings._dataMode != SPI_MODE3) {
         return;
     }
-
+    if (!_initialized) {
+        return;
+    }
     if (_in_transaction) {
         endTransaction();
     }
@@ -226,21 +228,13 @@ void SPIClass::beginTransaction(SPISettings settings)
     setDataMode(settings._dataMode);
 
 #if defined(CONFIG_SPI_SUPPORT_MASTER) && (CONFIG_SPI_SUPPORT_MASTER == 1)
-    // Reinitialize SPI with new settings
-    if (_initialized) {
-        // Deinit and reinit to apply new baudrate/mode
-        uapi_spi_deinit(SPI_BUS_0);
+    // Apply new settings in place instead of tearing down the bus on every transaction.
+    spi_attr_t attr;
+    fillMasterAttr(&attr);
 
-        spi_attr_t attr;
-        fillMasterAttr(&attr);
-
-        spi_extra_attr_t extra_attr;
-        memset(&extra_attr, 0, sizeof(extra_attr));
-
-        errcode_t init_ret = uapi_spi_init(SPI_BUS_0, &attr, &extra_attr);
-        if (init_ret != ERRCODE_SUCC) {
-            _initialized = false;
-        }
+    errcode_t attr_ret = uapi_spi_set_attr(SPI_BUS_0, &attr);
+    if (attr_ret != ERRCODE_SUCC) {
+        _initialized = false;
     }
 #endif
 

@@ -17,10 +17,18 @@
 #include "I2SClass.h"
 #include <string.h>
 #include "securec.h"
+#include "soc_osal.h"
 
 #include "i2s.h"
 #include "sio_porting.h"
 #include "hal_sio.h"
+
+// CONFIG_I2S_SUPPORT is not a real SDK Kconfig option (the SDK defines
+// CONFIG_SIO_USING_V151 / CONFIG_I2S_BUS_MAX_NUM etc.). Derive it here so
+// the I2S implementation is compiled instead of an empty stub.
+#if !defined(CONFIG_I2S_SUPPORT) && (defined(CONFIG_SIO_USING_V151) || defined(CONFIG_SIO_USING_V150) || defined(CONFIG_I2S_BUS_MAX_NUM))
+#define CONFIG_I2S_SUPPORT 1
+#endif
 
 #if defined(CONFIG_I2S_SUPPORT_DMA) && (CONFIG_I2S_SUPPORT_DMA == 1)
 #include "dma.h"

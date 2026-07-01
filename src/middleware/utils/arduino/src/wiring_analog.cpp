@@ -10,6 +10,7 @@
 
 #include "Arduino.h"
 #include "pins_arduino.h"
+#include "pinctrl.h"  // uapi_pin_set_mode for PWM pinmux
 
 /* Magic-number macros for ADC/PWM */
 #define ADC_DEFAULT_RESOLUTION 10
@@ -17,13 +18,15 @@
 #define ADC_HW_MAX_VALUE ((1UL << ADC_HW_BITS) - 1)
 #define ADC_HW_HALF_MAX (ADC_HW_MAX_VALUE / 2)
 #define ADC_MIN_RES_BITS 1
-#define ADC_MAX_RES_BITS 32
+// Cap at 31: analogRead returns int (32-bit signed); bits=32 would truncate 0xFFFFFFFF to -1.
+#define ADC_MAX_RES_BITS 31U
 
 #define PWM_MAX_VALUE 255U
 #define PWM_HALF_THRESHOLD 127
 #define PWM_DEFAULT_FREQ 1000U
 #define PWM_DEFAULT_CLOCK_FREQ 1000000U
 #define PWM_MIN_TOTAL_CYCLES 1000U
+#define PWM_PERIOD_MAX 65535U   /* V151 period register (high+low) is 16-bit */
 #define MAX_PWM_CHANNELS 16U
 
 #if defined(CONFIG_ADC_SUPPORT) || defined(CONFIG_PWM_SUPPORT)
@@ -45,6 +48,22 @@ static bool s_adc_initialized = false;
 #if defined(CONFIG_PWM_SUPPORT)
 // PWM channel tracking for analogWrite
 static bool s_pwm_channel_open[MAX_PWM_CHANNELS] = {false};
+// PWM driver initialized flag — mirrors the ADC pattern.
+// uapi_pwm_init() enables the PWM clock; without it, open/start succeed but
+// no signal is generated because the clock stays gated.
+static bool s_pwm_initialized = false;
+
+static bool pwm_init_if_needed(void)
+{
+    if (!s_pwm_initialized) {
+        errcode_t ret = uapi_pwm_init();
+        if (ret != ERRCODE_SUCC) {
+            return false; // Init failed — do NOT set s_pwm_initialized
+        }
+        s_pwm_initialized = true;
+    }
+    return true;
+}
 #endif
 
 // ============================================================================
@@ -72,8 +91,9 @@ static bool adc_init_if_needed(void)
 /* *
  * @brief Reset ADC state (allows retry after init failure)
  * After calling this, adc_init_if_needed() will attempt to reinitialize
+ * (retained for future retry/reset flows; not yet called on the hot path)
  */
-static void reset_adc(void)
+static inline void reset_adc(void)
 {
     if (s_adc_initialized) {
         uapi_adc_deinit();
@@ -140,9 +160,9 @@ int analogRead(uint8_t pin)
         raw_value >>= (ADC_HW_BITS - s_adc_resolution);
     } else if (s_adc_resolution > ADC_HW_BITS) {
         // Upscale: multiply and shift to expand range
-        // Formula: raw * (max_target / ADC_HW_MAX_VALUE) with rounding
-        uint32_t max_target = (1UL << s_adc_resolution) - 1;
-        raw_value = (int32_t)(((uint32_t)raw_value * max_target + ADC_HW_HALF_MAX) / ADC_HW_MAX_VALUE);
+        // Use uint64_t to avoid overflow when bits=32 (max_target=0xFFFFFFFF)
+        uint64_t max_target = ((uint64_t)1 << s_adc_resolution) - 1;
+        raw_value = (int32_t)(((uint64_t)raw_value * max_target + ADC_HW_HALF_MAX) / ADC_HW_MAX_VALUE);
     }
     // s_adc_resolution == 12: return as-is
 
@@ -226,13 +246,29 @@ void analogWrite(uint8_t pin, int val)
     if (total_cycles == 0) {
         total_cycles = PWM_MIN_TOTAL_CYCLES; // Safety minimum
     }
+    // V151 period register (high_time + low_time) is 16-bit (max 65535).
+    // Cap to the register limit; Arduino analogWrite only specifies duty ratio,
+    // not the exact carrier frequency, so a higher carrier is acceptable.
+    if (total_cycles > PWM_PERIOD_MAX) {
+        total_cycles = PWM_PERIOD_MAX;
+    }
 
     // High time cycles = (val / PWM_MAX_VALUE) * total_cycles
     uint32_t high_time = ((uint32_t)val * total_cycles) / PWM_MAX_VALUE;
     uint32_t low_time = total_cycles - high_time;
 
     if (!s_pwm_channel_open[pwm_channel]) {
+        // PWM clock must be ungated via uapi_pwm_init() before open/start.
+        if (!pwm_init_if_needed()) {
+            return;
+        }
         // First time: open and start PWM
+        // configure GPIO pinmux to PWM function before opening (MODE_1 = PWM
+        // for ws63 PWM-capable GPIOs, confirmed via SDK pwm_demo.c + datasheet)
+        uint8_t hw_pin = digitalPinToPin(pin);
+        if (hw_pin != NOT_A_PIN) {
+            uapi_pin_set_mode((pin_t)hw_pin, PIN_MODE_1);
+        }
         pwm_config_t cfg;
         cfg.high_time = high_time;
         cfg.low_time = low_time;
@@ -246,11 +282,16 @@ void analogWrite(uint8_t pin, int val)
         }
         s_pwm_channel_open[pwm_channel] = true;
 #if defined(CONFIG_PWM_USING_V151)
-        // PWM V151: uapi_pwm_start() requires the channel to be in a group.
+        // PWM V151: use the canonical set_group + start_group sequence.
+        // Clear group first because set_group rejects a channel already present
+        // in any group (and uapi_pwm_close does not clear membership).
         uint8_t grp_ch = pwm_channel;
+        (void)uapi_pwm_clear_group(0);
         (void)uapi_pwm_set_group(0, &grp_ch, 1);
-#endif
+        (void)uapi_pwm_start_group(0);
+#else
         uapi_pwm_start(pwm_channel);
+#endif
     } else {
         // Channel already open: update duty cycle
 #if defined(CONFIG_PWM_USING_V150)
@@ -259,14 +300,24 @@ void analogWrite(uint8_t pin, int val)
         uapi_pwm_update_duty_ratio(pwm_channel, low_time, high_time);
         uapi_pwm_start(pwm_channel);
 #elif defined(CONFIG_PWM_USING_V151)
-        // V151 API: use update_cfg
+        // V151: uapi_pwm_update_cfg() does not restart a grouped channel's output.
+        // Use close + reopen + clear_group + set_group + start_group to apply
+        // the new duty cycle.
+        uapi_pwm_close(pwm_channel);
         pwm_config_t cfg;
         cfg.high_time = high_time;
         cfg.low_time = low_time;
         cfg.offset_time = 0;
         cfg.cycles = 0;
         cfg.repeat = true;
-        uapi_pwm_update_cfg(pwm_channel, &cfg);
+        if (uapi_pwm_open(pwm_channel, &cfg) != ERRCODE_SUCC) {
+            s_pwm_channel_open[pwm_channel] = false;
+            return;
+        }
+        uint8_t upd_ch = pwm_channel;
+        (void)uapi_pwm_clear_group(0);
+        (void)uapi_pwm_set_group(0, &upd_ch, 1);
+        (void)uapi_pwm_start_group(0);
 #else
         // No update API: close and reopen
         uapi_pwm_close(pwm_channel);

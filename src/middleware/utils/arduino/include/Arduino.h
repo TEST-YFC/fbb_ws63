@@ -101,6 +101,17 @@ typedef uint8_t byte;
 #define HAVE_HWSERIAL1
 #define HAVE_HWSERIAL2
 
+// Config definations for ADC/PWM/GPIO support based on build configuration
+#if !defined(CONFIG_PWM_SUPPORT) && defined(CONFIG_PWM_USING_V151)
+#define CONFIG_PWM_SUPPORT 1
+#endif
+#if !defined(CONFIG_ADC_SUPPORT) && defined(CONFIG_ADC_USING_V154)
+#define CONFIG_ADC_SUPPORT 1
+#endif
+#if !defined(CONFIG_GPIO_SUPPORT)
+#define CONFIG_GPIO_SUPPORT 1
+#endif
+
 // Yield function (for cooperative multitasking)
 void yield(void);
 
@@ -128,14 +139,24 @@ void detachInterrupt(uint8_t pin);
 void interrupts(void);
 void noInterrupts(void);
 
-// Map digital pin to interrupt number (identity mapping on this platform)
-#define digitalPinToInterrupt(p) ((int)(p))
+// Only pins 0-15 are interrupt-capable; others return NOT_AN_INTERRUPT(-1).
+#ifndef NOT_AN_INTERRUPT
+#define NOT_AN_INTERRUPT (-1)
+#endif
+
+// Maximum number of interrupt pins
+#define MAX_INTERRUPT_PINS 16
+
+#define digitalPinToInterrupt(p) (((int)(p) >= 0 && (int)(p) < MAX_INTERRUPT_PINS) ? (int)(p) : NOT_AN_INTERRUPT)
 
 #include <math.h>
 
 // Tone (implemented in wiring_pulse.cpp)
 void tone(uint8_t pin, unsigned int frequency, unsigned long duration = 0);
 void noTone(uint8_t pin);
+// WS63 extension: call periodically from loop() to sustain continuous tones
+// on non-PWM pins (PWM-pin tones are hardware-driven and need no update).
+void tone_update(void);
 
 // Pulse (implemented in wiring_pulse.cpp)
 unsigned long pulseIn(uint8_t pin, uint8_t state, unsigned long timeout = 1000000UL);
@@ -158,6 +179,7 @@ int i2s_read();
 void shiftOut(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, uint8_t val);
 uint8_t shiftIn(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder);
 
+// Random number generation (Platform adaptation)
 void randomSeed(unsigned long seed);
 long random(long max);
 long random(long min, long max);
