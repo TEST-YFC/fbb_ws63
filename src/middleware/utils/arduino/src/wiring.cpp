@@ -23,6 +23,7 @@
 #else
 #define SYS_CPU_FREQ_HZ (GET_SYS_CLOCK())
 #endif
+#define BITS_PER_BYTE 8
 
 /* *
  * @brief Get milliseconds since system startup
@@ -80,16 +81,16 @@ void yield(void)
 /* *
  * @brief Map a value from one range to another
  * @param value - Value to map
- * @param fromLow/fromHigh - Source range
- * @param toLow/toHigh - Target range
+ * @param from_low/from_high - Source range
+ * @param to_low/to_high - Target range
  * @return Mapped value (integer arithmetic, truncated)
  */
-long map(long value, long fromLow, long fromHigh, long toLow, long toHigh)
+long map(long value, long from_low, long from_high, long to_low, long to_high)
 {
-    if (fromHigh == fromLow) {
-        return toLow;  // Guard against divide-by-zero
+    if (from_high == from_low) {
+        return to_low;  // Guard against divide-by-zero
     }
-    return (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow) + toLow;
+    return (value - from_low) * (to_high - to_low) / (from_high - from_low) + to_low;
 }
 
 /* *
@@ -154,5 +155,5 @@ unsigned int makeWord(unsigned int w)
  */
 unsigned int makeWord(unsigned char h, unsigned char l)
 {
-    return ((unsigned int)h << 8) | l;
+    return ((unsigned int)h << BITS_PER_BYTE) | l;
 }

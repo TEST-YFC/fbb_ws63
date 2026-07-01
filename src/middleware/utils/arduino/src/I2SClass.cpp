@@ -26,7 +26,7 @@
 // CONFIG_I2S_SUPPORT is not a real SDK Kconfig option (the SDK defines
 // CONFIG_SIO_USING_V151 / CONFIG_I2S_BUS_MAX_NUM etc.). Derive it here so
 // the I2S implementation is compiled instead of an empty stub.
-#if !defined(CONFIG_I2S_SUPPORT) && (defined(CONFIG_SIO_USING_V151) || defined(CONFIG_SIO_USING_V150) || defined(CONFIG_I2S_BUS_MAX_NUM))
+#if !defined(CONFIG_I2S_SUPPORT) && defined(CONFIG_SIO_USING_V151)
 #define CONFIG_I2S_SUPPORT 1
 #endif
 

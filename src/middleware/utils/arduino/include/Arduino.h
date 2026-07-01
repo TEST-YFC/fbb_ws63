@@ -185,7 +185,7 @@ long random(long max);
 long random(long min, long max);
 
 // Math
-long map(long value, long fromLow, long fromHigh, long toLow, long toHigh);
+long map(long value, long from_low, long from_high, long to_low, long to_high);
 unsigned int makeWord(unsigned int w);
 unsigned int makeWord(unsigned char h, unsigned char l);
 #define word(...) makeWord(__VA_ARGS__)

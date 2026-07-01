@@ -104,7 +104,8 @@ private:
 
     // Private methods
     void _init_buffer();
-    void _store_char(uint8_t c, volatile uint16_t *head, volatile uint16_t *tail, uint8_t *buffer, size_t buffer_size) const;
+    void _store_char(uint8_t c, volatile uint16_t *head, volatile uint16_t *tail,
+                    uint8_t *buffer, size_t buffer_size) const;
     int _read_from_buffer();
     int _available_in_buffer() const;
     void _refill_from_fifo() const;
