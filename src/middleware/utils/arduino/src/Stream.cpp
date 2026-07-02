@@ -114,11 +114,11 @@ long Stream::parseInt(char ignore)
     if (c < 0)
         return 0; // Timeout
                                                                              
-    if (c == '-') {                                                                                                                                                       
-        isNegative = true;                                                                                                                                                
-    } else if (c >= '0' && c <= '9') {                                                                                                                                    
-        value = value * DECIMAL_BASE + (c - '0');                                                                                                                         
-    }                                                                           
+    if (c == '-') {
+        isNegative = true;
+    } else if (c >= '0' && c <= '9') {
+        value = value * DECIMAL_BASE + (c - '0');
+    }
     // (peekNextDigit uses timedPeek which peeks without consuming;
     read();
 

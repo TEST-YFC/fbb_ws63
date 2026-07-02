@@ -127,10 +127,6 @@ static inline uint8_t digitalPinToPin(uint8_t arduino_pin)
 
 static inline uint8_t digitalPinToPWMChannel(uint8_t arduino_pin)
 {
-    if (arduino_pin >= NUM_DIGITAL_PINS || !HAS_PWM(arduino_pin)) {
-        return NOT_ON_TIMER;
-    }
-
     /* Real Arduino-pin -> PWM channel, from the WS63/HH-D01 pin-mux table:
      *   D3 =GPIO03=PWM3   D5 =GPIO05=PWM5   D6 =GPIO06=PWM6
      *   D9 =GPIO09=PWM1   D10=GPIO10=PWM2   D11=GPIO11=PWM3
