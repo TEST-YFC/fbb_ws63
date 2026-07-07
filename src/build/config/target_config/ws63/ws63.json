@@ -118,7 +118,13 @@
 		"backend": "burntool",
 		"chiptype": "WS63",
 		"signalbaud": 921600,
-		"expected_sections": 7
+		"expected_sections": 7,
+		"fwpkg_all_patterns": [
+			"output/{chip}/fwpkg/{target}/{target}_all.fwpkg"
+		],
+		"fwpkg_load_only_patterns": [
+			"output/{chip}/fwpkg/{target}/{target}_load_only.fwpkg"
+		]
 	},
 	"examples": {
 		"roots": [
