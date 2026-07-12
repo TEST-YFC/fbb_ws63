@@ -10,16 +10,19 @@
 
 ## SDK 侧职责
 
-SDK 负责提供芯片、target、构建系统和官方/伙伴板卡的基础事实。WS63 的板卡包入口文件为：
+SDK 负责提供芯片、target、构建系统和可扩展组件接入能力。SDK 不维护伙伴板卡清单，也不把伙伴板卡包作为内置内容发布。
 
-```text
-src/tools/board_packages/ws63/boards.json
-```
+伙伴板级支持包属于统一注册中心中的扩展资产，由伙伴、教师或社区维护者独立发布。SDK 只需要保证这些外部包安装到项目 `components/` 后，能以普通 FBB 组件方式进入构建。
 
-该文件登记 SDK 已知的板卡包候选项。首期登记：
+WS63 SDK 对外暴露的稳定约束是：
 
-- `nearlink-vip/hihope-nearlink-dk-ws63e-v03`
-- `nearlink-vip/bearpi-pico-h3863`
+- 芯片 ID：`ws63`
+- 推荐应用 target：`ws63-liteos-app`
+- 外部组件安装位置：项目 `components/`
+- 组件构建入口：`fbb-package.toml` 与 `CMakeLists.txt`
+- 可选配置入口：包内 `Kconfig`
+
+HiHope、BearPi 等伙伴板卡包应在注册中心中声明自身适配 WS63，而不是写入 SDK 内部清单。
 
 ## 板卡包 manifest
 
@@ -55,7 +58,8 @@ status = "partner"
 - `[compat].chips` 必须包含 `ws63`。
 - `[compat].targets` 应声明可构建 target。
 - `[board].id` 是稳定板卡 ID，供 samples 和 solution 引用。
-- 若板卡包提供 Kconfig、头文件或适配代码，应作为普通 FBB 组件安装到项目 `components/` 下。
+- 若板卡包提供 Kconfig、头文件或适配代码，应作为普通 FBB 组件安装到客户项目 `components/` 下。
+- SDK 仓不登记具体伙伴板卡包；板卡包发现由注册中心和 `hs-fbb-cli` 完成。
 
 ## CLI 行为
 
@@ -87,4 +91,3 @@ boards = ["hihope-nearlink-dk-ws63e-v03"]
 samples = ["nearlink-vip/ws63-led-blink"]
 components = ["nearlink-vip/ringbuf"]
 ```
-
