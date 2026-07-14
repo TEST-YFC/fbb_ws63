@@ -21,24 +21,9 @@
 #define SPI_BYTE_SHIFT 8
 
 #if defined(CONFIG_SPI_SUPPORT_MASTER) && (CONFIG_SPI_SUPPORT_MASTER == 1)
-// SPI master pin assignment. Reuse the peripheral SPI sample's Kconfig values
-// when available (CONFIG_SAMPLE_SUPPORT_SPI_MASTER=y), otherwise fall back to
-// the same defaults the sample declares (DI=11, DO=9, CLK=7, CS=10, mode=3).
-#ifndef CONFIG_SPI_DI_MASTER_PIN
-#define CONFIG_SPI_DI_MASTER_PIN 11
-#endif
-#ifndef CONFIG_SPI_DO_MASTER_PIN
-#define CONFIG_SPI_DO_MASTER_PIN 9
-#endif
-#ifndef CONFIG_SPI_CLK_MASTER_PIN
-#define CONFIG_SPI_CLK_MASTER_PIN 7
-#endif
-#ifndef CONFIG_SPI_CS_MASTER_PIN
-#define CONFIG_SPI_CS_MASTER_PIN 10
-#endif
-#ifndef CONFIG_SPI_MASTER_PIN_MODE
-#define CONFIG_SPI_MASTER_PIN_MODE 3
-#endif
+// SPI master pin assignment (CONFIG_SPI_DI/DO/CLK/CS_MASTER_PIN,
+// CONFIG_SPI_MASTER_PIN_MODE) comes from the chip porting layer's
+// arduino_config.h (included via Arduino.h above).
 
 // Arduino SPI abstraction is single-master-single-slave; always select slave 0.
 // If multi-slave support is needed in the future, convert this to a Kconfig item.

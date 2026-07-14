@@ -29,6 +29,7 @@ set(PUBLIC_HEADER
 set(PRIVATE_HEADER
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${ROOT_DIR}/middleware/chips/${CHIP}/arduino
     ${ROOT_DIR}/include
     ${ROOT_DIR}/include/driver
     ${ROOT_DIR}/include/middleware/utils
@@ -69,33 +70,10 @@ set(PUBLIC_DEFINES
 set(COMPONENT_PUBLIC_CCFLAGS
 )
 
-# REWRITE_CCFLAGS=true: use only COMPONENT_CCFLAGS, discard global CCFLAGS
-# This prevents C-only flags (-std=gnu99, -Wstrict-prototypes, etc.) from being
-# passed to the C++ compiler (cc1plus), which would otherwise cause errors.
-set(REWRITE_CCFLAGS
-    true
-)
-
-set(COMPONENT_CCFLAGS
-    -mabi=ilp32f
-    -march=rv32imfc
-    -Wall
-    -Werror
-    -Wextra
-    -Winit-self
-    -Wpointer-arith
-    -Wno-type-limits
-    -fno-strict-aliasing
-    -Os
-    -fno-unwind-tables
-    -fno-exceptions
-    -fno-rtti
-    -nostdinc++
-    -fno-threadsafe-statics
-    -fno-use-cxa-atexit
-    -Wno-sign-compare
-    -fno-builtin-printf
-)
+# Chip-specific C++ build config (arch, -fno-exceptions/-rtti, stdlib, REWRITE_CCFLAGS).
+# Lives in the chip porting layer (middleware/chips/${CHIP}/arduino/arduino_pre.cmake)
+# so this CMakeLists stays identical across chips.
+include(${ROOT_DIR}/middleware/chips/${CHIP}/arduino/arduino_pre.cmake)
 
 set(WHOLE_LINK
     true
@@ -103,11 +81,6 @@ set(WHOLE_LINK
 
 set(MAIN_COMPONENT
     false
-)
-
-# Link C++ standard library (required for C++ sources using new/delete, virtual functions, etc.)
-set(LIBS
-    supc++
 )
 
 build_component()

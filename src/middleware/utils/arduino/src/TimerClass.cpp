@@ -62,8 +62,9 @@ static uint32_t get_timer_irqn(uint8_t index)
  * SDK demo uses TIMER_PRIO = 1.
  * main.c uses irq_prio(TIMER_1_IRQN) which reads from the priority table.
  * We use priority 1 to match the SDK convention.
+ * ARDUINO_TIMER_IRQ_PRIORITY is defined in the chip porting layer's
+ * arduino_config.h (included via TimerClass.h).
  */
-#define ARDUINO_TIMER_IRQ_PRIORITY 1
 
 /* *
  * @brief Ensure a specific timer index has its interrupt adapter registered

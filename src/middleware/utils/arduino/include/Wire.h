@@ -15,13 +15,9 @@
 #include <stddef.h>
 #include "Stream.h"
 
-// I2C SDK configuration - align with ws63_liteos_app.config
-// CONFIG_I2C_SUPPORT_MASTER=y is set in the config
-// CONFIG_I2C_SUPPORT_SLAVE and CONFIG_I2C_SUPPORT_INT are not set by default
-// We define MASTER to ensure uapi_i2c_master_* functions are available
-#ifndef CONFIG_I2C_SUPPORT_MASTER
-#define CONFIG_I2C_SUPPORT_MASTER 1
-#endif
+// I2C support config (CONFIG_I2C_SUPPORT_MASTER, ...) comes from the chip
+// porting layer's arduino_config.h. Include before driver/i2c.h.
+#include "arduino_config.h"
 
 #include "driver/i2c.h"
 

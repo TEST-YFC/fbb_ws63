@@ -3,9 +3,14 @@
  */
 /* *
  * @file pins_arduino.h
- * @brief Pin mapping for Arduino compatibility on ws63
+ * @brief Pin mapping for Arduino compatibility on ws63 (chip porting layer)
  * @version 3.0
  * @date 2026-04-21
+ *
+ * This header is chip-specific (ws63) and lives in the chip porting layer
+ * (middleware/chips/ws63/arduino/). Arduino.h includes it to obtain the pin
+ * count and pin map; another chip supplies its own copy at
+ * middleware/chips/<chip>/arduino/pins_arduino.h.
  */
 
 #ifndef PINS_ARDUINO_H
@@ -19,14 +24,11 @@ extern "C" {
 #endif
 
 /* ============================================================================
- * Total Pin Count
- * NOTE: NUM_DIGITAL_PINS and NUM_ANALOG_INPUTS are defined in Arduino.h
- * Do not redefine here to avoid conflicts.
+ * Total Pin Count (ws63-specific)
  * ============================================================================ */
 
-// Use values from Arduino.h (32 digital pins, 8 analog inputs)
-// NUM_DIGITAL_PINS = 32 (defined in Arduino.h)
-// NUM_ANALOG_INPUTS = 8 (defined in Arduino.h)
+#define NUM_DIGITAL_PINS 32
+#define NUM_ANALOG_INPUTS 8
 
 // Alias for compatibility with some Arduino libraries
 #define NUM_ANALOG_PINS NUM_ANALOG_INPUTS

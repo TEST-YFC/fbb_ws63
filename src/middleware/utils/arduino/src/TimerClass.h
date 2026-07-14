@@ -25,11 +25,9 @@
 #define TIMER_INSTANCE_1 ((uint8_t)TIMER_INDEX_1)
 #define TIMER_INSTANCE_2 ((uint8_t)TIMER_INDEX_2)
 
-// 系统保留的 timer 索引（默认保留 Timer0，与 LiteOS 系统 tick 冲突）
-// 其他芯片平台可通过定义此宏覆盖默认值
-#ifndef ARDUINO_TIMER_RESERVED
-#define ARDUINO_TIMER_RESERVED TIMER_INDEX_0
-#endif
+// ARDUINO_TIMER_RESERVED / ARDUINO_TIMER_IRQ_PRIORITY come from the chip
+// porting layer's arduino_config.h.
+#include "arduino_config.h"
 
 /* *
  * @class TimerClass

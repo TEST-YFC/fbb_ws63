@@ -37,6 +37,10 @@ typedef uint8_t byte;
 #include "Stream.h"
 #include "WString.h"
 
+// Chip-specific feature config (HAVE_HWSERIAL*, CONFIG_*/ADC/PWM/GPIO_SUPPORT,
+// MAX_INTERRUPT_PINS). Resolved from middleware/chips/${CHIP}/arduino/.
+#include "arduino_config.h"
+
 // Binary constants
 #define _BV(bit) (1 << (bit))
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
@@ -54,9 +58,9 @@ typedef uint8_t byte;
 #define LOW 0
 #define HIGH 1
 
-// Change this to match ws63 pin count
-#define NUM_DIGITAL_PINS 32
-#define NUM_ANALOG_INPUTS 8
+// NUM_DIGITAL_PINS / NUM_ANALOG_INPUTS are now chip-specific: they come from
+// pins_arduino.h (included at the bottom of this file from the chip porting
+// layer at middleware/chips/${CHIP}/arduino/pins_arduino.h).
 
 // Analog reference types
 #define DEFAULT 0
@@ -97,20 +101,8 @@ typedef uint8_t byte;
 #define EULER 2.718281828459045235360287471352
 
 // Serial communication
-#define HAVE_HWSERIAL0
-#define HAVE_HWSERIAL1
-#define HAVE_HWSERIAL2
-
-// Config definations for ADC/PWM/GPIO support based on build configuration
-#if !defined(CONFIG_PWM_SUPPORT) && defined(CONFIG_PWM_USING_V151)
-#define CONFIG_PWM_SUPPORT 1
-#endif
-#if !defined(CONFIG_ADC_SUPPORT) && defined(CONFIG_ADC_USING_V154)
-#define CONFIG_ADC_SUPPORT 1
-#endif
-#if !defined(CONFIG_GPIO_SUPPORT)
-#define CONFIG_GPIO_SUPPORT 1
-#endif
+// HAVE_HWSERIAL* and CONFIG_*/ADC/PWM/GPIO_SUPPORT now live in arduino_config.h
+// (chip porting layer), included above.
 
 // Yield function (for cooperative multitasking)
 void yield(void);
@@ -139,13 +131,12 @@ void detachInterrupt(uint8_t pin);
 void interrupts(void);
 void noInterrupts(void);
 
-// Only pins 0-15 are interrupt-capable; others return NOT_AN_INTERRUPT(-1).
+// Pins >= MAX_INTERRUPT_PINS return NOT_AN_INTERRUPT(-1).
 #ifndef NOT_AN_INTERRUPT
 #define NOT_AN_INTERRUPT (-1)
 #endif
 
-// Maximum number of interrupt pins
-#define MAX_INTERRUPT_PINS 16
+// MAX_INTERRUPT_PINS now lives in arduino_config.h (chip porting layer).
 
 #define digitalPinToInterrupt(p) (((int)(p) >= 0 && (int)(p) < MAX_INTERRUPT_PINS) ? (int)(p) : NOT_AN_INTERRUPT)
 
@@ -195,5 +186,10 @@ unsigned int makeWord(unsigned char h, unsigned char l);
 #define SERIAL_PORT_HARDWARE Serial
 #define SERIAL_PORT_HARDWARE1 Serial1
 #define SERIAL_PORT_HARDWARE2 Serial2
+
+// Chip-specific pin table (NUM_DIGITAL_PINS, pin map, digitalPinToPin, ...).
+// Resolved from middleware/chips/${CHIP}/arduino/ via the component include path.
+// Included at the end so all macros it depends on (e.g. NOT_ON_TIMER) are defined.
+#include "pins_arduino.h"
 
 #endif // ARDUINO_H
