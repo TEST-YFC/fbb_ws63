@@ -18,13 +18,6 @@
 #define SPI_TRANSFER_TIMEOUT_MS 100
 #define SPI_BUFFER_TRANSFER_TIMEOUT_MS 1000
 #define SPI_BYTE_SHIFT 8
-
-// SPI source clock (ssi_clk) — chip-specific: ARDUINO_SPI_BUS_CLK_HZ comes
-// from the chip porting layer's arduino_config.h (included via Arduino.h).
-// Used as the baud-rate divider base: SCK = bus_clk / clk_div.
-#ifndef ARDUINO_SPI_BUS_CLK_HZ
-#define ARDUINO_SPI_BUS_CLK_HZ 32000000UL
-#endif
 #define SPI_BASE_CLOCK_FREQ ARDUINO_SPI_BUS_CLK_HZ
 
 #if defined(CONFIG_SPI_SUPPORT_MASTER) && (CONFIG_SPI_SUPPORT_MASTER == 1)

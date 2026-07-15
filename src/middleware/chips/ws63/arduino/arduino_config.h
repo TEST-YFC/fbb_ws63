@@ -154,4 +154,25 @@
 #define ARDUINO_TIMER_RESERVED TIMER_INDEX_0
 #endif
 
+// Timer instance mapping: Arduino timer number -> chip timer_index_t enum
+// (defined in timer_porting.h). ws63 has TIMER_INDEX_0/1/2 (3 timers). Each
+// TIMER_INSTANCE_N is consumed by the gated TimerN object in TimerClass.cpp.
+// A chip with a different timer count defines its own set here.
+#define TIMER_INSTANCE_0 ((uint8_t)TIMER_INDEX_0)
+#define TIMER_INSTANCE_1 ((uint8_t)TIMER_INDEX_1)
+#define TIMER_INSTANCE_2 ((uint8_t)TIMER_INDEX_2)
+
+// Default timer for the C-style API (timerInit/timerStart/timerStop). Picks a
+// TimerN object the system/RTOS does NOT use, so Arduino timers never clash
+// with the system tick. ws63: Timer0 is the RTOS systick, Timer1 is the main.c
+// test timebase, so Timer2 is free. Macro expansion is deferred to the point of
+// use (inside TimerClass.cpp, after the TimerN globals are defined).
+#define ARDUINO_DEFAULT_TIMER (&Timer2)
+
+// USB macros (not applicable on this target, but kept for compatibility)
+#define SERIAL_PORT_MONITOR Serial
+#define SERIAL_PORT_HARDWARE Serial
+#define SERIAL_PORT_HARDWARE1 Serial1
+#define SERIAL_PORT_HARDWARE2 Serial2
+
 #endif /* ARDUINO_CONFIG_H */

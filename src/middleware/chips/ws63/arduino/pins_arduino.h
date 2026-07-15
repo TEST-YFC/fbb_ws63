@@ -95,14 +95,17 @@ extern "C" {
 #define PIN_SPI_SCK D13
 #define LED_BUILTIN D13
 
+/* Timer constants - use 0xFF for invalid (not 0 to avoid conflict with timer 0) */
+#define NOT_ON_TIMER 0xFF
+
 /* PWM support - ws63 specific pins */
 #define HAS_PWM(pin) ((pin) == D3 || (pin) == D5 || (pin) == D6 || (pin) == D9 || (pin) == D10 || (pin) == D11)
 
 /* Analog pin check */
 #define IS_ANALOG_PIN(pin) ((pin) >= A0 && (pin) <= A7)
 
-/* Invalid values - NOT_ON_TIMER defined in Arduino.h as 0xFF */
-// NOT_A_PIN is unique, no conflict with Arduino.h
+/* Invalid values - NOT_ON_TIMER defined above as 0xFF */
+// NOT_A_PIN is unique, no conflict
 #define NOT_A_PIN 0xFF
 
 /* ============================================================================

@@ -25,19 +25,6 @@ typedef void (*i2s_callback_forward_t)(uint32_t *left_buff, uint32_t *right_buff
 
 // I2S Pin Definitions — chip-specific (ARDUINO_I2S_*_PIN from the chip porting
 // layer's arduino_config.h). #ifndef fallback keeps the header self-contained.
-// 3322 has no SIO, so these stay unused (CONFIG_I2S_SUPPORT undefined).
-#ifndef ARDUINO_I2S_SCK_PIN
-#define ARDUINO_I2S_SCK_PIN 0
-#endif
-#ifndef ARDUINO_I2S_WS_PIN
-#define ARDUINO_I2S_WS_PIN 1
-#endif
-#ifndef ARDUINO_I2S_SD_PIN
-#define ARDUINO_I2S_SD_PIN 2
-#endif
-#ifndef ARDUINO_I2S_SD_IN_PIN
-#define ARDUINO_I2S_SD_IN_PIN 3
-#endif
 #define I2S_SCK_PIN   ARDUINO_I2S_SCK_PIN   // Serial Clock
 #define I2S_WS_PIN    ARDUINO_I2S_WS_PIN    // Word Select / LRCK
 #define I2S_SD_PIN    ARDUINO_I2S_SD_PIN    // Serial Data Out

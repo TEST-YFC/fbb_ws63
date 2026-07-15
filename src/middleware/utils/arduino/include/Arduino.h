@@ -37,8 +37,7 @@ typedef uint8_t byte;
 #include "Stream.h"
 #include "WString.h"
 
-// Chip-specific feature config (HAVE_HWSERIAL*, CONFIG_*/ADC/PWM/GPIO_SUPPORT,
-// MAX_INTERRUPT_PINS). Resolved from middleware/chips/${CHIP}/arduino/.
+// Chip-specific feature config.
 #include "arduino_config.h"
 
 // Binary constants
@@ -67,9 +66,6 @@ typedef uint8_t byte;
 #define EXTERNAL 1
 #define INTERNAL 2
 
-// Timer constants - use 0xFF for invalid (not 0 to avoid conflict with timer 0)
-#define NOT_ON_TIMER 0xFF
-
 // Interrupt modes - use unique values to avoid conflict with LOW/HIGH
 #define RISING 4
 #define FALLING 5
@@ -81,7 +77,8 @@ typedef uint8_t byte;
 // Do not redefine here to avoid conflicts
 
 // Wire definitions
-#define WIRE_HAS_END 1
+#define WIRE_HAS_END      1
+#define PWM_PERIOD_MAX    ARDUINO_PWM_PERIOD_MAX
 
 // SPI definitions
 #define SPI_HAS_TRANSACTION 1
@@ -181,15 +178,7 @@ unsigned int makeWord(unsigned int w);
 unsigned int makeWord(unsigned char h, unsigned char l);
 #define word(...) makeWord(__VA_ARGS__)
 
-// USB macros (not applicable on this target, but kept for compatibility)
-#define SERIAL_PORT_MONITOR Serial
-#define SERIAL_PORT_HARDWARE Serial
-#define SERIAL_PORT_HARDWARE1 Serial1
-#define SERIAL_PORT_HARDWARE2 Serial2
 
-// Chip-specific pin table (NUM_DIGITAL_PINS, pin map, digitalPinToPin, ...).
-// Resolved from middleware/chips/${CHIP}/arduino/ via the component include path.
-// Included at the end so all macros it depends on (e.g. NOT_ON_TIMER) are defined.
+// Chip-specific pin table.
 #include "pins_arduino.h"
-
 #endif // ARDUINO_H

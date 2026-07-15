@@ -14,12 +14,6 @@
 
 /* Magic-number macros for ADC/PWM */
 #define ADC_DEFAULT_RESOLUTION 10
-// ADC hardware resolution — chip-specific: ARDUINO_ADC_HW_BITS comes from the
-// chip porting layer's arduino_config.h (included via Arduino.h). Value is
-// chip-specific (e.g. 12-bit on current chips); another chip sets its own.
-#ifndef ARDUINO_ADC_HW_BITS
-#define ARDUINO_ADC_HW_BITS 12
-#endif
 #define ADC_HW_BITS ARDUINO_ADC_HW_BITS
 #define ADC_HW_MAX_VALUE ((1UL << ADC_HW_BITS) - 1)
 #define ADC_HW_HALF_MAX (ADC_HW_MAX_VALUE / 2)
@@ -32,13 +26,6 @@
 #define PWM_DEFAULT_FREQ 1000U
 #define PWM_DEFAULT_CLOCK_FREQ 1000000U
 #define PWM_MIN_TOTAL_CYCLES 1000U
-// PWM period register width — chip-specific: ARDUINO_PWM_PERIOD_MAX comes from
-// the chip porting layer's arduino_config.h (included via Arduino.h). Current
-// chips use the V151 PWM IP (16-bit high+low period register = 65535).
-#ifndef ARDUINO_PWM_PERIOD_MAX
-#define ARDUINO_PWM_PERIOD_MAX 65535U
-#endif
-#define PWM_PERIOD_MAX ARDUINO_PWM_PERIOD_MAX
 #define MAX_PWM_CHANNELS 16U
 
 #if defined(CONFIG_ADC_SUPPORT) || defined(CONFIG_PWM_SUPPORT)

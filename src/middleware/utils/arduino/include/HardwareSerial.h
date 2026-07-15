@@ -37,9 +37,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "Stream.h"
-
-// UART support config (CONFIG_UART_SUPPORT_TX/RX, ...) comes from the chip
-// porting layer's arduino_config.h. Include before driver/uart.h.
 #include "arduino_config.h"
 
 #include "driver/uart.h"

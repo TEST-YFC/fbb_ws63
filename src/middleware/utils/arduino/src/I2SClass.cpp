@@ -22,9 +22,6 @@
 #include "i2s.h"
 #include "sio_porting.h"
 #include "hal_sio.h"
-
-// CONFIG_I2S_SUPPORT (derived from CONFIG_SIO_USING_V151) comes from the chip
-// porting layer's arduino_config.h.
 #include "arduino_config.h"
 
 #if defined(CONFIG_I2S_SUPPORT_DMA) && (CONFIG_I2S_SUPPORT_DMA == 1)

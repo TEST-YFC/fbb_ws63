@@ -16,17 +16,15 @@
 
 #include <stdint.h>
 
-// Timer instance IDs - 引用 SDK 定义的枚举，保持跨平台一致
-// timer_porting.h 定义了 timer_index_t 枚举和 TIMER_INDEX_0/1/2
+// Timer instance IDs — chip-specific. TIMER_INSTANCE_* map Arduino timer
+// numbers to the chip's timer_index_t (defined in timer_porting.h). The count
+// varies per chip (e.g. 3 timers on one chip, 4 on another), so the macro set
+// + which TimerN objects exist are decided in the chip porting layer's
+// arduino_config.h, gated by CONFIG_TIMER_MAX_NUM.
 #include "timer_porting.h"
 
-// 通过宏映射，保持 Arduino API 兼容性
-#define TIMER_INSTANCE_0 ((uint8_t)TIMER_INDEX_0)
-#define TIMER_INSTANCE_1 ((uint8_t)TIMER_INDEX_1)
-#define TIMER_INSTANCE_2 ((uint8_t)TIMER_INDEX_2)
-
-// ARDUINO_TIMER_RESERVED / ARDUINO_TIMER_IRQ_PRIORITY come from the chip
-// porting layer's arduino_config.h.
+// ARDUINO_TIMER_RESERVED / ARDUINO_TIMER_IRQ_PRIORITY / TIMER_INSTANCE_* come
+// from the chip porting layer's arduino_config.h.
 #include "arduino_config.h"
 
 /* *

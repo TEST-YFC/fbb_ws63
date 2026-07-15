@@ -14,9 +14,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "Stream.h"
-
-// I2C support config (CONFIG_I2C_SUPPORT_MASTER, ...) comes from the chip
-// porting layer's arduino_config.h. Include before driver/i2c.h.
 #include "arduino_config.h"
 
 #include "driver/i2c.h"

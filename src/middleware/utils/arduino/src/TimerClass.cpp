@@ -57,16 +57,6 @@ static uint32_t get_timer_irqn(uint8_t index)
 }
 
 /* *
- * @brief Timer interrupt priority (same as SDK timer_demo.c)
- *
- * SDK demo uses TIMER_PRIO = 1.
- * main.c uses irq_prio(TIMER_1_IRQN) which reads from the priority table.
- * We use priority 1 to match the SDK convention.
- * ARDUINO_TIMER_IRQ_PRIORITY is defined in the chip porting layer's
- * arduino_config.h (included via TimerClass.h).
- */
-
-/* *
  * @brief Ensure a specific timer index has its interrupt adapter registered
  *
  * Each timer instance MUST call uapi_timer_adapter() before uapi_timer_start()
@@ -385,9 +375,15 @@ uint32_t TimerClass::getMaxPeriod()
 // Pre-defined timer instances
 // ============================================================================
 
+#if CONFIG_TIMER_MAX_NUM > 0
 TimerClass Timer0(TIMER_INSTANCE_0); // /< Timer instance 0
+#endif
+#if CONFIG_TIMER_MAX_NUM > 1
 TimerClass Timer1(TIMER_INSTANCE_1); // /< Timer instance 1
+#endif
+#if CONFIG_TIMER_MAX_NUM > 2
 TimerClass Timer2(TIMER_INSTANCE_2); // /< Timer instance 2
+#endif
 
 // ============================================================================
 // C-style API implementation
@@ -396,7 +392,9 @@ TimerClass Timer2(TIMER_INSTANCE_2); // /< Timer instance 2
 /* *
  * @brief Initialize timer with period and callback
  *
- * Uses Timer1 as default timer instance
+ * Uses the chip's default timer instance (ARDUINO_DEFAULT_TIMER, provided by
+ * the chip porting layer's arduino_config.h — points to a free TimerN that the
+ * system/RTOS does not use).
  *
  * @param period_us Period in microseconds
  * @param callback Callback function
@@ -407,13 +405,8 @@ void timerInit(uint32_t period_us, void (*callback)())
         return;
     }
 
-    // Default to Timer2 for the C-style API. On all current chips Timer2 is the
-    // free timer (the system tick and chip_init take other timers), so Timer2 is
-    // the safe intersection. The specific reservation scheme differs per chip —
-    // see porting_contract.md. If a future chip cannot spare Timer2, make this
-    // index a chip-layer macro.
     if (g_default_timer == nullptr) {
-        g_default_timer = &Timer2;
+        g_default_timer = ARDUINO_DEFAULT_TIMER;
     }
 
     g_default_timer->initialize(period_us);
