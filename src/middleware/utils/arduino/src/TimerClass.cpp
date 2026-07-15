@@ -407,12 +407,11 @@ void timerInit(uint32_t period_us, void (*callback)())
         return;
     }
 
-    // Prefer Timer2 for the C-style API because:
-    //   - Timer0 is reserved by LiteOS (systick). Its soft-timer slot count
-    //     is 0 (CONFIG_TIMER_MAX_TIMERS_NUM_0=0), so SDK timer_create() on
-    //     Timer0 either fails or disables the systick handler.
-    //   - Timer1 is used by main.c as the test timebase.
-    //   - Timer2 has 4 soft-timer slots and is otherwise free.
+    // Default to Timer2 for the C-style API. On all current chips Timer2 is the
+    // free timer (the system tick and chip_init take other timers), so Timer2 is
+    // the safe intersection. The specific reservation scheme differs per chip —
+    // see porting_contract.md. If a future chip cannot spare Timer2, make this
+    // index a chip-layer macro.
     if (g_default_timer == nullptr) {
         g_default_timer = &Timer2;
     }

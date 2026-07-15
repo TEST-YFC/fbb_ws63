@@ -14,7 +14,13 @@
 
 /* Magic-number macros for ADC/PWM */
 #define ADC_DEFAULT_RESOLUTION 10
-#define ADC_HW_BITS 12
+// ADC hardware resolution — chip-specific: ARDUINO_ADC_HW_BITS comes from the
+// chip porting layer's arduino_config.h (included via Arduino.h). Value is
+// chip-specific (e.g. 12-bit on current chips); another chip sets its own.
+#ifndef ARDUINO_ADC_HW_BITS
+#define ARDUINO_ADC_HW_BITS 12
+#endif
+#define ADC_HW_BITS ARDUINO_ADC_HW_BITS
 #define ADC_HW_MAX_VALUE ((1UL << ADC_HW_BITS) - 1)
 #define ADC_HW_HALF_MAX (ADC_HW_MAX_VALUE / 2)
 #define ADC_MIN_RES_BITS 1
@@ -26,7 +32,13 @@
 #define PWM_DEFAULT_FREQ 1000U
 #define PWM_DEFAULT_CLOCK_FREQ 1000000U
 #define PWM_MIN_TOTAL_CYCLES 1000U
-#define PWM_PERIOD_MAX 65535U   /* V151 period register (high+low) is 16-bit */
+// PWM period register width — chip-specific: ARDUINO_PWM_PERIOD_MAX comes from
+// the chip porting layer's arduino_config.h (included via Arduino.h). Current
+// chips use the V151 PWM IP (16-bit high+low period register = 65535).
+#ifndef ARDUINO_PWM_PERIOD_MAX
+#define ARDUINO_PWM_PERIOD_MAX 65535U
+#endif
+#define PWM_PERIOD_MAX ARDUINO_PWM_PERIOD_MAX
 #define MAX_PWM_CHANNELS 16U
 
 #if defined(CONFIG_ADC_SUPPORT) || defined(CONFIG_PWM_SUPPORT)
@@ -136,7 +148,7 @@ int analogRead(uint8_t pin)
     // Power on ADC in GADC mode for manual sample
     uapi_adc_power_en(AFE_GADC_MODE, true);
 
-    // Read value (ws63 ADC is 12-bit: 0-4095)
+    // Read value (ADC is ADC_HW_BITS-bit; e.g. 12-bit => 0-4095)
     int32_t raw_value = uapi_adc_manual_sample(adc_channel);
 
     // Close channel (check return value)
@@ -152,8 +164,9 @@ int analogRead(uint8_t pin)
         return 0; // Error
     }
 
-    // Scale to configured resolution
-    // ws63 ADC is ADC_HW_BITS-bit (0-ADC_HW_MAX_VALUE), scale if different resolution requested
+    // Scale to configured resolution.
+    // ADC native width is ADC_HW_BITS-bit (0-ADC_HW_MAX_VALUE); scale when a
+    // different resolution is requested.
     if (s_adc_resolution < ADC_HW_BITS) {
         // Downscale: shift right to reduce resolution
         // e.g. 10-bit: shift right by (12-10)
@@ -262,9 +275,9 @@ void analogWrite(uint8_t pin, int val)
         if (!pwm_init_if_needed()) {
             return;
         }
-        // First time: open and start PWM
-        // configure GPIO pinmux to PWM function before opening (MODE_1 = PWM
-        // for ws63 PWM-capable GPIOs, confirmed via SDK pwm_demo.c + datasheet)
+        // First time: open and start PWM.
+        // Configure GPIO pinmux to PWM function before opening (MODE_1 = PWM
+        // for PWM-capable GPIOs on the V151 PWM IP).
         uint8_t hw_pin = digitalPinToPin(pin);
         if (hw_pin != NOT_A_PIN) {
             uapi_pin_set_mode((pin_t)hw_pin, PIN_MODE_1);
@@ -376,7 +389,7 @@ void analogWrite(uint8_t pin, int val)
  * @brief Set analog reference voltage
  * @param mode - DEFAULT, EXTERNAL, or INTERNAL
  *
- * ws63 ADC has fixed reference voltage. This function:
+ * The ADC has a fixed reference voltage on current chips. This function:
  * - Records the mode for compatibility
  * - When CONFIG_ADC_SUPPORT_REF_VOLTAGE is defined, attempts to configure
  * - Otherwise, no-op stub
@@ -390,10 +403,10 @@ void analogReference(uint8_t mode)
     s_analog_reference = mode;
 
 #if defined(CONFIG_ADC_SUPPORT) && defined(CONFIG_ADC_SUPPORT_REF_VOLTAGE)
-    // When hardware supports configurable reference voltage
-    // Implementation depends on specific ws63 ADC reference config API
-    // Currently ws63 ADC reference is fixed, this block is reserved
-    // for future hardware variants that support reference configuration
+    // When hardware supports configurable reference voltage.
+    // Implementation depends on the chip's ADC reference config API.
+    // Current chips have a fixed ADC reference; this block is reserved for
+    // future hardware variants that support reference configuration.
     // Example (if API exists):
     uapi_adc_set_reference_voltage(mode);
 #endif
@@ -407,10 +420,11 @@ void analogReference(uint8_t mode)
  * @brief Set analog read resolution
  * @param bits - Resolution in bits (1-32)
  *
- * ws63 ADC is 12-bit hardware. This function sets the software resolution:
- * - 1-11 bits: readings are right-shifted (downscaled)
- * - 12 bits: native resolution (0-4095)
- * - 13-32 bits: readings are upscaled by multiplication
+ * ADC native width is ADC_HW_BITS-bit hardware. This function sets the software
+ * resolution (ADC_HW_BITS is chip-specific, e.g. 12 on current chips):
+ * - bits < native: readings are right-shifted (downscaled)
+ * - bits == native: native resolution (e.g. 12-bit => 0-4095)
+ * - bits > native: readings are upscaled by multiplication
  *
  * Default is 10 bits (standard Arduino: 0-1023)
  */

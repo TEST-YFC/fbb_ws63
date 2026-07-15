@@ -17,8 +17,15 @@
 #define SPI_INVALID_CS_PIN 255
 #define SPI_TRANSFER_TIMEOUT_MS 100
 #define SPI_BUFFER_TRANSFER_TIMEOUT_MS 1000
-#define SPI_BASE_CLOCK_FREQ 32000000UL
 #define SPI_BYTE_SHIFT 8
+
+// SPI source clock (ssi_clk) — chip-specific: ARDUINO_SPI_BUS_CLK_HZ comes
+// from the chip porting layer's arduino_config.h (included via Arduino.h).
+// Used as the baud-rate divider base: SCK = bus_clk / clk_div.
+#ifndef ARDUINO_SPI_BUS_CLK_HZ
+#define ARDUINO_SPI_BUS_CLK_HZ 32000000UL
+#endif
+#define SPI_BASE_CLOCK_FREQ ARDUINO_SPI_BUS_CLK_HZ
 
 #if defined(CONFIG_SPI_SUPPORT_MASTER) && (CONFIG_SPI_SUPPORT_MASTER == 1)
 // SPI master pin assignment (CONFIG_SPI_DI/DO/CLK/CS_MASTER_PIN,
@@ -31,7 +38,7 @@
 #endif
 
 // Helper: reverse bit order for LSBFIRST support
-// Since WS63 SPI hardware only supports MSB first, we need to reverse bits in software
+// The V151 SPI hardware only supports MSB first, so we reverse bits in software.
 static inline uint8_t bit_reverse_uint8(uint8_t data)
 {
     // 0xAA = 10101010b, swap odd/even bits: (data & 10101010) >> 1 | (data & 01010101) << 1
@@ -112,7 +119,7 @@ void SPIClass::fillMasterAttr(spi_attr_t *attr) const
     attr->frame_size = HAL_SPI_FRAME_SIZE_8;
     attr->tmod = 0;
     attr->sste = 0;
-    // Note: WS63 SPI hardware does not support LSB/MSB first selection.
+    // Note: The V151 SPI hardware does not support LSB/MSB first selection.
     // LSBFIRST is handled in software via bit reversal in transfer functions.
 }
 #endif
@@ -270,7 +277,7 @@ uint8_t SPIClass::transfer(uint8_t data)
     }
 
     // Handle LSBFIRST: reverse bit order before sending and after receiving
-    // since WS63 SPI hardware only supports MSB first
+    // since the V151 SPI hardware only supports MSB first
     if (_bit_order == LSBFIRST) {
         data = bit_reverse_uint8(data);
     }
@@ -340,7 +347,7 @@ void SPIClass::transfer(void *buf, size_t count)
     }
 
     // Handle LSBFIRST: reverse bit order for all bytes in buffer
-    // since WS63 SPI hardware only supports MSB first
+    // since the V151 SPI hardware only supports MSB first
     if (_bit_order == LSBFIRST) {
         for (size_t i = 0; i < count; i++) {
             buffer[i] = bit_reverse_uint8(buffer[i]);
@@ -368,7 +375,7 @@ void SPIClass::transfer(void *buf, size_t count)
 // Set bit order
 void SPIClass::setBitOrder(uint8_t bitOrder)
 {
-    // Note: WS63 SPI hardware does not support LSB/MSB first selection.
+    // Note: The V151 SPI hardware does not support LSB/MSB first selection.
     // LSBFIRST is handled in software via bit reversal in transfer functions.
     // No hardware reconfiguration needed - just store the value.
     _bit_order = bitOrder;
@@ -421,8 +428,9 @@ void SPIClass::setDataMode(uint8_t mode)
 // Set clock divider
 void SPIClass::setClockDivider(uint8_t div)
 {
-    // Calculate frequency based on divider
-    // ws63 SPI clock is 32MHz (from spi_porting.h: SPI_CLK_FREQ = 32000000)
+    // Calculate frequency based on divider.
+    // Base clock is the chip SSI source clock (ARDUINO_SPI_BUS_CLK_HZ, from the
+    // chip porting layer's arduino_config.h — value is chip-specific).
     uint32_t base_clock = SPI_BASE_CLOCK_FREQ;
     if (div == 0) {
         div = 1; // Prevent division by zero

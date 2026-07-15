@@ -34,7 +34,7 @@
  * @brief Hardware timer class for periodic interrupts
  *
  * Provides Arduino TimerOne-style interface for hardware timers
- * Uses ws63 SDK uapi_timer_* APIs
+ * Uses the chip SDK uapi_timer_* APIs
  */
 class TimerClass {
 private:

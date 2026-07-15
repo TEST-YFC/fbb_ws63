@@ -145,7 +145,7 @@ void noInterrupts(void);
 // Tone (implemented in wiring_pulse.cpp)
 void tone(uint8_t pin, unsigned int frequency, unsigned long duration = 0);
 void noTone(uint8_t pin);
-// WS63 extension: call periodically from loop() to sustain continuous tones
+// Vendor extension: call periodically from loop() to sustain continuous tones
 // on non-PWM pins (PWM-pin tones are hardware-driven and need no update).
 void tone_update(void);
 
@@ -181,7 +181,7 @@ unsigned int makeWord(unsigned int w);
 unsigned int makeWord(unsigned char h, unsigned char l);
 #define word(...) makeWord(__VA_ARGS__)
 
-// USB macros (not applicable for ws63, but kept for compatibility)
+// USB macros (not applicable on this target, but kept for compatibility)
 #define SERIAL_PORT_MONITOR Serial
 #define SERIAL_PORT_HARDWARE Serial
 #define SERIAL_PORT_HARDWARE1 Serial1

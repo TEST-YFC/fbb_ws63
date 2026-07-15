@@ -125,9 +125,9 @@ void attachInterrupt(uint8_t pin, void (*callback)(void), int mode)
     s_interrupt_handlers[slot].handler = callback;
     s_interrupt_handlers[slot].active = true;
 
-    // Map Arduino mode to ws63 trigger type
+    // Map Arduino mode to the GPIO HAL trigger type
     // Arduino interrupt modes (RISING=4, FALLING=5, CHANGE=6)
-    // ws63 trigger: 1=Rising, 2=Falling, 3=Both, 4=Low level, 8=High level
+    // GPIO HAL trigger: 1=Rising, 2=Falling, 3=Both, 4=Low level, 8=High level
     uint32_t trigger;
     switch (mode) {
         case RISING:                              // 4

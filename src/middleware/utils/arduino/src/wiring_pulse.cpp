@@ -29,8 +29,13 @@
 #define MILLISECONDS_PER_SECOND 1000U
 #define PWM_DEFAULT_CLOCK_FREQ 1000000U
 #define PWM_MAX_AUTO_STOP_CYCLES 32767U
-// V151 period register (high_time + low_time) is 16-bit (max 65535).
-#define PWM_PERIOD_MAX 65535U
+// PWM period register width — chip-specific: ARDUINO_PWM_PERIOD_MAX comes from
+// the chip porting layer's arduino_config.h (included via Arduino.h). Current
+// chips use the V151 PWM IP (16-bit high+low period register = 65535).
+#ifndef ARDUINO_PWM_PERIOD_MAX
+#define ARDUINO_PWM_PERIOD_MAX 65535U
+#endif
+#define PWM_PERIOD_MAX ARDUINO_PWM_PERIOD_MAX
 #define MAX_PWM_CHANNELS 16U
 #define TONE_BURST_CYCLES 100U
 #define TONE_UPDATE_BURST_CYCLES 10U

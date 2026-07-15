@@ -32,8 +32,25 @@
 #define CONFIG_PWM_SUPPORT 1
 #endif
 
+/* ============================================================================
+ * PWM period register width (wiring_analog.cpp / wiring_pulse.cpp). ws63 uses
+ * the V151 PWM IP: the period register (high_time + low_time) is 16-bit.
+ * Caps analogWrite()/tone() carrier cycle counts. Another chip sets its own.
+ * ============================================================================ */
+#if !defined(ARDUINO_PWM_PERIOD_MAX)
+#define ARDUINO_PWM_PERIOD_MAX 65535U
+#endif
+
 #if !defined(CONFIG_ADC_SUPPORT) && defined(CONFIG_ADC_USING_V154)
 #define CONFIG_ADC_SUPPORT 1
+#endif
+
+/* ============================================================================
+ * ADC hardware resolution (wiring_analog.cpp). ws63 ADC is 12-bit (0-4095).
+ * Drives the analogRead() range scaling. Another chip sets its own value.
+ * ============================================================================ */
+#if !defined(ARDUINO_ADC_HW_BITS)
+#define ARDUINO_ADC_HW_BITS 12
 #endif
 
 #if !defined(CONFIG_GPIO_SUPPORT)
@@ -73,9 +90,31 @@
 #endif
 
 /* ============================================================================
+ * I2S/SIO pin assignment (I2SClass.h). ws63 SIO0 default pinmux:
+ *   SCK=GPIO00  WS=GPIO01  SD(out)=GPIO02  SD_IN(in)=GPIO03
+ * ============================================================================ */
+#if !defined(ARDUINO_I2S_SCK_PIN)
+#define ARDUINO_I2S_SCK_PIN 0
+#endif
+#if !defined(ARDUINO_I2S_WS_PIN)
+#define ARDUINO_I2S_WS_PIN 1
+#endif
+#if !defined(ARDUINO_I2S_SD_PIN)
+#define ARDUINO_I2S_SD_PIN 2
+#endif
+#if !defined(ARDUINO_I2S_SD_IN_PIN)
+#define ARDUINO_I2S_SD_IN_PIN 3
+#endif
+
+/* ============================================================================
  * SPI master pin assignment (SPI.cpp). ws63 default pinmux on SPI0:
  *   DI(MISO)=GPIO11  DO(MOSI)=GPIO09  CLK=GPIO07  CS=GPIO10  pinmux mode=3
  * (Physical pin numbers; see SPI.cpp / ws63 IO复用关系表.)
+ *
+ * NOTE: CONFIG_SPI_SUPPORT_MASTER is intentionally NOT defaulted here. Unlike
+ * PWM/ADC (driver-on => support-on), SPI master is a user-selectable menuconfig
+ * option; ws63 ships with it "not set" (SPI.cpp compiles to its stub path).
+ * Each chip's menuconfig decides. See porting_contract.md.
  * ============================================================================ */
 #if !defined(CONFIG_SPI_DI_MASTER_PIN)
 #define CONFIG_SPI_DI_MASTER_PIN 11
@@ -91,6 +130,18 @@
 #endif
 #if !defined(CONFIG_SPI_MASTER_PIN_MODE)
 #define CONFIG_SPI_MASTER_PIN_MODE 3
+#endif
+
+/* ============================================================================
+ * SPI master bus clock (SPI.cpp). ws63 SSI source clock is 32MHz
+ * (spi_porting.h: SPI_CLK_FREQ = 32000000). SDK uses bus_clk as the baud-rate
+ * divider base: SCK = bus_clk / clk_div. Another chip sets its own value.
+ * ============================================================================ */
+#if !defined(ARDUINO_SPI_BUS_CLK_HZ)
+#define ARDUINO_SPI_BUS_CLK_HZ 32000000UL
+#endif
+#if !defined(ARDUINO_SPI_MAX_CLOCK_HZ)
+#define ARDUINO_SPI_MAX_CLOCK_HZ 32000000UL
 #endif
 
 /* ============================================================================

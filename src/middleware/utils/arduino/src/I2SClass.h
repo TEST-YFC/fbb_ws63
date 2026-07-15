@@ -23,11 +23,25 @@
 // We use void* for callback type to avoid header dependency issues in Arduino.h context
 typedef void (*i2s_callback_forward_t)(uint32_t *left_buff, uint32_t *right_buff, uint32_t length);
 
-// I2S Pin Definitions (ws63 specific)
-#define I2S_SCK_PIN 0   // Serial Clock
-#define I2S_WS_PIN 1    // Word Select / LRCK
-#define I2S_SD_PIN 2    // Serial Data Out
-#define I2S_SD_IN_PIN 3 // Serial Data In (for full-duplex)
+// I2S Pin Definitions — chip-specific (ARDUINO_I2S_*_PIN from the chip porting
+// layer's arduino_config.h). #ifndef fallback keeps the header self-contained.
+// 3322 has no SIO, so these stay unused (CONFIG_I2S_SUPPORT undefined).
+#ifndef ARDUINO_I2S_SCK_PIN
+#define ARDUINO_I2S_SCK_PIN 0
+#endif
+#ifndef ARDUINO_I2S_WS_PIN
+#define ARDUINO_I2S_WS_PIN 1
+#endif
+#ifndef ARDUINO_I2S_SD_PIN
+#define ARDUINO_I2S_SD_PIN 2
+#endif
+#ifndef ARDUINO_I2S_SD_IN_PIN
+#define ARDUINO_I2S_SD_IN_PIN 3
+#endif
+#define I2S_SCK_PIN   ARDUINO_I2S_SCK_PIN   // Serial Clock
+#define I2S_WS_PIN    ARDUINO_I2S_WS_PIN    // Word Select / LRCK
+#define I2S_SD_PIN    ARDUINO_I2S_SD_PIN    // Serial Data Out
+#define I2S_SD_IN_PIN ARDUINO_I2S_SD_IN_PIN // Serial Data In (for full-duplex)
 
 // I2S Standard Rates
 #define I2S_FREQ_8K 8000
@@ -64,8 +78,8 @@ typedef void (*i2s_callback_forward_t)(uint32_t *left_buff, uint32_t *right_buff
  * @class I2SClass
  * @brief Arduino-compatible I2S interface class
  *
- * Provides I2S audio interface for ws63 chip.
- * Inherits from Stream for Arduino compatibility.
+ * Provides I2S audio interface (requires a chip SIO driver; compiles to a stub
+ * when CONFIG_I2S_SUPPORT is undefined). Inherits from Stream for compatibility.
  *
  * DMA methods (writeDMA/readDMA) are always declared for API compatibility.
  * When CONFIG_I2S_SUPPORT_DMA is not enabled, they fallback to normal write/read.
