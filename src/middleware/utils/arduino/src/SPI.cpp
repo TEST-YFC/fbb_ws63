@@ -36,7 +36,6 @@
 //     hardware and the transfer functions skip software bit reversal.
 //   - Otherwise (the common case — most SPI IPs only do MSB) LSBFIRST is
 //     emulated by reversing the bit order of each byte in software.
-// ws63/3322: hal_spi_attr_t has no bit-order field, so neither defines the macro.
 #ifdef ARDUINO_SPI_HW_LSB_FIRST
 #define SPI_NEED_SW_BITREV 0
 #else
