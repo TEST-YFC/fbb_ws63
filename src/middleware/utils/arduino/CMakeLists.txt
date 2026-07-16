@@ -29,7 +29,6 @@ set(PUBLIC_HEADER
 set(PRIVATE_HEADER
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${ROOT_DIR}/middleware/chips/${CHIP}/arduino
     ${ROOT_DIR}/include
     ${ROOT_DIR}/include/driver
     ${ROOT_DIR}/include/middleware/utils
@@ -50,6 +49,7 @@ set(PRIVATE_HEADER
     ${ROOT_DIR}/middleware/utils/common_headers
     ${ROOT_DIR}/middleware/utils/common_headers/native
     ${ROOT_DIR}/middleware/utils/hwsec_c/include
+    ${ROOT_DIR}/middleware/utils/arduino/chips/${CHIP}
     ${ROOT_DIR}/drivers/chips/${CHIP}/include
     ${ROOT_DIR}/drivers/boards/${CHIP}/evb/memory_config/include/product
     ${ROOT_DIR}/kernel/osal/include
