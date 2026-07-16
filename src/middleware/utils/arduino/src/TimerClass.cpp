@@ -375,15 +375,9 @@ uint32_t TimerClass::getMaxPeriod()
 // Pre-defined timer instances
 // ============================================================================
 
-#if CONFIG_TIMER_MAX_NUM > 0
 TimerClass Timer0(TIMER_INSTANCE_0); // /< Timer instance 0
-#endif
-#if CONFIG_TIMER_MAX_NUM > 1
 TimerClass Timer1(TIMER_INSTANCE_1); // /< Timer instance 1
-#endif
-#if CONFIG_TIMER_MAX_NUM > 2
 TimerClass Timer2(TIMER_INSTANCE_2); // /< Timer instance 2
-#endif
 
 // ============================================================================
 // C-style API implementation

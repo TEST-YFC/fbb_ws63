@@ -20,11 +20,8 @@
 // numbers to the chip's timer_index_t (defined in timer_porting.h). The count
 // varies per chip (e.g. 3 timers on one chip, 4 on another), so the macro set
 // + which TimerN objects exist are decided in the chip porting layer's
-// arduino_config.h, gated by CONFIG_TIMER_MAX_NUM.
 #include "timer_porting.h"
 
-// ARDUINO_TIMER_RESERVED / ARDUINO_TIMER_IRQ_PRIORITY / TIMER_INSTANCE_* come
-// from the chip porting layer's arduino_config.h.
 #include "arduino_config.h"
 
 /* *

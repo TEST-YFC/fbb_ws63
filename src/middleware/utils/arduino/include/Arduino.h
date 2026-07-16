@@ -37,6 +37,9 @@ typedef uint8_t byte;
 #include "Stream.h"
 #include "WString.h"
 
+// Chip-specific pin table.
+#include "pins_arduino.h"
+
 // Chip-specific feature config.
 #include "arduino_config.h"
 
@@ -56,10 +59,6 @@ typedef uint8_t byte;
 // Digital levels
 #define LOW 0
 #define HIGH 1
-
-// NUM_DIGITAL_PINS / NUM_ANALOG_INPUTS are now chip-specific: they come from
-// pins_arduino.h (included at the bottom of this file from the chip porting
-// layer at middleware/chips/${CHIP}/arduino/pins_arduino.h).
 
 // Analog reference types
 #define DEFAULT 0
@@ -97,10 +96,6 @@ typedef uint8_t byte;
 #define RAD_TO_DEG 57.295779513082320876798154814105
 #define EULER 2.718281828459045235360287471352
 
-// Serial communication
-// HAVE_HWSERIAL* and CONFIG_*/ADC/PWM/GPIO_SUPPORT now live in arduino_config.h
-// (chip porting layer), included above.
-
 // Yield function (for cooperative multitasking)
 void yield(void);
 
@@ -132,8 +127,6 @@ void noInterrupts(void);
 #ifndef NOT_AN_INTERRUPT
 #define NOT_AN_INTERRUPT (-1)
 #endif
-
-// MAX_INTERRUPT_PINS now lives in arduino_config.h (chip porting layer).
 
 #define digitalPinToInterrupt(p) (((int)(p) >= 0 && (int)(p) < MAX_INTERRUPT_PINS) ? (int)(p) : NOT_AN_INTERRUPT)
 
@@ -178,7 +171,4 @@ unsigned int makeWord(unsigned int w);
 unsigned int makeWord(unsigned char h, unsigned char l);
 #define word(...) makeWord(__VA_ARGS__)
 
-
-// Chip-specific pin table.
-#include "pins_arduino.h"
 #endif // ARDUINO_H

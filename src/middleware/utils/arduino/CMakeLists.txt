@@ -70,32 +70,32 @@ set(PUBLIC_DEFINES
 set(COMPONENT_PUBLIC_CCFLAGS
 )
 
-# REWRITE_CCFLAGS=true: use only COMPONENT_CCFLAGS, discard global CCFLAGS	 
-# This prevents C-only flags (-std=gnu99, -Wstrict-prototypes, etc.) from being	 
-# passed to the C++ compiler (cc1plus), which would otherwise cause errors.	 
-set(REWRITE_CCFLAGS	 
-    true 
-) 
+# REWRITE_CCFLAGS=true: use only COMPONENT_CCFLAGS, discard global CCFLAGS
+# This prevents C-only flags (-std=gnu99, -Wstrict-prototypes, etc.) from being
+# passed to the C++ compiler (cc1plus), which would otherwise cause errors.
+set(REWRITE_CCFLAGS
+    true
+)
 
-set(COMPONENT_CCFLAGS 
-    -mabi=ilp32f 
-    -march=rv32imfc 
-    -Wall 
-    -Werror 
-    -Wextra 
-    -Winit-self 
-    -Wpointer-arith 
-    -Wno-type-limits 
-    -fno-strict-aliasing 
-    -Os 
-    -fno-unwind-tables 
-    -fno-exceptions 
-    -fno-rtti 
-    -nostdinc++ 
-    -fno-threadsafe-statics 
-    -fno-use-cxa-atexit 
-    -Wno-sign-compare 
-    -fno-builtin-printf 
+set(COMPONENT_CCFLAGS
+    -mabi=ilp32f
+    -march=rv32imfc
+    -Wall
+    -Werror
+    -Wextra
+    -Winit-self
+    -Wpointer-arith
+    -Wno-type-limits
+    -fno-strict-aliasing
+    -Os
+    -fno-unwind-tables
+    -fno-exceptions
+    -fno-rtti
+    -nostdinc++
+    -fno-threadsafe-statics
+    -fno-use-cxa-atexit
+    -Wno-sign-compare
+    -fno-builtin-printf
 )
 
 set(WHOLE_LINK
@@ -106,9 +106,9 @@ set(MAIN_COMPONENT
     false
 )
 
-# Link C++ standard library (required for C++ sources using new/delete, virtual functions, etc.) 
-set(LIBS 
-    supc++ 
+# Link C++ standard library (required for C++ sources using new/delete, virtual functions, etc.)
+set(LIBS
+    supc++
 )
 
 build_component()
