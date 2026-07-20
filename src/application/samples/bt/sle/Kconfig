@@ -22,4 +22,10 @@ config LARGE_THROUGHPUT_CLIENT
     default y
     depends on SAMPLE_SUPPORT_SLE_SPEED_CLIENT_SAMPLE
 
+config SAMPLE_SUPPORT_SLE_HELLO_SERVER_SAMPLE
+    bool "Support SLE Hello Server Sample."
+
+config SAMPLE_SUPPORT_SLE_HELLO_CLIENT_SAMPLE
+    bool "Support SLE Hello Client Sample."
+
 endchoice
