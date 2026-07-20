@@ -49,6 +49,7 @@ set(PRIVATE_HEADER
     ${ROOT_DIR}/middleware/utils/common_headers
     ${ROOT_DIR}/middleware/utils/common_headers/native
     ${ROOT_DIR}/middleware/utils/hwsec_c/include
+    ${ROOT_DIR}/middleware/utils/arduino/chips/${CHIP}
     ${ROOT_DIR}/drivers/chips/${CHIP}/include
     ${ROOT_DIR}/drivers/boards/${CHIP}/evb/memory_config/include/product
     ${ROOT_DIR}/kernel/osal/include

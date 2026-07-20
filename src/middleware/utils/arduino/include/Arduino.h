@@ -37,6 +37,12 @@ typedef uint8_t byte;
 #include "Stream.h"
 #include "WString.h"
 
+// Chip-specific pin table.
+#include "pins_arduino.h"
+
+// Chip-specific feature config.
+#include "arduino_config.h"
+
 // Binary constants
 #define _BV(bit) (1 << (bit))
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
@@ -54,17 +60,10 @@ typedef uint8_t byte;
 #define LOW 0
 #define HIGH 1
 
-// Change this to match ws63 pin count
-#define NUM_DIGITAL_PINS 32
-#define NUM_ANALOG_INPUTS 8
-
 // Analog reference types
 #define DEFAULT 0
 #define EXTERNAL 1
 #define INTERNAL 2
-
-// Timer constants - use 0xFF for invalid (not 0 to avoid conflict with timer 0)
-#define NOT_ON_TIMER 0xFF
 
 // Interrupt modes - use unique values to avoid conflict with LOW/HIGH
 #define RISING 4
@@ -77,7 +76,8 @@ typedef uint8_t byte;
 // Do not redefine here to avoid conflicts
 
 // Wire definitions
-#define WIRE_HAS_END 1
+#define WIRE_HAS_END      1
+#define PWM_PERIOD_MAX    ARDUINO_PWM_PERIOD_MAX
 
 // SPI definitions
 #define SPI_HAS_TRANSACTION 1
@@ -95,22 +95,6 @@ typedef uint8_t byte;
 #define DEG_TO_RAD 0.017453292519943295769236907684886
 #define RAD_TO_DEG 57.295779513082320876798154814105
 #define EULER 2.718281828459045235360287471352
-
-// Serial communication
-#define HAVE_HWSERIAL0
-#define HAVE_HWSERIAL1
-#define HAVE_HWSERIAL2
-
-// Config definations for ADC/PWM/GPIO support based on build configuration
-#if !defined(CONFIG_PWM_SUPPORT) && defined(CONFIG_PWM_USING_V151)
-#define CONFIG_PWM_SUPPORT 1
-#endif
-#if !defined(CONFIG_ADC_SUPPORT) && defined(CONFIG_ADC_USING_V154)
-#define CONFIG_ADC_SUPPORT 1
-#endif
-#if !defined(CONFIG_GPIO_SUPPORT)
-#define CONFIG_GPIO_SUPPORT 1
-#endif
 
 // Yield function (for cooperative multitasking)
 void yield(void);
@@ -139,13 +123,10 @@ void detachInterrupt(uint8_t pin);
 void interrupts(void);
 void noInterrupts(void);
 
-// Only pins 0-15 are interrupt-capable; others return NOT_AN_INTERRUPT(-1).
+// Pins >= MAX_INTERRUPT_PINS return NOT_AN_INTERRUPT(-1).
 #ifndef NOT_AN_INTERRUPT
 #define NOT_AN_INTERRUPT (-1)
 #endif
-
-// Maximum number of interrupt pins
-#define MAX_INTERRUPT_PINS 16
 
 #define digitalPinToInterrupt(p) (((int)(p) >= 0 && (int)(p) < MAX_INTERRUPT_PINS) ? (int)(p) : NOT_AN_INTERRUPT)
 
@@ -154,7 +135,7 @@ void noInterrupts(void);
 // Tone (implemented in wiring_pulse.cpp)
 void tone(uint8_t pin, unsigned int frequency, unsigned long duration = 0);
 void noTone(uint8_t pin);
-// WS63 extension: call periodically from loop() to sustain continuous tones
+// Vendor extension: call periodically from loop() to sustain continuous tones
 // on non-PWM pins (PWM-pin tones are hardware-driven and need no update).
 void tone_update(void);
 
@@ -189,11 +170,5 @@ long map(long value, long from_low, long from_high, long to_low, long to_high);
 unsigned int makeWord(unsigned int w);
 unsigned int makeWord(unsigned char h, unsigned char l);
 #define word(...) makeWord(__VA_ARGS__)
-
-// USB macros (not applicable for ws63, but kept for compatibility)
-#define SERIAL_PORT_MONITOR Serial
-#define SERIAL_PORT_HARDWARE Serial
-#define SERIAL_PORT_HARDWARE1 Serial1
-#define SERIAL_PORT_HARDWARE2 Serial2
 
 #endif // ARDUINO_H

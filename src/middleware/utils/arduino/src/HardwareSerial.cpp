@@ -217,11 +217,8 @@ void HardwareSerial::begin(unsigned long baud, uint8_t config)
     }
 
     // Configure pins based on UART bus
-    // Pin mapping is handled by SDK's uart_port_config_pinmux()
-    // Default configuration for ws63:
-    // - UART_BUS_0: GPIO 13/14 (TX/RX)
-    // - UART_BUS_1: GPIO 13/14 (TX/RX) - alternative function
-    // - UART_BUS_2: GPIO 7/8 or GPIO 12/13 (depends on board)
+    // Pin mapping is left to the SDK: tx/rx pins are set to (pin_t)-1 so the
+    // chip's uart_port_config_pinmux() picks the default pins per UART bus.
     uart_pin_config_t pins;
     pins.tx_pin = (pin_t) - 1; // Use SDK default pin mapping
     pins.rx_pin = (pin_t) - 1;

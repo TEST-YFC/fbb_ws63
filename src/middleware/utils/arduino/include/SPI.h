@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "arduino_config.h"
 
 // SPI Bit Order
 #ifndef LSBFIRST
@@ -46,7 +47,9 @@
 #define SPI_CLOCK_DIV128 128
 
 #define SPI_DEFAULT_CLOCK 4000000UL
-#define SPI_MAX_CLOCK 32000000UL  // Max SPI clock (based on 32MHz base)
+
+// Max SPI clock — chip-specific SSI source clock. ARDUINO_SPI_MAX_CLOCK_HZ
+#define SPI_MAX_CLOCK ARDUINO_SPI_MAX_CLOCK_HZ
 
 // SPISettings class for transaction configuration
 class SPISettings {

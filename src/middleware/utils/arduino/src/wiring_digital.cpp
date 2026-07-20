@@ -45,8 +45,8 @@ void pinMode(uint8_t pin, uint8_t mode)
     }
 
     // Configure pull-up/pull-down FIRST, then direction.
-    // On ws63, switching GPIO direction can reset pinctrl pull settings, so
-    // apply pull configuration before uapi_gpio_set_dir().
+    // Switching GPIO direction can reset pinctrl pull settings, so apply the
+    // pull configuration before uapi_gpio_set_dir().
     pin_pull_t pull;
     switch (mode) {
         case INPUT_PULLUP:

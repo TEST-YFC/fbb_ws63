@@ -18,11 +18,6 @@
 #include "driver/security_unified/trng.h"
 #include <stdlib.h>
 
-#if (CHIP_WS63 == 1)
-#define SYS_CPU_FREQ_HZ (160 * 1000000UL)
-#else
-#define SYS_CPU_FREQ_HZ (GET_SYS_CLOCK())
-#endif
 #define BITS_PER_BYTE 8
 
 /* *

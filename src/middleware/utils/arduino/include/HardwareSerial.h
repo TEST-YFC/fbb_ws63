@@ -37,14 +37,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "Stream.h"
-
-// UART configuration - must be defined before including uart.h
-#ifndef CONFIG_UART_SUPPORT_TX
-#define CONFIG_UART_SUPPORT_TX 1
-#endif
-#ifndef CONFIG_UART_SUPPORT_RX
-#define CONFIG_UART_SUPPORT_RX 1
-#endif
+#include "arduino_config.h"
 
 #include "driver/uart.h"
 

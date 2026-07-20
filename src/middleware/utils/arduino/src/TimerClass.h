@@ -16,27 +16,20 @@
 
 #include <stdint.h>
 
-// Timer instance IDs - 引用 SDK 定义的枚举，保持跨平台一致
-// timer_porting.h 定义了 timer_index_t 枚举和 TIMER_INDEX_0/1/2
+// Timer instance IDs — chip-specific. TIMER_INSTANCE_* map Arduino timer
+// numbers to the chip's timer_index_t (defined in timer_porting.h). The count
+// varies per chip (e.g. 3 timers on one chip, 4 on another), so the macro set
+// + which TimerN objects exist are decided in the chip porting layer's
 #include "timer_porting.h"
 
-// 通过宏映射，保持 Arduino API 兼容性
-#define TIMER_INSTANCE_0 ((uint8_t)TIMER_INDEX_0)
-#define TIMER_INSTANCE_1 ((uint8_t)TIMER_INDEX_1)
-#define TIMER_INSTANCE_2 ((uint8_t)TIMER_INDEX_2)
-
-// 系统保留的 timer 索引（默认保留 Timer0，与 LiteOS 系统 tick 冲突）
-// 其他芯片平台可通过定义此宏覆盖默认值
-#ifndef ARDUINO_TIMER_RESERVED
-#define ARDUINO_TIMER_RESERVED TIMER_INDEX_0
-#endif
+#include "arduino_config.h"
 
 /* *
  * @class TimerClass
  * @brief Hardware timer class for periodic interrupts
  *
  * Provides Arduino TimerOne-style interface for hardware timers
- * Uses ws63 SDK uapi_timer_* APIs
+ * Uses the chip SDK uapi_timer_* APIs
  */
 class TimerClass {
 private:
