@@ -18,4 +18,6 @@ config SAMPLE_SUPPORT_BLE_SPEED_CLIENT_SAMPLE
 
 config SAMPLE_SUPPORT_BLE_CFG_SAMPLE
     bool "Support BLE WIFI CFG Sample"
+
+osource "application/samples/bt/ble/ble_hello/Kconfig"
 endchoice
