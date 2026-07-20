@@ -34,8 +34,18 @@ config SAMPLE_SUPPORT_SLE_UART_SERVER_SAMPLE
 config SAMPLE_SUPPORT_SLE_UART_CLIENT_SAMPLE
     bool "Support SLE UART Client Sample."
 
+config SAMPLE_SUPPORT_SLE_SENSOR_REPORT_SERVER_SAMPLE
+    bool "Support SLE Sensor Report Server Sample."
+
+config SAMPLE_SUPPORT_SLE_SENSOR_REPORT_CLIENT_SAMPLE
+    bool "Support SLE Sensor Report Client Sample."
+
 endchoice
 
 if SAMPLE_SUPPORT_SLE_UART_SERVER_SAMPLE || SAMPLE_SUPPORT_SLE_UART_CLIENT_SAMPLE
 osource "application/samples/bt/sle/sle_uart/Kconfig"
+endif
+
+if SAMPLE_SUPPORT_SLE_SENSOR_REPORT_SERVER_SAMPLE || SAMPLE_SUPPORT_SLE_SENSOR_REPORT_CLIENT_SAMPLE
+osource "application/samples/bt/sle/sle_sensor_report/Kconfig"
 endif
