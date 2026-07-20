@@ -18,6 +18,13 @@ if(DEFINED CONFIG_SAMPLE_SUPPORT_SLE_HELLO_CLIENT_SAMPLE)
     add_subdirectory_if_exist(sle_hello)
 endif()
 
+if(DEFINED CONFIG_SAMPLE_SUPPORT_SLE_UART_SERVER_SAMPLE)
+    add_subdirectory_if_exist(sle_uart)
+endif()
+
+if(DEFINED CONFIG_SAMPLE_SUPPORT_SLE_UART_CLIENT_SAMPLE)
+    add_subdirectory_if_exist(sle_uart)
+endif()
 
 
 set(SOURCES "${SOURCES}" PARENT_SCOPE)
