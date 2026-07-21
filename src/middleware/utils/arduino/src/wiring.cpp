@@ -35,7 +35,7 @@ unsigned long millis()
  */
 unsigned long micros()
 {
-    return uapi_systick_get_us();
+    return LOS_CurrNanosec() / OS_SYS_NS_PER_US;
 }
 
 /* *
@@ -48,7 +48,7 @@ void delay(unsigned long ms)
         return;
     }
 
-    LOS_TaskDelay(LOS_MS2Tick(ms));
+    LOS_Mdelay(ms);
 }
 
 /* *
@@ -61,7 +61,7 @@ void delayMicroseconds(unsigned int us)
         return;
     }
 
-    uapi_systick_delay_us(us);
+    LOS_Udelay(us);
 }
 
 /* *
