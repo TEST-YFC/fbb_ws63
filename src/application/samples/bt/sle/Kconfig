@@ -40,6 +40,12 @@ config SAMPLE_SUPPORT_SLE_SENSOR_REPORT_SERVER_SAMPLE
 config SAMPLE_SUPPORT_SLE_SENSOR_REPORT_CLIENT_SAMPLE
     bool "Support SLE Sensor Report Client Sample."
 
+config SAMPLE_SUPPORT_SLE_CONN_PARAM_TUNING_SERVER_SAMPLE
+    bool "Support SLE Connection Parameter Tuning Server Sample."
+
+config SAMPLE_SUPPORT_SLE_CONN_PARAM_TUNING_CLIENT_SAMPLE
+    bool "Support SLE Connection Parameter Tuning Client Sample."
+
 endchoice
 
 if SAMPLE_SUPPORT_SLE_UART_SERVER_SAMPLE || SAMPLE_SUPPORT_SLE_UART_CLIENT_SAMPLE
@@ -48,4 +54,8 @@ endif
 
 if SAMPLE_SUPPORT_SLE_SENSOR_REPORT_SERVER_SAMPLE || SAMPLE_SUPPORT_SLE_SENSOR_REPORT_CLIENT_SAMPLE
 osource "application/samples/bt/sle/sle_sensor_report/Kconfig"
+endif
+
+if SAMPLE_SUPPORT_SLE_CONN_PARAM_TUNING_SERVER_SAMPLE || SAMPLE_SUPPORT_SLE_CONN_PARAM_TUNING_CLIENT_SAMPLE
+osource "application/samples/bt/sle/sle_conn_param_tuning/Kconfig"
 endif
