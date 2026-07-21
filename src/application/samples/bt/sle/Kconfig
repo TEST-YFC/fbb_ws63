@@ -46,6 +46,12 @@ config SAMPLE_SUPPORT_SLE_CONN_PARAM_TUNING_SERVER_SAMPLE
 config SAMPLE_SUPPORT_SLE_CONN_PARAM_TUNING_CLIENT_SAMPLE
     bool "Support SLE Connection Parameter Tuning Client Sample."
 
+config SAMPLE_SUPPORT_SLE_PHY_MCS_SWITCH_SERVER_SAMPLE
+    bool "Support SLE PHY/MCS Dynamic Switch Server Sample."
+
+config SAMPLE_SUPPORT_SLE_PHY_MCS_SWITCH_CLIENT_SAMPLE
+    bool "Support SLE PHY/MCS Dynamic Switch Client Sample."
+
 endchoice
 
 if SAMPLE_SUPPORT_SLE_UART_SERVER_SAMPLE || SAMPLE_SUPPORT_SLE_UART_CLIENT_SAMPLE
@@ -58,4 +64,8 @@ endif
 
 if SAMPLE_SUPPORT_SLE_CONN_PARAM_TUNING_SERVER_SAMPLE || SAMPLE_SUPPORT_SLE_CONN_PARAM_TUNING_CLIENT_SAMPLE
 osource "application/samples/bt/sle/sle_conn_param_tuning/Kconfig"
+endif
+
+if SAMPLE_SUPPORT_SLE_PHY_MCS_SWITCH_SERVER_SAMPLE || SAMPLE_SUPPORT_SLE_PHY_MCS_SWITCH_CLIENT_SAMPLE
+osource "application/samples/bt/sle/sle_phy_mcs_switch/Kconfig"
 endif
