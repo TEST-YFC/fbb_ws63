@@ -1,7 +1,11 @@
 /**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026. All rights reserved.
  *
- * Description: SLE RSSI ranging sample entry. \n
+ * @if Eng
+ * @brief SLE RSSI ranging sample entry. \n
+ * @else
+ * @brief SLE RSSI 测距案例入口。 \n
+ * @endif
  */
 #include "common_def.h"
 #include "soc_osal.h"
@@ -16,6 +20,17 @@
 #define SLE_RSSI_RANGING_TASK_PRIO       28
 #define SLE_RSSI_RANGING_TASK_STACK_SIZE 0x1000
 
+/**
+ * @if Eng
+ * @brief Start the Server or Client selected by Kconfig.
+ * @param [in] arg Reserved task argument.
+ * @return Always returns NULL after role initialization.
+ * @else
+ * @brief 启动 Kconfig 选中的 Server 或 Client 角色。
+ * @param [in] arg 预留的任务参数。
+ * @return 角色初始化完成后固定返回 NULL。
+ * @endif
+ */
 static void *sle_rssi_ranging_task(const char *arg)
 {
     unused(arg);
@@ -29,6 +44,13 @@ static void *sle_rssi_ranging_task(const char *arg)
     return NULL;
 }
 
+/**
+ * @if Eng
+ * @brief Create the sample entry task without blocking system initialization.
+ * @else
+ * @brief 创建案例入口任务，避免阻塞系统初始化流程。
+ * @endif
+ */
 static void sle_rssi_ranging_entry(void)
 {
     osal_task *task_handle = NULL;

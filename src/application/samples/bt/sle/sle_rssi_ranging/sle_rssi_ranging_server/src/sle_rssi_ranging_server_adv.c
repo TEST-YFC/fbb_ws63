@@ -1,7 +1,11 @@
 /**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026. All rights reserved.
  *
- * Description: SLE RSSI ranging server announce implementation. \n
+ * @if Eng
+ * @brief SLE RSSI ranging Server announcement implementation. \n
+ * @else
+ * @brief SLE RSSI 测距 Server 广播实现。 \n
+ * @endif
  */
 #include "securec.h"
 #include "soc_osal.h"
@@ -26,6 +30,19 @@ enum {
     SLE_RSSI_DATA_TX_POWER_LEVEL = 0x0C,
 };
 
+/**
+ * @if Eng
+ * @brief Append the complete Server local-name field.
+ * @param [out] data Output buffer.
+ * @param [in] max_len Available buffer length.
+ * @return Encoded field length, or zero on failure.
+ * @else
+ * @brief 追加 Server 完整本地名称字段。
+ * @param [out] data 输出缓冲区。
+ * @param [in] max_len 可用缓冲区长度。
+ * @return 编码后的字段长度，失败时返回 0。
+ * @endif
+ */
 static uint16_t sle_rssi_set_local_name(uint8_t *data, uint16_t max_len)
 {
     const uint8_t local_name[] = SLE_RSSI_LOCAL_NAME;
@@ -42,6 +59,17 @@ static uint16_t sle_rssi_set_local_name(uint8_t *data, uint16_t max_len)
     return (uint16_t)(local_name_len + 2U);
 }
 
+/**
+ * @if Eng
+ * @brief Build the primary announcement payload.
+ * @param [out] data Output buffer.
+ * @return Payload length, or zero on failure.
+ * @else
+ * @brief 构造主广播数据。
+ * @param [out] data 输出缓冲区。
+ * @return 广播数据长度，失败时返回 0。
+ * @endif
+ */
 static uint16_t sle_rssi_set_announce_data(uint8_t *data)
 {
     sle_rssi_ranging_adv_common_value_t discovery = {
@@ -68,6 +96,17 @@ static uint16_t sle_rssi_set_announce_data(uint8_t *data)
     return (uint16_t)(index + sizeof(access_mode));
 }
 
+/**
+ * @if Eng
+ * @brief Build the seek-response payload containing TX power and local name.
+ * @param [out] data Output buffer.
+ * @return Payload length, or zero on failure.
+ * @else
+ * @brief 构造包含发射功率和本地名称的扫描响应数据。
+ * @param [out] data 输出缓冲区。
+ * @return 扫描响应数据长度，失败时返回 0。
+ * @endif
+ */
 static uint16_t sle_rssi_set_seek_response(uint8_t *data)
 {
     sle_rssi_ranging_adv_common_value_t tx_power = {
@@ -86,6 +125,17 @@ static uint16_t sle_rssi_set_seek_response(uint8_t *data)
     return (name_len == 0) ? 0 : (uint16_t)(index + name_len);
 }
 
+/**
+ * @if Eng
+ * @brief Configure connectable and scannable announcement parameters.
+ * @retval ERRCODE_SUCC Success.
+ * @retval Other Failure. For details, see @ref errcode_t.
+ * @else
+ * @brief 配置可连接、可扫描的广播参数。
+ * @retval ERRCODE_SUCC 成功。
+ * @retval Other 失败，参考 @ref errcode_t。
+ * @endif
+ */
 static errcode_t sle_rssi_set_announce_param(void)
 {
     sle_announce_param_t param = {0};
@@ -110,6 +160,17 @@ static errcode_t sle_rssi_set_announce_param(void)
     return sle_set_announce_param(param.announce_handle, &param);
 }
 
+/**
+ * @if Eng
+ * @brief Submit announcement and seek-response payloads to the SLE stack.
+ * @retval ERRCODE_SUCC Success.
+ * @retval Other Failure. For details, see @ref errcode_t.
+ * @else
+ * @brief 将广播和扫描响应数据提交给 SLE 协议栈。
+ * @retval ERRCODE_SUCC 成功。
+ * @retval Other 失败，参考 @ref errcode_t。
+ * @endif
+ */
 static errcode_t sle_rssi_set_announce_payload(void)
 {
     sle_announce_data_t payload = {0};
@@ -126,16 +187,49 @@ static errcode_t sle_rssi_set_announce_payload(void)
     return sle_set_announce_data(SLE_RSSI_RANGING_ADV_HANDLE, &payload);
 }
 
+/**
+ * @if Eng
+ * @brief Report the asynchronous announcement-enable result.
+ * @param [in] announce_id Announcement handle.
+ * @param [in] status Enable result.
+ * @else
+ * @brief 输出异步广播使能结果。
+ * @param [in] announce_id 广播句柄。
+ * @param [in] status 使能结果。
+ * @endif
+ */
 static void sle_rssi_announce_enable_cb(uint32_t announce_id, errcode_t status)
 {
     osal_printk("%s announce enabled, id=%u, status=0x%x\r\n", SLE_RSSI_SERVER_LOG, announce_id, status);
 }
 
+/**
+ * @if Eng
+ * @brief Report the asynchronous announcement-disable result.
+ * @param [in] announce_id Announcement handle.
+ * @param [in] status Disable result.
+ * @else
+ * @brief 输出异步广播停止结果。
+ * @param [in] announce_id 广播句柄。
+ * @param [in] status 停止结果。
+ * @endif
+ */
 static void sle_rssi_announce_disable_cb(uint32_t announce_id, errcode_t status)
 {
     osal_printk("%s announce disabled, id=%u, status=0x%x\r\n", SLE_RSSI_SERVER_LOG, announce_id, status);
 }
 
+/**
+ * @if Eng
+ * @brief Register announcement state callbacks.
+ * @retval ERRCODE_SUCC Success.
+ * @retval Other Failure. For details, see @ref errcode_t.
+ * @else
+ * @brief 注册广播状态回调。
+ * @retval ERRCODE_SUCC 成功。
+ * @retval Other 失败，参考 @ref errcode_t。
+ * @endif
+ */
 errcode_t sle_rssi_ranging_announce_register_callbacks(void)
 {
     sle_announce_seek_callbacks_t callbacks = {0};
@@ -144,6 +238,17 @@ errcode_t sle_rssi_ranging_announce_register_callbacks(void)
     return sle_announce_seek_register_callbacks(&callbacks);
 }
 
+/**
+ * @if Eng
+ * @brief Configure the payload and start Server announcement.
+ * @retval ERRCODE_SUCC Success.
+ * @retval Other Failure. For details, see @ref errcode_t.
+ * @else
+ * @brief 配置广播数据并启动 Server 广播。
+ * @retval ERRCODE_SUCC 成功。
+ * @retval Other 失败，参考 @ref errcode_t。
+ * @endif
+ */
 errcode_t sle_rssi_ranging_server_announce_start(void)
 {
     errcode_t ret = sle_rssi_set_announce_param();
