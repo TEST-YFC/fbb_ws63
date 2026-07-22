@@ -1,7 +1,11 @@
 /**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026. All rights reserved.
  *
- * Description: SLE PHY/MCS dynamic switch server implementation. \n
+ * @if Eng
+ * @brief SLE PHY/MCS dynamic switch Server implementation. \n
+ * @else
+ * @brief SLE PHY/MCS 动态切换 Server 实现。 \n
+ * @endif
  */
 #include <stdbool.h>
 #include "common_def.h"
@@ -24,6 +28,13 @@
 #define SLE_PHY_MCS_ADAPT_TASK_PRIO    27
 #define SLE_PHY_MCS_ADAPT_STACK_SIZE   0x1000
 
+/**
+ * @if Eng
+ * @brief Adaptive link profiles ordered from invalid to highest throughput.
+ * @else
+ * @brief 从无效档到最高吞吐档排列的自适应链路档位。
+ * @endif
+ */
 typedef enum {
     SLE_PHY_MCS_PROFILE_INVALID = 0,
     SLE_PHY_MCS_PROFILE_ROBUST,
@@ -31,6 +42,13 @@ typedef enum {
     SLE_PHY_MCS_PROFILE_FAST,
 } sle_phy_mcs_profile_id_t;
 
+/**
+ * @if Eng
+ * @brief PHY, MCS and pilot-density parameters of one link profile.
+ * @else
+ * @brief 一个链路档位对应的 PHY、MCS 和导频密度参数。
+ * @endif
+ */
 typedef struct {
     const char *name;
     uint8_t phy;
@@ -55,6 +73,13 @@ static uint8_t g_candidate_windows = 0;
 static int32_t g_rssi_sum = 0;
 static uint8_t g_rssi_count = 0;
 
+/**
+ * @if Eng
+ * @brief Reset all adaptive-switching state for a new link.
+ * @else
+ * @brief 为新链路复位全部自适应切换状态。
+ * @endif
+ */
 static void sle_phy_mcs_reset_adaptation(void)
 {
     g_phy_update_pending = false;
@@ -66,6 +91,13 @@ static void sle_phy_mcs_reset_adaptation(void)
     g_rssi_count = 0;
 }
 
+/**
+ * @if Eng
+ * @brief Select a profile with asymmetric thresholds to provide hysteresis.
+ * @else
+ * @brief 使用非对称门限选择档位，从而形成迟滞区间。
+ * @endif
+ */
 static sle_phy_mcs_profile_id_t sle_phy_mcs_select_profile(int8_t average_rssi)
 {
     switch (g_current_profile) {
@@ -88,6 +120,13 @@ static sle_phy_mcs_profile_id_t sle_phy_mcs_select_profile(int8_t average_rssi)
     }
 }
 
+/**
+ * @if Eng
+ * @brief Start the two-step PHY then MCS switch for a target profile.
+ * @else
+ * @brief 按先 PHY、后 MCS 的两阶段流程切换到目标档位。
+ * @endif
+ */
 static errcode_t sle_phy_mcs_request_profile(sle_phy_mcs_profile_id_t profile_id)
 {
     const sle_phy_mcs_profile_t *profile = &g_profiles[profile_id];
@@ -118,6 +157,13 @@ static errcode_t sle_phy_mcs_request_profile(sle_phy_mcs_profile_id_t profile_id
     return ret;
 }
 
+/**
+ * @if Eng
+ * @brief Reset adaptation on link changes and resume announcement after disconnection.
+ * @else
+ * @brief 链路变化时复位自适应状态，并在断链后恢复广播。
+ * @endif
+ */
 static void sle_phy_mcs_state_changed_cb(uint16_t conn_id, const sle_addr_t *addr,
     sle_acb_state_t conn_state, sle_pair_state_t pair_state, sle_disc_reason_t disc_reason)
 {
@@ -138,6 +184,13 @@ static void sle_phy_mcs_state_changed_cb(uint16_t conn_id, const sle_addr_t *add
     }
 }
 
+/**
+ * @if Eng
+ * @brief Complete the second-stage MCS update after PHY succeeds.
+ * @else
+ * @brief PHY 更新成功后继续完成第二阶段 MCS 更新。
+ * @endif
+ */
 static void sle_phy_mcs_set_phy_cb(uint16_t conn_id, errcode_t status, const sle_set_phy_t *param)
 {
     const sle_phy_mcs_profile_t *target = &g_profiles[g_target_profile];
@@ -166,6 +219,13 @@ static void sle_phy_mcs_set_phy_cb(uint16_t conn_id, errcode_t status, const sle
     g_candidate_windows = 0;
 }
 
+/**
+ * @if Eng
+ * @brief Average RSSI samples and confirm a candidate profile across consecutive windows.
+ * @else
+ * @brief 对 RSSI 样本求平均，并跨连续窗口确认候选档位。
+ * @endif
+ */
 static void sle_phy_mcs_read_rssi_cb(uint16_t conn_id, int8_t rssi, errcode_t status)
 {
     int8_t average_rssi;
@@ -192,6 +252,10 @@ static void sle_phy_mcs_read_rssi_cb(uint16_t conn_id, int8_t rssi, errcode_t st
         g_candidate_windows = 0;
         return;
     }
+    /*
+     * Require the same candidate in consecutive windows to suppress short RSSI bursts.
+     * 要求候选档位连续多个窗口保持一致，以抑制短时 RSSI 波动。
+     */
     if (selected != g_candidate_profile) {
         g_candidate_profile = selected;
         g_candidate_windows = 1;
@@ -205,6 +269,13 @@ static void sle_phy_mcs_read_rssi_cb(uint16_t conn_id, int8_t rssi, errcode_t st
     }
 }
 
+/**
+ * @if Eng
+ * @brief Register connection, RSSI-read and PHY-update callbacks.
+ * @else
+ * @brief 注册连接、RSSI 读取和 PHY 更新回调。
+ * @endif
+ */
 static errcode_t sle_phy_mcs_register_connection_callbacks(void)
 {
     sle_connection_callbacks_t callbacks = {0};
@@ -214,6 +285,13 @@ static errcode_t sle_phy_mcs_register_connection_callbacks(void)
     return sle_connection_register_callbacks(&callbacks);
 }
 
+/**
+ * @if Eng
+ * @brief Periodically initialize the robust profile or request a new RSSI sample.
+ * @else
+ * @brief 周期性初始化稳健档，或请求新的 RSSI 样本。
+ * @endif
+ */
 static void *sle_phy_mcs_adapt_task(const char *arg)
 {
     unused(arg);
@@ -233,6 +311,13 @@ static void *sle_phy_mcs_adapt_task(const char *arg)
     return NULL;
 }
 
+/**
+ * @if Eng
+ * @brief Create the adaptive link-management task.
+ * @else
+ * @brief 创建链路自适应管理任务。
+ * @endif
+ */
 static errcode_t sle_phy_mcs_start_adapt_task(void)
 {
     osal_task *task_handle;
@@ -247,6 +332,13 @@ static errcode_t sle_phy_mcs_start_adapt_task(void)
     return (task_handle == NULL) ? ERRCODE_MALLOC : ERRCODE_SUCC;
 }
 
+/**
+ * @if Eng
+ * @brief Initialize Server announcement, callbacks and adaptive task.
+ * @else
+ * @brief 初始化 Server 广播、回调和自适应任务。
+ * @endif
+ */
 errcode_t sle_phy_mcs_switch_server_init(void)
 {
     errcode_t ret = enable_sle();
