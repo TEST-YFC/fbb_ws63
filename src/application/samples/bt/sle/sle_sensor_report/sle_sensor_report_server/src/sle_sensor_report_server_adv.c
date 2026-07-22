@@ -1,7 +1,11 @@
 /**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2024. All rights reserved.
  *
- * Description: SLE Sensor Report Server ADV config. \n
+ * @if Eng
+ * @brief Implements advertising configuration for the SLE sensor report server.
+ * @else
+ * @brief 实现 SLE 传感器上报服务端的广播配置。
+ * @endif
  *
  * History: \n
  * 2024-06-01, Create file. \n
@@ -19,7 +23,7 @@
 
 #define SENSOR_SERVER_LOG "[sensor server adv]"
 
-/* 广播参数 */
+/* Advertising parameters. / 广播参数。 */
 #define NAME_MAX_LENGTH                      16
 #define SLE_CONN_INTV_MIN_DEFAULT            0x64   /* 12.5ms, unit 125us */
 #define SLE_CONN_INTV_MAX_DEFAULT            0x64
@@ -33,8 +37,15 @@
 
 static uint8_t g_sle_local_name[NAME_MAX_LENGTH] = "sensor_server";
 
-/* ── 广播/扫描响应数据组装 ── */
+/* Advertising and scan response assembly. / 广播与扫描响应数据组装。 */
 
+/**
+ * @if Eng
+ * @brief Encodes the local device name into advertising data.
+ * @else
+ * @brief 将本地设备名称编码到广播数据中。
+ * @endif
+ */
 static uint16_t sle_set_adv_local_name(uint8_t *adv_data, uint16_t max_len)
 {
     errno_t ret;
@@ -52,6 +63,13 @@ static uint16_t sle_set_adv_local_name(uint8_t *adv_data, uint16_t max_len)
     return (uint16_t)index + local_name_len;
 }
 
+/**
+ * @if Eng
+ * @brief Builds the advertising data payload.
+ * @else
+ * @brief 构造广播数据载荷。
+ * @endif
+ */
 static uint16_t sle_set_adv_data(uint8_t *adv_data)
 {
     size_t len = sizeof(struct sle_adv_common_value);
@@ -83,6 +101,13 @@ static uint16_t sle_set_adv_data(uint8_t *adv_data)
     return idx;
 }
 
+/**
+ * @if Eng
+ * @brief Builds the scan response payload.
+ * @else
+ * @brief 构造扫描响应数据载荷。
+ * @endif
+ */
 static uint16_t sle_set_scan_response_data(uint8_t *scan_rsp_data)
 {
     uint16_t idx = 0;
@@ -104,8 +129,15 @@ static uint16_t sle_set_scan_response_data(uint8_t *scan_rsp_data)
     return idx;
 }
 
-/* ── 广播参数配置 ── */
+/* Advertising configuration. / 广播配置。 */
 
+/**
+ * @if Eng
+ * @brief Configures the default SLE advertising parameters.
+ * @else
+ * @brief 配置默认 SLE 广播参数。
+ * @endif
+ */
 static int sle_set_default_announce_param(void)
 {
     errno_t ret;
@@ -132,6 +164,13 @@ static int sle_set_default_announce_param(void)
     return (int)sle_set_announce_param(param.announce_handle, &param);
 }
 
+/**
+ * @if Eng
+ * @brief Configures the default SLE advertising data.
+ * @else
+ * @brief 配置默认 SLE 广播数据。
+ * @endif
+ */
 static int sle_set_default_announce_data(void)
 {
     errcode_t ret;
@@ -159,27 +198,55 @@ static int sle_set_default_announce_data(void)
     return ERRCODE_SLE_SUCCESS;
 }
 
-/* ── 广播回调 ── */
+/* Advertising callbacks. / 广播回调。 */
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c sle_sensor_announce_enable_cbk.
+ * @else
+ * @brief 处理分发给 \c sle_sensor_announce_enable_cbk 的异步事件。
+ * @endif
+ */
 static void sle_sensor_announce_enable_cbk(uint32_t announce_id, errcode_t status)
 {
     osal_printk("%s announce enable cbk id: 0x%x, status: 0x%x\r\n",
                 SENSOR_SERVER_LOG, announce_id, status);
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c sle_sensor_announce_disable_cbk.
+ * @else
+ * @brief 处理分发给 \c sle_sensor_announce_disable_cbk 的异步事件。
+ * @endif
+ */
 static void sle_sensor_announce_disable_cbk(uint32_t announce_id, errcode_t status)
 {
     osal_printk("%s announce disable cbk id: 0x%x, status: 0x%x\r\n",
                 SENSOR_SERVER_LOG, announce_id, status);
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c sle_sensor_announce_terminal_cbk.
+ * @else
+ * @brief 处理分发给 \c sle_sensor_announce_terminal_cbk 的异步事件。
+ * @endif
+ */
 static void sle_sensor_announce_terminal_cbk(uint32_t announce_id)
 {
     osal_printk("%s announce terminal cbk id: 0x%x\r\n", SENSOR_SERVER_LOG, announce_id);
 }
 
-/* ── Public API ── */
+/* Public APIs. / 公共接口。 */
 
+/**
+ * @if Eng
+ * @brief Registers the callbacks required by \c sle_sensor_report_announce_register_cbks.
+ * @else
+ * @brief 注册 \c sle_sensor_report_announce_register_cbks 所需的回调函数。
+ * @endif
+ */
 errcode_t sle_sensor_report_announce_register_cbks(void)
 {
     sle_announce_seek_callbacks_t seek_cbks = {0};
@@ -195,6 +262,13 @@ errcode_t sle_sensor_report_announce_register_cbks(void)
     return ERRCODE_SLE_SUCCESS;
 }
 
+/**
+ * @if Eng
+ * @brief Initializes the feature implemented by \c sle_sensor_report_server_adv_init.
+ * @else
+ * @brief 初始化 \c sle_sensor_report_server_adv_init 对应的功能。
+ * @endif
+ */
 errcode_t sle_sensor_report_server_adv_init(void)
 {
     errcode_t ret;

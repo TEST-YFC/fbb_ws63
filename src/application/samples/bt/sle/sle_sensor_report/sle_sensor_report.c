@@ -1,7 +1,11 @@
 /**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2024. All rights reserved.
  *
- * Description: SLE Sensor Report sample entry. \n
+ * @if Eng
+ * @brief Provides the entry and display task for the SLE sensor report sample.
+ * @else
+ * @brief 提供 SLE 传感器上报案例入口及显示任务。
+ * @endif
  *
  * History: \n
  * 2024-06-01, Create file. \n
@@ -24,11 +28,18 @@
 #define SLE_SENSOR_REPORT_TASK_PRIO         28
 #define SLE_SENSOR_REPORT_TASK_STACK_SIZE   0x1000
 
-/* 传感器数据帧 (与 server 端保持一致, Client 编译时本地定义) */
+/* Client-local frame matching the server layout. / 客户端本地帧，布局与服务端一致。 */
 #if defined(CONFIG_SAMPLE_SUPPORT_SLE_SENSOR_REPORT_CLIENT_SAMPLE)
 #define SENSOR_FRAME_TYPE_PERIODIC  0x01
 #define SENSOR_FRAME_TYPE_ALARM     0x02
 
+/**
+ * @if Eng
+ * @brief Defines a data type used by this sample.
+ * @else
+ * @brief 定义本案例使用的数据类型。
+ * @endif
+ */
 typedef struct {
     uint8_t  frame_type;
     uint8_t  sensor_count;
@@ -43,8 +54,15 @@ typedef struct {
 
 #if defined(CONFIG_SAMPLE_SUPPORT_SLE_SENSOR_REPORT_CLIENT_SAMPLE)
 
-/* ── Client 数据接收回调 ── */
+/* Client data callbacks. / 客户端数据回调。 */
 
+/**
+ * @if Eng
+ * @brief Handles a notification received from the SLE server.
+ * @else
+ * @brief 处理从 SLE 服务端收到的通知。
+ * @endif
+ */
 static void sle_sensor_report_notification_cb(uint8_t client_id, uint16_t conn_id,
                                               ssapc_handle_value_t *data, errcode_t status)
 {
@@ -68,6 +86,13 @@ static void sle_sensor_report_notification_cb(uint8_t client_id, uint16_t conn_i
                 frame->frame_type);
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c sle_sensor_report_indication_cb.
+ * @else
+ * @brief 处理分发给 \c sle_sensor_report_indication_cb 的异步事件。
+ * @endif
+ */
 static void sle_sensor_report_indication_cb(uint8_t client_id, uint16_t conn_id,
                                              ssapc_handle_value_t *data, errcode_t status)
 {
@@ -87,8 +112,15 @@ static void sle_sensor_report_indication_cb(uint8_t client_id, uint16_t conn_id,
                 frame->frame_type);
 }
 
-/* ── Client 任务 ── */
+/* Client task. / 客户端任务。 */
 
+/**
+ * @if Eng
+ * @brief Runs the worker task implemented by \c sle_sensor_report_client_task.
+ * @else
+ * @brief 运行 \c sle_sensor_report_client_task 实现的工作任务。
+ * @endif
+ */
 static void *sle_sensor_report_client_task(const char *arg)
 {
     unused(arg);
@@ -101,8 +133,15 @@ static void *sle_sensor_report_client_task(const char *arg)
 
 #if defined(CONFIG_SAMPLE_SUPPORT_SLE_SENSOR_REPORT_SERVER_SAMPLE)
 
-/* ── Server 任务 ── */
+/* Server task. / 服务端任务。 */
 
+/**
+ * @if Eng
+ * @brief Runs the worker task implemented by \c sle_sensor_report_server_task.
+ * @else
+ * @brief 运行 \c sle_sensor_report_server_task 实现的工作任务。
+ * @endif
+ */
 static void *sle_sensor_report_server_task(const char *arg)
 {
     unused(arg);
@@ -112,8 +151,15 @@ static void *sle_sensor_report_server_task(const char *arg)
 
 #endif /* CONFIG_SAMPLE_SUPPORT_SLE_SENSOR_REPORT_SERVER_SAMPLE */
 
-/* ── 应用入口 ── */
+/* Application entry. / 应用入口。 */
 
+/**
+ * @if Eng
+ * @brief Creates and starts the sample task.
+ * @else
+ * @brief 创建并启动案例任务。
+ * @endif
+ */
 static void sle_sensor_report_entry(void)
 {
     osal_task *task_handle = NULL;

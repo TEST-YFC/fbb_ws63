@@ -1,7 +1,11 @@
 /**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2024. All rights reserved.
  *
- * Description: SLE Sensor Report Server core logic. \n
+ * @if Eng
+ * @brief Implements data generation and reporting for the SLE sensor report server.
+ * @else
+ * @brief 实现 SLE 传感器上报服务端的数据生成与上报流程。
+ * @endif
  *
  * History: \n
  * 2024-06-01, Create file. \n
@@ -22,10 +26,10 @@
 
 #define SENSOR_SERVER_LOG "[sensor server]"
 
-/* App UUID (16-bit) */
+/* Application UUID (16-bit). / 应用 UUID（16 位）。 */
 static char g_sensor_app_uuid[2] = {0x12, 0x34};
 
-/* SLE 128-bit base UUID */
+/* SLE 128-bit base UUID. / SLE 128 位基础 UUID。 */
 static uint8_t g_sensor_base_uuid[] = { 0x37, 0xBE, 0xA8, 0x80, 0xFC, 0x70, 0x11, 0xEA,
     0xB7, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
@@ -33,14 +37,28 @@ static uint8_t g_sensor_base_uuid[] = { 0x37, 0xBE, 0xA8, 0x80, 0xFC, 0x70, 0x11
 #define UUID_128BIT_LEN 16
 #define UUID_INDEX      14
 
-/* ── UUID 工具 (参照 hello/uart) ── */
+/* UUID helpers based on hello and UART samples. / 参考 hello 和 UART 案例的 UUID 辅助函数。 */
 
+/**
+ * @if Eng
+ * @brief Encodes a 16-bit value in little-endian order.
+ * @else
+ * @brief 按小端序编码 16 位数值。
+ * @endif
+ */
 static void encode2byte_little(uint8_t *_ptr, uint16_t data)
 {
     *(uint8_t *)((_ptr) + 1) = (uint8_t)((data) >> 0x8);
     *(uint8_t *)(_ptr) = (uint8_t)(data);
 }
 
+/**
+ * @if Eng
+ * @brief Initializes an SLE UUID with the sample base UUID.
+ * @else
+ * @brief 使用案例基础 UUID 初始化 SLE UUID。
+ * @endif
+ */
 static void sle_uuid_set_base(sle_uuid_t *out)
 {
     errcode_t ret;
@@ -52,6 +70,13 @@ static void sle_uuid_set_base(sle_uuid_t *out)
     out->len = UUID_16BIT_LEN;
 }
 
+/**
+ * @if Eng
+ * @brief Builds a 16-bit service UUID from the sample base UUID.
+ * @else
+ * @brief 基于案例基础 UUID 构造 16 位服务 UUID。
+ * @endif
+ */
 static void sle_uuid_setu2(uint16_t u2, sle_uuid_t *out)
 {
     sle_uuid_set_base(out);
@@ -59,37 +84,44 @@ static void sle_uuid_setu2(uint16_t u2, sle_uuid_t *out)
     encode2byte_little(&out->uuid[UUID_INDEX], u2);
 }
 
-/* SSAP Server 全局状态 */
+/* Global SSAP server state. / SSAP 服务端全局状态。 */
 static uint8_t  g_server_id = 0;
 static uint16_t g_service_handle = 0;
-static uint16_t g_data_property_handle = 0;   /* 常规数据 Property */
-static uint16_t g_alarm_property_handle = 0;  /* 告警数据 Property */
+static uint16_t g_data_property_handle = 0;   /* Periodic data property. / 常规数据属性。 */
+static uint16_t g_alarm_property_handle = 0;  /* Alarm data property. / 告警数据属性。 */
 static uint16_t g_sle_conn_hdl = 0;
 static bool     g_connected = false;
 
-/* 定时器 */
+/* Reporting timer. / 上报定时器。 */
 static osal_timer g_sensor_report_timer = {0};
 
-/* 生成模拟传感器数据的调用计数 */
+/* Counter used to generate simulated data. / 用于生成模拟数据的调用计数。 */
 static uint32_t g_sensor_call_count = 0;
 
-/* ── 模拟数据生成 ── */
+/* Simulated data generation. / 模拟数据生成。 */
 
-/* 简谐波表: 16 点正弦近似 (x100), 幅值 ±500 */
+/* A 16-point sine approximation scaled by 100. / 放大 100 倍的 16 点正弦近似表。 */
 static const int16_t g_sine_table[16] = {
     0, 195, 383, 500, 500, 383, 195, 0,
     0, -195, -383, -500, -500, -383, -195, 0
 };
 
+/**
+ * @if Eng
+ * @brief Generates the simulated value used by \c get_simulated_temperature.
+ * @else
+ * @brief 生成 \c get_simulated_temperature 所需的模拟数值。
+ * @endif
+ */
 static int16_t get_simulated_temperature(void)
 {
     g_sensor_call_count++;
-    /* 基准 25.00C + 逐步升温 (每秒 +1.0C) + 简谐波 ±5C, 约 1 分钟触发告警 */
+    /* Combine baseline, drift, and sine components. / 组合温度基准、漂移和简谐波分量。 */
     int16_t drift = (int16_t)(g_sensor_call_count * 100);
     int16_t sine  = g_sine_table[g_sensor_call_count & 0xF];
-    int16_t noise = (int16_t)(rand() % 31 - 15);  /* ±0.15℃ 随机抖动 */
+    int16_t noise = (int16_t)(rand() % 31 - 15);  /* +/-0.15 C jitter. / 正负 0.15 摄氏度抖动。 */
     int16_t temp  = 2500 + drift + sine + noise;
-    /* 撞顶后降温回落至 ~65C，约 15 秒后重新爬入告警区，形成 ON/OFF 循环 */
+    /* Reset drift at the upper limit to repeat alarm cycles. / 达到上限后重置漂移，以重复告警周期。 */
     if (temp > 8500) {
         g_sensor_call_count = 40;
         temp = 8500;
@@ -100,9 +132,16 @@ static int16_t get_simulated_temperature(void)
     return temp;
 }
 
+/**
+ * @if Eng
+ * @brief Generates the simulated value used by \c get_simulated_humidity.
+ * @else
+ * @brief 生成 \c get_simulated_humidity 所需的模拟数值。
+ * @endif
+ */
 static uint8_t get_simulated_humidity(void)
 {
-    int16_t val = 60 + (rand() % 11 - 5);  /* 60% +- 5% */
+    int16_t val = 60 + (rand() % 11 - 5);  /* Simulate 60% +/- 5%. / 模拟 60% 上下浮动 5%。 */
     if (val < 45) {
         val = 45;
     }
@@ -112,9 +151,16 @@ static uint8_t get_simulated_humidity(void)
     return (uint8_t)val;
 }
 
+/**
+ * @if Eng
+ * @brief Generates the simulated value used by \c get_simulated_light.
+ * @else
+ * @brief 生成 \c get_simulated_light 所需的模拟数值。
+ * @endif
+ */
 static uint16_t get_simulated_light(void)
 {
-    int32_t val = 1200 + (rand() % 401 - 200);  /* 1200 +- 200 lux */
+    int32_t val = 1200 + (rand() % 401 - 200);  /* Simulate 1200 +/- 200 lux. / 模拟 1200 上下浮动 200 lux。 */
     if (val < 500) {
         val = 500;
     }
@@ -124,8 +170,15 @@ static uint16_t get_simulated_light(void)
     return (uint16_t)val;
 }
 
-/* ── 定时器回调：数据打包与发送 ── */
+/* Timer callback for packing and sending data. / 打包并发送数据的定时器回调。 */
 
+/**
+ * @if Eng
+ * @brief Generates and reports one periodic sensor data frame.
+ * @else
+ * @brief 生成并上报一帧周期性传感器数据。
+ * @endif
+ */
 static void sensor_report_timer_cb(unsigned long arg)
 {
     unused(arg);
@@ -137,18 +190,18 @@ static void sensor_report_timer_cb(unsigned long arg)
     sensor_data_frame_t frame;
     (void)memset_s(&frame, sizeof(frame), 0, sizeof(frame));
 
-    /* 生成模拟数据 */
+    /* Generate simulated measurements. / 生成模拟测量数据。 */
     frame.temperature = get_simulated_temperature();
     frame.humidity    = get_simulated_humidity();
     frame.light       = get_simulated_light();
     frame.sensor_count = 3;
 
-    /* 获取时间戳 */
+    /* Capture the timestamp. / 获取时间戳。 */
     osal_timeval tv;
     osal_gettimeofday(&tv);
     frame.timestamp = (uint32_t)(tv.tv_sec * 1000 + tv.tv_usec / 1000);
 
-    /* 判断告警，选择对应 Property 通道 */
+    /* Select a property according to the alarm threshold. / 根据告警阈值选择属性通道。 */
     uint16_t prop_handle;
     bool is_alarm = (frame.temperature > TEMP_ALARM_HIGH || frame.temperature < TEMP_ALARM_LOW);
 
@@ -175,12 +228,19 @@ static void sensor_report_timer_cb(unsigned long arg)
 
     (void)ssaps_notify_indicate(g_server_id, g_sle_conn_hdl, &param);
 
-    /* osal_timer 为单次触发，回调中重新启动以实现周期定时 */
+    /* Restart the one-shot timer for periodic reporting. / 重启单次定时器以实现周期上报。 */
     (void)osal_timer_start(&g_sensor_report_timer);
 }
 
-/* ── SSAPS 回调 ── */
+/* SSAPS callbacks. / SSAPS 回调。 */
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c ssaps_add_service_cbk.
+ * @else
+ * @brief 处理分发给 \c ssaps_add_service_cbk 的异步事件。
+ * @endif
+ */
 static void ssaps_add_service_cbk(uint8_t server_id, sle_uuid_t *uuid,
                                   uint16_t handle, errcode_t status)
 {
@@ -190,6 +250,13 @@ static void ssaps_add_service_cbk(uint8_t server_id, sle_uuid_t *uuid,
     osal_printk("%s add service cbk, status: 0x%x\r\n", SENSOR_SERVER_LOG, status);
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c ssaps_add_property_cbk.
+ * @else
+ * @brief 处理分发给 \c ssaps_add_property_cbk 的异步事件。
+ * @endif
+ */
 static void ssaps_add_property_cbk(uint8_t server_id, sle_uuid_t *uuid,
                                    uint16_t service_handle, uint16_t handle, errcode_t status)
 {
@@ -200,6 +267,13 @@ static void ssaps_add_property_cbk(uint8_t server_id, sle_uuid_t *uuid,
                 SENSOR_SERVER_LOG, handle, status);
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c ssaps_add_descriptor_cbk.
+ * @else
+ * @brief 处理分发给 \c ssaps_add_descriptor_cbk 的异步事件。
+ * @endif
+ */
 static void ssaps_add_descriptor_cbk(uint8_t server_id, sle_uuid_t *uuid,
                                      uint16_t service_handle, uint16_t property_handle,
                                      errcode_t status)
@@ -211,6 +285,13 @@ static void ssaps_add_descriptor_cbk(uint8_t server_id, sle_uuid_t *uuid,
                 SENSOR_SERVER_LOG, property_handle, status);
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c ssaps_start_service_cbk.
+ * @else
+ * @brief 处理分发给 \c ssaps_start_service_cbk 的异步事件。
+ * @endif
+ */
 static void ssaps_start_service_cbk(uint8_t server_id, uint16_t handle, errcode_t status)
 {
     unused(server_id);
@@ -218,12 +299,26 @@ static void ssaps_start_service_cbk(uint8_t server_id, uint16_t handle, errcode_
                 SENSOR_SERVER_LOG, handle, status);
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c ssaps_delete_all_service_cbk.
+ * @else
+ * @brief 处理分发给 \c ssaps_delete_all_service_cbk 的异步事件。
+ * @endif
+ */
 static void ssaps_delete_all_service_cbk(uint8_t server_id, errcode_t status)
 {
     osal_printk("%s delete all service cbk, server_id: %u, status: 0x%x\r\n",
                 SENSOR_SERVER_LOG, server_id, status);
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c ssaps_mtu_changed_cbk.
+ * @else
+ * @brief 处理分发给 \c ssaps_mtu_changed_cbk 的异步事件。
+ * @endif
+ */
 static void ssaps_mtu_changed_cbk(uint8_t server_id, uint16_t conn_id,
                                   ssap_exchange_info_t *info, errcode_t status)
 {
@@ -233,6 +328,13 @@ static void ssaps_mtu_changed_cbk(uint8_t server_id, uint16_t conn_id,
                 SENSOR_SERVER_LOG, (info != NULL) ? info->mtu_size : 0, status);
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c ssaps_read_request_cb.
+ * @else
+ * @brief 处理分发给 \c ssaps_read_request_cb 的异步事件。
+ * @endif
+ */
 static void ssaps_read_request_cb(uint8_t server_id, uint16_t conn_id,
                                   ssaps_req_read_cb_t *read_cb_para, errcode_t status)
 {
@@ -240,16 +342,23 @@ static void ssaps_read_request_cb(uint8_t server_id, uint16_t conn_id,
     unused(conn_id);
     unused(read_cb_para);
     unused(status);
-    /* 传感器上报场景不处理 Client 读请求 */
+    /* Client reads are unused in this scenario. / 本场景不处理客户端读请求。 */
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c ssaps_write_request_cb.
+ * @else
+ * @brief 处理分发给 \c ssaps_write_request_cb 的异步事件。
+ * @endif
+ */
 static void ssaps_write_request_cb(uint8_t server_id, uint16_t conn_id,
                                    ssaps_req_write_cb_t *write_cb_para, errcode_t status)
 {
     unused(conn_id);
     unused(status);
 
-    /* CCCD 写入由协议栈内置处理，应用层不应拦截回复 */
+    /* The stack handles CCCD writes. / 协议栈负责处理 CCCD 写入。 */
     if (write_cb_para != NULL && write_cb_para->need_rsp &&
         write_cb_para->type != SSAP_DESCRIPTOR_CLIENT_CONFIGURATION) {
         ssaps_send_rsp_t rsp = {0};
@@ -259,6 +368,13 @@ static void ssaps_write_request_cb(uint8_t server_id, uint16_t conn_id,
     }
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c ssaps_indicate_cfm_cb.
+ * @else
+ * @brief 处理分发给 \c ssaps_indicate_cfm_cb 的异步事件。
+ * @endif
+ */
 static void ssaps_indicate_cfm_cb(uint8_t server_id, uint16_t conn_id,
                                   sle_indication_cfm_result_t cfm_result, errcode_t status)
 {
@@ -267,6 +383,13 @@ static void ssaps_indicate_cfm_cb(uint8_t server_id, uint16_t conn_id,
                 SENSOR_SERVER_LOG, conn_id, cfm_result, status);
 }
 
+/**
+ * @if Eng
+ * @brief Registers the callbacks required by \c sle_sensor_report_ssaps_register_cbks.
+ * @else
+ * @brief 注册 \c sle_sensor_report_ssaps_register_cbks 所需的回调函数。
+ * @endif
+ */
 static errcode_t sle_sensor_report_ssaps_register_cbks(void)
 {
     ssaps_callbacks_t ssaps_cbk = {0};
@@ -288,8 +411,15 @@ static errcode_t sle_sensor_report_ssaps_register_cbks(void)
     return ERRCODE_SLE_SUCCESS;
 }
 
-/* ── SSAP 服务注册 ── */
+/* SSAP service registration. / SSAP 服务注册。 */
 
+/**
+ * @if Eng
+ * @brief Adds the service object configured by \c sle_sensor_report_add_service.
+ * @else
+ * @brief 添加 \c sle_sensor_report_add_service 配置的服务对象。
+ * @endif
+ */
 static errcode_t sle_sensor_report_add_service(void)
 {
     sle_uuid_t service_uuid = {0};
@@ -302,6 +432,13 @@ static errcode_t sle_sensor_report_add_service(void)
     return ERRCODE_SLE_SUCCESS;
 }
 
+/**
+ * @if Eng
+ * @brief Adds the service object configured by \c sle_sensor_report_add_data_property.
+ * @else
+ * @brief 添加 \c sle_sensor_report_add_data_property 配置的服务对象。
+ * @endif
+ */
 static errcode_t sle_sensor_report_add_data_property(void)
 {
     errcode_t ret;
@@ -340,6 +477,13 @@ static errcode_t sle_sensor_report_add_data_property(void)
     return ERRCODE_SLE_SUCCESS;
 }
 
+/**
+ * @if Eng
+ * @brief Adds the service object configured by \c sle_sensor_report_add_alarm_property.
+ * @else
+ * @brief 添加 \c sle_sensor_report_add_alarm_property 配置的服务对象。
+ * @endif
+ */
 static errcode_t sle_sensor_report_add_alarm_property(void)
 {
     errcode_t ret;
@@ -362,7 +506,7 @@ static errcode_t sle_sensor_report_add_alarm_property(void)
         return ERRCODE_SLE_FAIL;
     }
 
-    /* CCCD — 初始值设为 0x0002 预开启 Indication (参照 data property 的 ntf_value 模式) */
+    /* Initialize the CCCD to 0x0002 to enable indications. / 将 CCCD 初值设为 0x0002 以使能指示。 */
     uint8_t ind_value[] = {0x02, 0x00};
     descriptor.permissions = SSAP_PERMISSION_READ | SSAP_PERMISSION_WRITE;
     descriptor.type = SSAP_DESCRIPTOR_CLIENT_CONFIGURATION;
@@ -380,6 +524,13 @@ static errcode_t sle_sensor_report_add_alarm_property(void)
     return ERRCODE_SLE_SUCCESS;
 }
 
+/**
+ * @if Eng
+ * @brief Adds the service object configured by \c sle_sensor_report_server_add.
+ * @else
+ * @brief 添加 \c sle_sensor_report_server_add 配置的服务对象。
+ * @endif
+ */
 static errcode_t sle_sensor_report_server_add(void)
 {
     errcode_t ret;
@@ -416,8 +567,15 @@ static errcode_t sle_sensor_report_server_add(void)
     return ERRCODE_SLE_SUCCESS;
 }
 
-/* ── 连接回调 ── */
+/* Connection callbacks. / 连接回调。 */
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c sle_sensor_report_connect_state_changed_cbk.
+ * @else
+ * @brief 处理分发给 \c sle_sensor_report_connect_state_changed_cbk 的异步事件。
+ * @endif
+ */
 static void sle_sensor_report_connect_state_changed_cbk(uint16_t conn_id,
                                                          const sle_addr_t *addr,
                                                          sle_acb_state_t conn_state,
@@ -437,11 +595,11 @@ static void sle_sensor_report_connect_state_changed_cbk(uint16_t conn_id,
 
         case SLE_ACB_STATE_DISCONNECTED:
             osal_printk("%s disconnected, conn_id: 0x%x\r\n", SENSOR_SERVER_LOG, conn_id);
-            /* 停止定时器 */
+            /* Stop reporting. / 停止上报。 */
             (void)osal_timer_stop(&g_sensor_report_timer);
             g_sle_conn_hdl = 0;
             g_connected = false;
-            /* 重新启动广播 */
+            /* Restart advertising. / 重新启动广播。 */
             (void)sle_start_announce(1);
             break;
 
@@ -450,6 +608,13 @@ static void sle_sensor_report_connect_state_changed_cbk(uint16_t conn_id,
     }
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c sle_sensor_report_pair_complete_cbk.
+ * @else
+ * @brief 处理分发给 \c sle_sensor_report_pair_complete_cbk 的异步事件。
+ * @endif
+ */
 static void sle_sensor_report_pair_complete_cbk(uint16_t conn_id, const sle_addr_t *addr,
                                                  errcode_t status)
 {
@@ -463,11 +628,11 @@ static void sle_sensor_report_pair_complete_cbk(uint16_t conn_id, const sle_addr
 
     osal_printk("%s pair complete, conn_id: 0x%x\r\n", SENSOR_SERVER_LOG, conn_id);
 
-    /* 设置 MTU = 520 */
+    /* Configure an MTU of 520 bytes. / 配置 520 字节 MTU。 */
     ssap_exchange_info_t info = { .mtu_size = 520, .version = 1 };
     (void)ssaps_set_info(g_server_id, &info);
 
-    /* 启动 1 秒周期定时器 */
+    /* Start the one-second timer. / 启动 1 秒定时器。 */
     if (g_sensor_report_timer.timer == NULL) {
         g_sensor_report_timer.handler = sensor_report_timer_cb;
         g_sensor_report_timer.data = 0;
@@ -486,6 +651,13 @@ static void sle_sensor_report_pair_complete_cbk(uint16_t conn_id, const sle_addr
     osal_printk("%s 1s periodic timer started.\r\n", SENSOR_SERVER_LOG);
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c sle_sensor_report_read_rssi_cb.
+ * @else
+ * @brief 处理分发给 \c sle_sensor_report_read_rssi_cb 的异步事件。
+ * @endif
+ */
 static void sle_sensor_report_read_rssi_cb(uint16_t conn_id, int8_t rssi, errcode_t status)
 {
     unused(conn_id);
@@ -493,6 +665,13 @@ static void sle_sensor_report_read_rssi_cb(uint16_t conn_id, int8_t rssi, errcod
     unused(status);
 }
 
+/**
+ * @if Eng
+ * @brief Registers the callbacks required by \c sle_sensor_report_conn_register_cbks.
+ * @else
+ * @brief 注册 \c sle_sensor_report_conn_register_cbks 所需的回调函数。
+ * @endif
+ */
 static errcode_t sle_sensor_report_conn_register_cbks(void)
 {
     sle_connection_callbacks_t conn_cbks = {0};
@@ -508,8 +687,15 @@ static errcode_t sle_sensor_report_conn_register_cbks(void)
     return ERRCODE_SLE_SUCCESS;
 }
 
-/* ── Public API ── */
+/* Public APIs. / 公共接口。 */
 
+/**
+ * @if Eng
+ * @brief Initializes the feature implemented by \c sle_sensor_report_server_init.
+ * @else
+ * @brief 初始化 \c sle_sensor_report_server_init 对应的功能。
+ * @endif
+ */
 errcode_t sle_sensor_report_server_init(void)
 {
     errcode_t ret;
@@ -554,6 +740,13 @@ errcode_t sle_sensor_report_server_init(void)
     return ERRCODE_SLE_SUCCESS;
 }
 
+/**
+ * @if Eng
+ * @brief Reports whether the SLE link is connected.
+ * @else
+ * @brief 返回 SLE 链路是否已连接。
+ * @endif
+ */
 uint16_t sle_sensor_report_server_is_connected(void)
 {
     return (uint16_t)g_connected;
