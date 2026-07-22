@@ -18,3 +18,11 @@ config SAMPLE_SUPPORT_OSAL_TASK_CONCURRENCY
     depends on ENABLE_OS_SAMPLE
     help
         This option enables the OSAL task concurrency and priority preemption sample.
+
+config SAMPLE_SUPPORT_OSAL_INTERRUPT
+    bool
+    prompt "Support OSAL interrupt management Sample."
+    default n
+    depends on ENABLE_OS_SAMPLE
+    help
+        This option enables the OSAL interrupt registration and handling sample.
