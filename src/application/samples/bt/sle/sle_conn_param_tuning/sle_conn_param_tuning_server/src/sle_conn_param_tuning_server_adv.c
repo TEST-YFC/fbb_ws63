@@ -1,7 +1,11 @@
 /**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026. All rights reserved.
  *
- * Description: SLE connection parameter tuning server announce implementation. \n
+ * @if Eng
+ * @brief SLE connection parameter tuning Server announcement implementation. \n
+ * @else
+ * @brief SLE 连接参数调优 Server 广播实现。 \n
+ * @endif
  */
 #include "securec.h"
 #include "soc_osal.h"
@@ -26,6 +30,13 @@ enum {
     SLE_CONN_PARAM_DATA_TX_POWER_LEVEL = 0x0C,
 };
 
+/**
+ * @if Eng
+ * @brief Append the complete Server local-name field.
+ * @else
+ * @brief 追加 Server 完整本地名称字段。
+ * @endif
+ */
 static uint16_t sle_conn_param_set_local_name(uint8_t *data, uint16_t max_len)
 {
     const uint8_t local_name[] = SLE_CONN_PARAM_LOCAL_NAME;
@@ -42,6 +53,13 @@ static uint16_t sle_conn_param_set_local_name(uint8_t *data, uint16_t max_len)
     return (uint16_t)(local_name_len + 2);
 }
 
+/**
+ * @if Eng
+ * @brief Build the primary announcement payload.
+ * @else
+ * @brief 构造主广播数据。
+ * @endif
+ */
 static uint16_t sle_conn_param_set_announce_data(uint8_t *data)
 {
     sle_conn_param_adv_common_value_t discovery = {
@@ -68,6 +86,13 @@ static uint16_t sle_conn_param_set_announce_data(uint8_t *data)
     return (uint16_t)(index + sizeof(access_mode));
 }
 
+/**
+ * @if Eng
+ * @brief Build the seek-response payload.
+ * @else
+ * @brief 构造扫描响应数据。
+ * @endif
+ */
 static uint16_t sle_conn_param_set_seek_response(uint8_t *data)
 {
     sle_conn_param_adv_common_value_t tx_power = {
@@ -86,6 +111,13 @@ static uint16_t sle_conn_param_set_seek_response(uint8_t *data)
     return (name_len == 0) ? 0 : (uint16_t)(index + name_len);
 }
 
+/**
+ * @if Eng
+ * @brief Configure connectable announcement parameters.
+ * @else
+ * @brief 配置可连接广播参数。
+ * @endif
+ */
 static errcode_t sle_conn_param_set_announce_param(void)
 {
     sle_announce_param_t param = {0};
@@ -110,6 +142,13 @@ static errcode_t sle_conn_param_set_announce_param(void)
     return sle_set_announce_param(param.announce_handle, &param);
 }
 
+/**
+ * @if Eng
+ * @brief Submit announcement payloads to the SLE stack.
+ * @else
+ * @brief 向 SLE 协议栈提交广播数据。
+ * @endif
+ */
 static errcode_t sle_conn_param_set_announce_payload(void)
 {
     sle_announce_data_t payload = {0};
@@ -126,18 +165,39 @@ static errcode_t sle_conn_param_set_announce_payload(void)
     return sle_set_announce_data(SLE_CONN_PARAM_ADV_HANDLE, &payload);
 }
 
+/**
+ * @if Eng
+ * @brief Report the announcement-enable result.
+ * @else
+ * @brief 输出广播使能结果。
+ * @endif
+ */
 static void sle_conn_param_announce_enable_cb(uint32_t announce_id, errcode_t status)
 {
     osal_printk("%s announce enabled, id=%u, status=0x%x\r\n",
         SLE_CONN_PARAM_SERVER_LOG, announce_id, status);
 }
 
+/**
+ * @if Eng
+ * @brief Report the announcement-disable result.
+ * @else
+ * @brief 输出广播停止结果。
+ * @endif
+ */
 static void sle_conn_param_announce_disable_cb(uint32_t announce_id, errcode_t status)
 {
     osal_printk("%s announce disabled, id=%u, status=0x%x\r\n",
         SLE_CONN_PARAM_SERVER_LOG, announce_id, status);
 }
 
+/**
+ * @if Eng
+ * @brief Register announcement callbacks.
+ * @else
+ * @brief 注册广播回调。
+ * @endif
+ */
 errcode_t sle_conn_param_tuning_announce_register_callbacks(void)
 {
     sle_announce_seek_callbacks_t callbacks = {0};
@@ -146,6 +206,13 @@ errcode_t sle_conn_param_tuning_announce_register_callbacks(void)
     return sle_announce_seek_register_callbacks(&callbacks);
 }
 
+/**
+ * @if Eng
+ * @brief Configure and start Server announcement.
+ * @else
+ * @brief 配置并启动 Server 广播。
+ * @endif
+ */
 errcode_t sle_conn_param_tuning_server_announce_start(void)
 {
     errcode_t ret = sle_conn_param_set_announce_param();

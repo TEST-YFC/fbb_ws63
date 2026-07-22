@@ -1,7 +1,11 @@
 /**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026. All rights reserved.
  *
- * Description: SLE connection parameter tuning server implementation. \n
+ * @if Eng
+ * @brief SLE connection parameter tuning Server implementation. \n
+ * @else
+ * @brief SLE 连接参数调优 Server 实现。 \n
+ * @endif
  */
 #include "common_def.h"
 #include "soc_osal.h"
@@ -20,6 +24,13 @@
 #define SLE_CONN_TIMEOUT_MAX            0x0C80
 #define SLE_CONN_TIMEOUT_SCALE          20U
 
+/**
+ * @if Eng
+ * @brief Named target connection-parameter profile.
+ * @else
+ * @brief 带名称的目标连接参数档位。
+ * @endif
+ */
 typedef struct {
     const char *name;
     uint16_t interval;
@@ -35,6 +46,13 @@ static const sle_conn_param_profile_t g_profile = {"low-latency", 30, 0, 200};
 static const sle_conn_param_profile_t g_profile = {"balanced", 50, 0, 500};
 #endif
 
+/**
+ * @if Eng
+ * @brief Validate the relationship and protocol range of requested connection parameters.
+ * @else
+ * @brief 校验请求连接参数之间的关系及协议取值范围。
+ * @endif
+ */
 static errcode_t sle_conn_param_validate(const sle_connection_param_update_t *param)
 {
     uint32_t timeout_scaled;
@@ -49,13 +67,24 @@ static errcode_t sle_conn_param_validate(const sle_connection_param_update_t *pa
         return ERRCODE_INVALID_PARAM;
     }
 
-    /* interval uses 0.25 ms and timeout uses 10 ms:
-     * timeout * 10 ms > 2 * (latency + 1) * interval * 0.25 ms. */
+    /*
+     * Interval uses 0.25 ms and timeout uses 10 ms:
+     * timeout * 10 ms > 2 * (latency + 1) * interval * 0.25 ms.
+     * interval 的单位为 0.25 ms，timeout 的单位为 10 ms，约束关系如下：
+     * timeout * 10 ms > 2 * (latency + 1) * interval * 0.25 ms。
+     */
     timeout_scaled = (uint32_t)param->supervision_timeout * SLE_CONN_TIMEOUT_SCALE;
     max_connection_gap = ((uint32_t)param->max_latency + 1U) * param->interval_max;
     return (timeout_scaled > max_connection_gap) ? ERRCODE_SUCC : ERRCODE_INVALID_PARAM;
 }
 
+/**
+ * @if Eng
+ * @brief Request the target connection parameters after a link is established.
+ * @else
+ * @brief 建链后请求切换到目标连接参数。
+ * @endif
+ */
 static errcode_t sle_conn_param_request_update(uint16_t conn_id)
 {
     sle_connection_param_update_t param = {
@@ -79,6 +108,13 @@ static errcode_t sle_conn_param_request_update(uint16_t conn_id)
     return ret;
 }
 
+/**
+ * @if Eng
+ * @brief Trigger tuning on connection and resume announcement after disconnection.
+ * @else
+ * @brief 建链时触发参数调优，断链后恢复广播。
+ * @endif
+ */
 static void sle_conn_param_state_changed_cb(uint16_t conn_id, const sle_addr_t *addr,
     sle_acb_state_t conn_state, sle_pair_state_t pair_state, sle_disc_reason_t disc_reason)
 {
@@ -95,6 +131,13 @@ static void sle_conn_param_state_changed_cb(uint16_t conn_id, const sle_addr_t *
     }
 }
 
+/**
+ * @if Eng
+ * @brief Report the asynchronous parameter-update request result.
+ * @else
+ * @brief 输出异步连接参数更新请求结果。
+ * @endif
+ */
 static void sle_conn_param_update_req_cb(uint16_t conn_id, errcode_t status,
     const sle_connection_param_update_req_t *param)
 {
@@ -106,6 +149,13 @@ static void sle_conn_param_update_req_cb(uint16_t conn_id, errcode_t status,
         param->interval_max, param->max_latency, param->supervision_timeout);
 }
 
+/**
+ * @if Eng
+ * @brief Report the final connection parameters applied by the controller.
+ * @else
+ * @brief 输出控制器最终应用的连接参数。
+ * @endif
+ */
 static void sle_conn_param_update_cb(uint16_t conn_id, errcode_t status,
     const sle_connection_param_update_evt_t *param)
 {
@@ -117,6 +167,13 @@ static void sle_conn_param_update_cb(uint16_t conn_id, errcode_t status,
         param->latency, param->supervision);
 }
 
+/**
+ * @if Eng
+ * @brief Register connection-state and parameter-update callbacks.
+ * @else
+ * @brief 注册连接状态和参数更新回调。
+ * @endif
+ */
 static errcode_t sle_conn_param_register_connection_callbacks(void)
 {
     sle_connection_callbacks_t callbacks = {0};
@@ -126,6 +183,13 @@ static errcode_t sle_conn_param_register_connection_callbacks(void)
     return sle_connection_register_callbacks(&callbacks);
 }
 
+/**
+ * @if Eng
+ * @brief Initialize SLE, callbacks and Server announcement.
+ * @else
+ * @brief 初始化 SLE、回调和 Server 广播。
+ * @endif
+ */
 errcode_t sle_conn_param_tuning_server_init(void)
 {
     errcode_t ret = enable_sle();

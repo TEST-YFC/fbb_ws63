@@ -1,7 +1,11 @@
 /**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026. All rights reserved.
  *
- * Description: SLE connection parameter tuning sample entry. \n
+ * @if Eng
+ * @brief SLE connection parameter tuning sample entry. \n
+ * @else
+ * @brief SLE 连接参数调优案例入口。 \n
+ * @endif
  */
 #include "common_def.h"
 #include "soc_osal.h"
@@ -16,6 +20,13 @@
 #define SLE_CONN_PARAM_TASK_PRIO       28
 #define SLE_CONN_PARAM_TASK_STACK_SIZE 0x1000
 
+/**
+ * @if Eng
+ * @brief Start the Server or Client role selected by Kconfig.
+ * @else
+ * @brief 启动 Kconfig 选中的 Server 或 Client 角色。
+ * @endif
+ */
 static void *sle_conn_param_tuning_task(const char *arg)
 {
     unused(arg);
@@ -29,6 +40,13 @@ static void *sle_conn_param_tuning_task(const char *arg)
     return NULL;
 }
 
+/**
+ * @if Eng
+ * @brief Create the sample entry task without blocking system initialization.
+ * @else
+ * @brief 创建案例入口任务，避免阻塞系统初始化流程。
+ * @endif
+ */
 static void sle_conn_param_tuning_entry(void)
 {
     osal_task *task_handle = NULL;

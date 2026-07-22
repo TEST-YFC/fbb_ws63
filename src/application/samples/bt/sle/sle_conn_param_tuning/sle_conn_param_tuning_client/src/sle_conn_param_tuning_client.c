@@ -1,7 +1,11 @@
 /**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026. All rights reserved.
  *
- * Description: SLE connection parameter tuning client implementation. \n
+ * @if Eng
+ * @brief SLE connection parameter tuning Client implementation. \n
+ * @else
+ * @brief SLE 连接参数调优 Client 实现。 \n
+ * @endif
  */
 #include <stdbool.h>
 #include <string.h>
@@ -24,6 +28,13 @@
 static sle_addr_t g_remote_addr = {0};
 static bool g_target_found = false;
 
+/**
+ * @if Eng
+ * @brief Parse announcement fields and match the tuning Server name.
+ * @else
+ * @brief 解析广播字段并匹配调优 Server 名称。
+ * @endif
+ */
 static bool sle_conn_param_has_server_name(const uint8_t *data, uint8_t data_len)
 {
     const uint8_t server_name[] = SLE_CONN_PARAM_SERVER_NAME;
@@ -45,6 +56,13 @@ static bool sle_conn_param_has_server_name(const uint8_t *data, uint8_t data_len
     return false;
 }
 
+/**
+ * @if Eng
+ * @brief Configure active seeking and start Server discovery.
+ * @else
+ * @brief 配置主动扫描并启动 Server 发现。
+ * @endif
+ */
 static errcode_t sle_conn_param_start_seek(void)
 {
     sle_seek_param_t param = {0};
@@ -68,6 +86,13 @@ static errcode_t sle_conn_param_start_seek(void)
     return ret;
 }
 
+/**
+ * @if Eng
+ * @brief Start seeking after the SLE stack is enabled.
+ * @else
+ * @brief SLE 协议栈使能后启动扫描。
+ * @endif
+ */
 static void sle_conn_param_enable_cb(errcode_t status)
 {
     osal_printk("%s SLE enabled, status=0x%x\r\n", SLE_CONN_PARAM_CLIENT_LOG, status);
@@ -76,11 +101,25 @@ static void sle_conn_param_enable_cb(errcode_t status)
     }
 }
 
+/**
+ * @if Eng
+ * @brief Report the asynchronous seek-enable result.
+ * @else
+ * @brief 输出异步扫描使能结果。
+ * @endif
+ */
 static void sle_conn_param_seek_enable_cb(errcode_t status)
 {
     osal_printk("%s seek enabled, status=0x%x\r\n", SLE_CONN_PARAM_CLIENT_LOG, status);
 }
 
+/**
+ * @if Eng
+ * @brief Select the named Server and stop seeking.
+ * @else
+ * @brief 选择指定名称的 Server 并停止扫描。
+ * @endif
+ */
 static void sle_conn_param_seek_result_cb(sle_seek_result_info_t *result)
 {
     if ((result == NULL) || (result->data == NULL) || g_target_found) {
@@ -97,6 +136,13 @@ static void sle_conn_param_seek_result_cb(sle_seek_result_info_t *result)
     (void)sle_stop_seek();
 }
 
+/**
+ * @if Eng
+ * @brief Connect to the selected Server after seeking stops.
+ * @else
+ * @brief 扫描停止后连接已选中的 Server。
+ * @endif
+ */
 static void sle_conn_param_seek_disable_cb(errcode_t status)
 {
     errcode_t ret;
@@ -109,6 +155,13 @@ static void sle_conn_param_seek_disable_cb(errcode_t status)
     osal_printk("%s connect request sent, status=0x%x\r\n", SLE_CONN_PARAM_CLIENT_LOG, ret);
 }
 
+/**
+ * @if Eng
+ * @brief Report Client connection-state changes and restart seeking after disconnection.
+ * @else
+ * @brief 输出 Client 连接状态，并在断链后重新扫描。
+ * @endif
+ */
 static void sle_conn_param_state_changed_cb(uint16_t conn_id, const sle_addr_t *addr,
     sle_acb_state_t conn_state, sle_pair_state_t pair_state, sle_disc_reason_t disc_reason)
 {
@@ -126,6 +179,13 @@ static void sle_conn_param_state_changed_cb(uint16_t conn_id, const sle_addr_t *
     }
 }
 
+/**
+ * @if Eng
+ * @brief Report the peer connection-parameter update request.
+ * @else
+ * @brief 输出对端发起的连接参数更新请求。
+ * @endif
+ */
 static void sle_conn_param_update_req_cb(uint16_t conn_id, errcode_t status,
     const sle_connection_param_update_req_t *param)
 {
@@ -137,6 +197,13 @@ static void sle_conn_param_update_req_cb(uint16_t conn_id, errcode_t status,
         param->interval_max, param->max_latency, param->supervision_timeout);
 }
 
+/**
+ * @if Eng
+ * @brief Report the connection parameters that actually took effect.
+ * @else
+ * @brief 输出最终实际生效的连接参数。
+ * @endif
+ */
 static void sle_conn_param_update_cb(uint16_t conn_id, errcode_t status,
     const sle_connection_param_update_evt_t *param)
 {
@@ -148,6 +215,13 @@ static void sle_conn_param_update_cb(uint16_t conn_id, errcode_t status,
         param->latency, param->supervision);
 }
 
+/**
+ * @if Eng
+ * @brief Register SLE enable and discovery callbacks.
+ * @else
+ * @brief 注册 SLE 使能和设备发现回调。
+ * @endif
+ */
 static errcode_t sle_conn_param_register_seek_callbacks(void)
 {
     sle_announce_seek_callbacks_t callbacks = {0};
@@ -158,6 +232,13 @@ static errcode_t sle_conn_param_register_seek_callbacks(void)
     return sle_announce_seek_register_callbacks(&callbacks);
 }
 
+/**
+ * @if Eng
+ * @brief Register connection-state and parameter-update callbacks.
+ * @else
+ * @brief 注册连接状态和参数更新回调。
+ * @endif
+ */
 static errcode_t sle_conn_param_register_connection_callbacks(void)
 {
     sle_connection_callbacks_t callbacks = {0};
@@ -167,6 +248,13 @@ static errcode_t sle_conn_param_register_connection_callbacks(void)
     return sle_connection_register_callbacks(&callbacks);
 }
 
+/**
+ * @if Eng
+ * @brief Initialize Client callbacks and enable SLE.
+ * @else
+ * @brief 初始化 Client 回调并使能 SLE。
+ * @endif
+ */
 errcode_t sle_conn_param_tuning_client_init(void)
 {
     errcode_t ret;
