@@ -1,0 +1,20 @@
+#===============================================================================
+# @brief    Kconfig file for OSAL and RTOS samples.
+# Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2026. All rights reserved.
+#===============================================================================
+
+config SAMPLE_SUPPORT_OSAL_KMALLOC
+    bool
+    prompt "Support OSAL dynamic memory Sample."
+    default n
+    depends on ENABLE_OS_SAMPLE
+    help
+        This option enables the OSAL dynamic memory allocation sample.
+
+config SAMPLE_SUPPORT_OSAL_TASK_CONCURRENCY
+    bool
+    prompt "Support OSAL task concurrency Sample."
+    default n
+    depends on ENABLE_OS_SAMPLE
+    help
+        This option enables the OSAL task concurrency and priority preemption sample.

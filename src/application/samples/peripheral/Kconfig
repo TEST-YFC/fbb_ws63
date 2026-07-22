@@ -30,7 +30,6 @@ config ENABLE_ALL_PERIPHERAL_SAMPLE
     select SAMPLE_SUPPORT_RTC
     select SAMPLE_SUPPORT_SPI
     select SAMPLE_SUPPORT_SYSTICK
-    select SAMPLE_SUPPORT_TASKS
     select SAMPLE_SUPPORT_TCXO
     select SAMPLE_SUPPORT_TIMER
     select SAMPLE_SUPPORT_UART
@@ -390,14 +389,6 @@ config SAMPLE_SUPPORT_SYSTICK
     depends on ENABLE_PERIPHERAL_SAMPLE
     help
         This option means support SYSTICK Sample.
-
-config SAMPLE_SUPPORT_TASKS
-    bool
-    prompt "Support TASKS Test Sample."
-    default n
-    depends on ENABLE_PERIPHERAL_SAMPLE
-    help
-        This option means support TASKS Test Sample.
 
 config SAMPLE_SUPPORT_TCXO
     bool
