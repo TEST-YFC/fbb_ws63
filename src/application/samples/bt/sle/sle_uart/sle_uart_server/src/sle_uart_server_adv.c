@@ -1,7 +1,11 @@
 /**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026. All rights reserved.
  *
- * Description: SLE adv config for sle uart server. \n
+ * @if Eng
+ * @brief Implements advertising configuration for the SLE UART server.
+ * @else
+ * @brief 实现 SLE UART 服务端的广播配置。
+ * @endif
  *
  * History: \n
  * 2024-05-18, Create file. \n
@@ -16,7 +20,7 @@
 #include "sle_uart_server_adv.h"
 #include "string.h"
 
-/* 广播参数: 连接间隔 15ms (12 × 1.25ms), 广播间隔 25ms (200 × 0.125ms) */
+/* Connection interval: 15 ms; advertising interval: 25 ms. / 连接间隔：15 ms；广播间隔：25 ms。 */
 #define SLE_CONN_INTV_MIN_DEFAULT              CONFIG_SLE_UART_CONN_INTERVAL
 #define SLE_CONN_INTV_MAX_DEFAULT              CONFIG_SLE_UART_CONN_INTERVAL
 #define SLE_ADV_INTERVAL_MIN_DEFAULT           0xC8
@@ -33,6 +37,13 @@ static uint8_t g_sle_local_name[NAME_MAX_LENGTH] = "uart_server";
 
 #define SLE_UART_SERVER_LOG "[sle uart server]"
 
+/**
+ * @if Eng
+ * @brief Encodes the local device name into advertising data.
+ * @else
+ * @brief 将本地设备名称编码到广播数据中。
+ * @endif
+ */
 static uint16_t sle_set_adv_local_name(uint8_t *adv_data, uint16_t max_len)
 {
     errno_t ret;
@@ -50,6 +61,13 @@ static uint16_t sle_set_adv_local_name(uint8_t *adv_data, uint16_t max_len)
     return (uint16_t)index + local_name_len;
 }
 
+/**
+ * @if Eng
+ * @brief Builds the advertising data payload.
+ * @else
+ * @brief 构造广播数据载荷。
+ * @endif
+ */
 static uint16_t sle_set_adv_data(uint8_t *adv_data)
 {
     size_t len = 0;
@@ -83,6 +101,13 @@ static uint16_t sle_set_adv_data(uint8_t *adv_data)
     return idx;
 }
 
+/**
+ * @if Eng
+ * @brief Builds the scan response payload.
+ * @else
+ * @brief 构造扫描响应数据载荷。
+ * @endif
+ */
 static uint16_t sle_set_scan_response_data(uint8_t *scan_rsp_data)
 {
     uint16_t idx = 0;
@@ -104,6 +129,13 @@ static uint16_t sle_set_scan_response_data(uint8_t *scan_rsp_data)
     return idx;
 }
 
+/**
+ * @if Eng
+ * @brief Configures the default SLE advertising parameters.
+ * @else
+ * @brief 配置默认 SLE 广播参数。
+ * @endif
+ */
 static int sle_set_default_announce_param(void)
 {
     errno_t ret;
@@ -129,6 +161,13 @@ static int sle_set_default_announce_param(void)
     return sle_set_announce_param(param.announce_handle, &param);
 }
 
+/**
+ * @if Eng
+ * @brief Configures the default SLE advertising data.
+ * @else
+ * @brief 配置默认 SLE 广播数据。
+ * @endif
+ */
 static int sle_set_default_announce_data(void)
 {
     errcode_t ret;
@@ -156,21 +195,49 @@ static int sle_set_default_announce_data(void)
     return ERRCODE_SLE_SUCCESS;
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c sle_uart_server_announce_enable_cbk.
+ * @else
+ * @brief 处理分发给 \c sle_uart_server_announce_enable_cbk 的异步事件。
+ * @endif
+ */
 static void sle_uart_server_announce_enable_cbk(uint32_t announce_id, errcode_t status)
 {
     osal_printk("%s announce enable cbk id:%02x, status:%x\r\n", SLE_UART_SERVER_LOG, announce_id, status);
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c sle_uart_server_announce_disable_cbk.
+ * @else
+ * @brief 处理分发给 \c sle_uart_server_announce_disable_cbk 的异步事件。
+ * @endif
+ */
 static void sle_uart_server_announce_disable_cbk(uint32_t announce_id, errcode_t status)
 {
     osal_printk("%s announce disable cbk id:%02x, status:%x\r\n", SLE_UART_SERVER_LOG, announce_id, status);
 }
 
+/**
+ * @if Eng
+ * @brief Handles the asynchronous event delivered to \c sle_uart_server_announce_terminal_cbk.
+ * @else
+ * @brief 处理分发给 \c sle_uart_server_announce_terminal_cbk 的异步事件。
+ * @endif
+ */
 static void sle_uart_server_announce_terminal_cbk(uint32_t announce_id)
 {
     osal_printk("%s announce terminal cbk id:%02x\r\n", SLE_UART_SERVER_LOG, announce_id);
 }
 
+/**
+ * @if Eng
+ * @brief Registers the callbacks required by \c sle_uart_server_announce_register_cbks.
+ * @else
+ * @brief 注册 \c sle_uart_server_announce_register_cbks 所需的回调函数。
+ * @endif
+ */
 errcode_t sle_uart_server_announce_register_cbks(void)
 {
     errcode_t ret = 0;
@@ -186,6 +253,13 @@ errcode_t sle_uart_server_announce_register_cbks(void)
     return ERRCODE_SLE_SUCCESS;
 }
 
+/**
+ * @if Eng
+ * @brief Initializes the feature implemented by \c sle_uart_server_adv_init.
+ * @else
+ * @brief 初始化 \c sle_uart_server_adv_init 对应的功能。
+ * @endif
+ */
 errcode_t sle_uart_server_adv_init(void)
 {
     errcode_t ret;

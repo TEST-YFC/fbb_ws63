@@ -1,7 +1,11 @@
 /**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026. All rights reserved.
  *
- * Description: SLE UART Server ADV Config. \n
+ * @if Eng
+ * @brief Declares advertising types and interfaces for the SLE UART server.
+ * @else
+ * @brief 声明 SLE UART 服务端的广播类型与接口。
+ * @endif
  *
  * History: \n
  * 2024-05-18, Create file. \n
@@ -19,12 +23,26 @@ extern "C" {
 #endif /* __cplusplus */
 #endif /* __cplusplus */
 
+/**
+ * @if Eng
+ * @brief Defines a data type used by this sample.
+ * @else
+ * @brief 定义本案例使用的数据类型。
+ * @endif
+ */
 typedef struct sle_adv_common_value {
     uint8_t length;
     uint8_t type;
     uint8_t value;
 } le_adv_common_t;
 
+/**
+ * @if Eng
+ * @brief Defines a data type used by this sample.
+ * @else
+ * @brief 定义本案例使用的数据类型。
+ * @endif
+ */
 typedef enum sle_adv_channel {
     SLE_ADV_CHANNEL_MAP_77                 = 0x01,
     SLE_ADV_CHANNEL_MAP_78                 = 0x02,
@@ -32,6 +50,13 @@ typedef enum sle_adv_channel {
     SLE_ADV_CHANNEL_MAP_DEFAULT            = 0x07
 } sle_adv_channel_map_t;
 
+/**
+ * @if Eng
+ * @brief Defines a data type used by this sample.
+ * @else
+ * @brief 定义本案例使用的数据类型。
+ * @endif
+ */
 typedef enum sle_adv_data {
     SLE_ADV_DATA_TYPE_DISCOVERY_LEVEL                              = 0x01,
     SLE_ADV_DATA_TYPE_ACCESS_MODE                                  = 0x02,
@@ -51,8 +76,29 @@ typedef enum sle_adv_data {
     SLE_ADV_DATA_TYPE_MANUFACTURER_SPECIFIC_DATA                   = 0xFF
 } sle_adv_data_type;
 
+/**
+ * @if Eng
+ * @brief Registers the callbacks required by \c sle_uart_server_announce_register_cbks.
+ * @else
+ * @brief 注册 \c sle_uart_server_announce_register_cbks 所需的回调函数。
+ * @endif
+ */
 errcode_t sle_uart_server_announce_register_cbks(void);
+/**
+ * @if Eng
+ * @brief Initializes the feature implemented by \c sle_uart_server_adv_init.
+ * @else
+ * @brief 初始化 \c sle_uart_server_adv_init 对应的功能。
+ * @endif
+ */
 errcode_t sle_uart_server_adv_init(void);
+/**
+ * @if Eng
+ * @brief Implements the internal workflow of \c sle_start_announce.
+ * @else
+ * @brief 实现 \c sle_start_announce 对应的内部处理流程。
+ * @endif
+ */
 errcode_t sle_start_announce(uint8_t announce_id);
 
 #ifdef __cplusplus
