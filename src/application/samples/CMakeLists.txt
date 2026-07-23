@@ -16,6 +16,9 @@ endif()
 if(DEFINED CONFIG_ENABLE_PERIPHERAL_SAMPLE)
     add_subdirectory_if_exist(peripheral)
 endif()
+if(DEFINED CONFIG_ENABLE_OS_SAMPLE)
+    add_subdirectory_if_exist(os)
+endif()
 if(DEFINED CONFIG_ENABLE_WIFI_SAMPLE)
     add_subdirectory_if_exist(wifi)
 endif()
@@ -33,6 +36,12 @@ add_subdirectory_if_exist(custom)
 
 set(PRIVATE_HEADER
 )
+
+if(DEFINED CONFIG_SAMPLE_SUPPORT_BLE_WIFI_CFG_SAMPLE)
+    list(APPEND PRIVATE_HEADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/bt/ble/ble_wifi_cfg_server/inc"
+    )
+endif()
 
 set(PRIVATE_DEFINES
 )
@@ -56,6 +65,7 @@ set(MAIN_COMPONENT
 )
 
 install_sdk("${CMAKE_CURRENT_SOURCE_DIR}/peripheral" "*")
+install_sdk("${CMAKE_CURRENT_SOURCE_DIR}/os" "*")
 install_sdk("${CMAKE_CURRENT_SOURCE_DIR}/products" "*")
 install_sdk("${CMAKE_CURRENT_SOURCE_DIR}/wifi/sta_sample" "*")
 install_sdk("${CMAKE_CURRENT_SOURCE_DIR}/wifi/alilink_sample" "*")

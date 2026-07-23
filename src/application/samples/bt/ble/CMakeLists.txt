@@ -15,5 +15,11 @@ if(DEFINED CONFIG_SAMPLE_SUPPORT_BLE_CFG_SAMPLE)
     add_subdirectory_if_exist(ble_wifi_cfg_server)
 endif()
 
+if(DEFINED CONFIG_SAMPLE_SUPPORT_BLE_HID_BTN_SAMPLE)
+    add_subdirectory_if_exist(ble_hid_btn)
+endif()
+
+add_subdirectory_if_exist(ble_hello)
+
 set(SOURCES "${SOURCES}" PARENT_SCOPE)
 set(PUBLIC_HEADER "${PUBLIC_HEADER}" PARENT_SCOPE)

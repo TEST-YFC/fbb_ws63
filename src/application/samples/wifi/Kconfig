@@ -29,6 +29,10 @@ endif
 config SAMPLE_SUPPORT_BLE_WIFI_CFG_SAMPLE
     bool "Support BLE WIFI CFG Sample"
 
+if SAMPLE_SUPPORT_BLE_WIFI_CFG_SAMPLE
+osource "application/samples/wifi/ble_wifi_cfg_sample/Kconfig"
+endif
+
 config SUPPORT_HILINK
     bool "Support HILINK"
 
