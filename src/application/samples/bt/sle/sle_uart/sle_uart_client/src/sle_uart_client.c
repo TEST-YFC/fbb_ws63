@@ -20,6 +20,7 @@
 #define SLE_SEEK_INTERVAL_DEFAULT 100
 #define SLE_SEEK_WINDOW_DEFAULT 100
 #define SLE_UART_WAIT_SLE_CORE_READY_MS 5000
+#define SLE_ADDR_PENULTIMATE_OFFSET 2
 
 #ifndef SLE_UART_SERVER_NAME
 #define SLE_UART_SERVER_NAME "uart_server"
@@ -220,7 +221,8 @@ static void sle_uart_client_connect_state_changed_cbk(uint16_t conn_id,
 static void sle_uart_client_pair_complete_cbk(uint16_t conn_id, const sle_addr_t *addr, errcode_t status)
 {
     osal_printk("%s pair complete conn_id:%d, addr:%02x***%02x%02x, status:%d\r\n", SLE_UART_CLIENT_LOG, conn_id,
-                addr->addr[0], addr->addr[SLE_ADDR_LEN - 2], addr->addr[SLE_ADDR_LEN - 1], status);
+                addr->addr[0], addr->addr[SLE_ADDR_LEN - SLE_ADDR_PENULTIMATE_OFFSET],
+                addr->addr[SLE_ADDR_LEN - 1], status);
     if (status == 0) {
         ssap_exchange_info_t info = {0};
         info.mtu_size = CONFIG_SLE_UART_MTU_SIZE;
