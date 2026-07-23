@@ -21,19 +21,20 @@
 #include "sle_sensor_report_server.h"
 #include "sle_sensor_report_server_adv.h"
 
+#define SLE_ADV_TX_POWER_DBM 18
 #define SENSOR_SERVER_LOG "[sensor server adv]"
 
 /* Advertising parameters. / 广播参数。 */
-#define NAME_MAX_LENGTH                      16
-#define SLE_CONN_INTV_MIN_DEFAULT            0x64   /* 12.5ms, unit 125us */
-#define SLE_CONN_INTV_MAX_DEFAULT            0x64
-#define SLE_ADV_INTERVAL_MIN_DEFAULT         0xC8   /* 25ms, unit 125us */
-#define SLE_ADV_INTERVAL_MAX_DEFAULT         0xC8
-#define SLE_CONN_SUPERVISION_TIMEOUT_DEFAULT 0x1F4  /* 5000ms, unit 10ms */
-#define SLE_CONN_MAX_LATENCY                 0x1F3  /* 4990ms, unit 10ms */
-#define SLE_ADV_TX_POWER                     10
-#define SLE_ADV_HANDLE_DEFAULT               1
-#define SLE_ADV_DATA_LEN_MAX                 251
+#define NAME_MAX_LENGTH 16
+#define SLE_CONN_INTV_MIN_DEFAULT 0x64 /* 12.5ms, unit 125us */
+#define SLE_CONN_INTV_MAX_DEFAULT 0x64
+#define SLE_ADV_INTERVAL_MIN_DEFAULT 0xC8 /* 25ms, unit 125us */
+#define SLE_ADV_INTERVAL_MAX_DEFAULT 0xC8
+#define SLE_CONN_SUPERVISION_TIMEOUT_DEFAULT 0x1F4 /* 5000ms, unit 10ms */
+#define SLE_CONN_MAX_LATENCY 0x1F3                 /* 4990ms, unit 10ms */
+#define SLE_ADV_TX_POWER 10
+#define SLE_ADV_HANDLE_DEFAULT 1
+#define SLE_ADV_DATA_LEN_MAX 251
 
 static uint8_t g_sle_local_name[NAME_MAX_LENGTH] = "sensor_server";
 
@@ -155,7 +156,7 @@ static int sle_set_default_announce_param(void)
     param.conn_interval_max = SLE_CONN_INTV_MAX_DEFAULT;
     param.conn_max_latency = SLE_CONN_MAX_LATENCY;
     param.conn_supervision_timeout = SLE_CONN_SUPERVISION_TIMEOUT_DEFAULT;
-    param.announce_tx_power = 18;
+    param.announce_tx_power = SLE_ADV_TX_POWER_DBM;
     param.own_addr.type = 0;
     ret = memcpy_s(param.own_addr.addr, SLE_ADDR_LEN, local_addr, SLE_ADDR_LEN);
     if (ret != EOK) {
@@ -209,8 +210,7 @@ static int sle_set_default_announce_data(void)
  */
 static void sle_sensor_announce_enable_cbk(uint32_t announce_id, errcode_t status)
 {
-    osal_printk("%s announce enable cbk id: 0x%x, status: 0x%x\r\n",
-                SENSOR_SERVER_LOG, announce_id, status);
+    osal_printk("%s announce enable cbk id: 0x%x, status: 0x%x\r\n", SENSOR_SERVER_LOG, announce_id, status);
 }
 
 /**
@@ -222,8 +222,7 @@ static void sle_sensor_announce_enable_cbk(uint32_t announce_id, errcode_t statu
  */
 static void sle_sensor_announce_disable_cbk(uint32_t announce_id, errcode_t status)
 {
-    osal_printk("%s announce disable cbk id: 0x%x, status: 0x%x\r\n",
-                SENSOR_SERVER_LOG, announce_id, status);
+    osal_printk("%s announce disable cbk id: 0x%x, status: 0x%x\r\n", SENSOR_SERVER_LOG, announce_id, status);
 }
 
 /**
@@ -250,8 +249,8 @@ static void sle_sensor_announce_terminal_cbk(uint32_t announce_id)
 errcode_t sle_sensor_report_announce_register_cbks(void)
 {
     sle_announce_seek_callbacks_t seek_cbks = {0};
-    seek_cbks.announce_enable_cb   = sle_sensor_announce_enable_cbk;
-    seek_cbks.announce_disable_cb  = sle_sensor_announce_disable_cbk;
+    seek_cbks.announce_enable_cb = sle_sensor_announce_enable_cbk;
+    seek_cbks.announce_disable_cb = sle_sensor_announce_disable_cbk;
     seek_cbks.announce_terminal_cb = sle_sensor_announce_terminal_cbk;
 
     errcode_t ret = sle_announce_seek_register_callbacks(&seek_cbks);

@@ -30,12 +30,23 @@
 static char g_sensor_app_uuid[2] = {0x12, 0x34};
 
 /* SLE 128-bit base UUID. / SLE 128 位基础 UUID。 */
-static uint8_t g_sensor_base_uuid[] = { 0x37, 0xBE, 0xA8, 0x80, 0xFC, 0x70, 0x11, 0xEA,
-    0xB7, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+static uint8_t g_sensor_base_uuid[] = {0x37, 0xBE, 0xA8, 0x80, 0xFC, 0x70, 0x11, 0xEA,
+                                       0xB7, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-#define UUID_16BIT_LEN  2
+#define UUID_16BIT_LEN 2
 #define UUID_128BIT_LEN 16
-#define UUID_INDEX      14
+#define UUID_INDEX 14
+#define SENSOR_TEMP_SCALE 100
+#define SENSOR_TEMP_BASE 2500
+#define SENSOR_TEMP_MAX 8500
+#define SENSOR_TEMP_MIN 2000
+#define SENSOR_DRIFT_RESET_COUNT 40
+#define SENSOR_HUMIDITY_MIN 45
+#define SENSOR_HUMIDITY_MAX 75
+#define SENSOR_LIGHT_MIN 500
+#define SENSOR_LIGHT_MAX 2000
+#define SENSOR_COUNT 3
+#define USEC_PER_MSEC 1000
 
 /* UUID helpers based on hello and UART samples. / 参考 hello 和 UART 案例的 UUID 辅助函数。 */
 
@@ -46,10 +57,10 @@ static uint8_t g_sensor_base_uuid[] = { 0x37, 0xBE, 0xA8, 0x80, 0xFC, 0x70, 0x11
  * @brief 按小端序编码 16 位数值。
  * @endif
  */
-static void encode2byte_little(uint8_t *_ptr, uint16_t data)
+static void encode2byte_little(uint8_t *ptr, uint16_t data)
 {
-    *(uint8_t *)((_ptr) + 1) = (uint8_t)((data) >> 0x8);
-    *(uint8_t *)(_ptr) = (uint8_t)(data);
+    *(uint8_t *)(ptr + 1) = (uint8_t)(data >> 0x8);
+    *(uint8_t *)ptr = (uint8_t)data;
 }
 
 /**
@@ -85,12 +96,12 @@ static void sle_uuid_setu2(uint16_t u2, sle_uuid_t *out)
 }
 
 /* Global SSAP server state. / SSAP 服务端全局状态。 */
-static uint8_t  g_server_id = 0;
+static uint8_t g_server_id = 0;
 static uint16_t g_service_handle = 0;
-static uint16_t g_data_property_handle = 0;   /* Periodic data property. / 常规数据属性。 */
-static uint16_t g_alarm_property_handle = 0;  /* Alarm data property. / 告警数据属性。 */
+static uint16_t g_data_property_handle = 0;  /* Periodic data property. / 常规数据属性。 */
+static uint16_t g_alarm_property_handle = 0; /* Alarm data property. / 告警数据属性。 */
 static uint16_t g_sle_conn_hdl = 0;
-static bool     g_connected = false;
+static bool g_connected = false;
 
 /* Reporting timer. / 上报定时器。 */
 static osal_timer g_sensor_report_timer = {0};
@@ -101,10 +112,7 @@ static uint32_t g_sensor_call_count = 0;
 /* Simulated data generation. / 模拟数据生成。 */
 
 /* A 16-point sine approximation scaled by 100. / 放大 100 倍的 16 点正弦近似表。 */
-static const int16_t g_sine_table[16] = {
-    0, 195, 383, 500, 500, 383, 195, 0,
-    0, -195, -383, -500, -500, -383, -195, 0
-};
+static const int16_t SINE_TABLE[16] = {0, 195, 383, 500, 500, 383, 195, 0, 0, -195, -383, -500, -500, -383, -195, 0};
 
 /**
  * @if Eng
@@ -117,17 +125,17 @@ static int16_t get_simulated_temperature(void)
 {
     g_sensor_call_count++;
     /* Combine baseline, drift, and sine components. / 组合温度基准、漂移和简谐波分量。 */
-    int16_t drift = (int16_t)(g_sensor_call_count * 100);
-    int16_t sine  = g_sine_table[g_sensor_call_count & 0xF];
-    int16_t noise = (int16_t)(rand() % 31 - 15);  /* +/-0.15 C jitter. / 正负 0.15 摄氏度抖动。 */
-    int16_t temp  = 2500 + drift + sine + noise;
+    int16_t drift = (int16_t)(g_sensor_call_count * SENSOR_TEMP_SCALE);
+    int16_t sine = SINE_TABLE[g_sensor_call_count & 0xF];
+    int16_t noise = (int16_t)(rand() % 31 - 15); /* +/-0.15 C jitter. / 正负 0.15 摄氏度抖动。 */
+    int16_t temp = SENSOR_TEMP_BASE + drift + sine + noise;
     /* Reset drift at the upper limit to repeat alarm cycles. / 达到上限后重置漂移，以重复告警周期。 */
-    if (temp > 8500) {
-        g_sensor_call_count = 40;
-        temp = 8500;
+    if (temp > SENSOR_TEMP_MAX) {
+        g_sensor_call_count = SENSOR_DRIFT_RESET_COUNT;
+        temp = SENSOR_TEMP_MAX;
     }
-    if (temp < 2000) {
-        temp = 2000;
+    if (temp < SENSOR_TEMP_MIN) {
+        temp = SENSOR_TEMP_MIN;
     }
     return temp;
 }
@@ -141,12 +149,12 @@ static int16_t get_simulated_temperature(void)
  */
 static uint8_t get_simulated_humidity(void)
 {
-    int16_t val = 60 + (rand() % 11 - 5);  /* Simulate 60% +/- 5%. / 模拟 60% 上下浮动 5%。 */
-    if (val < 45) {
-        val = 45;
+    int16_t val = 60 + (rand() % 11 - 5); /* Simulate 60% +/- 5%. / 模拟 60% 上下浮动 5%。 */
+    if (val < SENSOR_HUMIDITY_MIN) {
+        val = SENSOR_HUMIDITY_MIN;
     }
-    if (val > 75) {
-        val = 75;
+    if (val > SENSOR_HUMIDITY_MAX) {
+        val = SENSOR_HUMIDITY_MAX;
     }
     return (uint8_t)val;
 }
@@ -160,12 +168,12 @@ static uint8_t get_simulated_humidity(void)
  */
 static uint16_t get_simulated_light(void)
 {
-    int32_t val = 1200 + (rand() % 401 - 200);  /* Simulate 1200 +/- 200 lux. / 模拟 1200 上下浮动 200 lux。 */
-    if (val < 500) {
-        val = 500;
+    int32_t val = 1200 + (rand() % 401 - 200); /* Simulate 1200 +/- 200 lux. / 模拟 1200 上下浮动 200 lux。 */
+    if (val < SENSOR_LIGHT_MIN) {
+        val = SENSOR_LIGHT_MIN;
     }
-    if (val > 2000) {
-        val = 2000;
+    if (val > SENSOR_LIGHT_MAX) {
+        val = SENSOR_LIGHT_MAX;
     }
     return (uint16_t)val;
 }
@@ -192,14 +200,14 @@ static void sensor_report_timer_cb(unsigned long arg)
 
     /* Generate simulated measurements. / 生成模拟测量数据。 */
     frame.temperature = get_simulated_temperature();
-    frame.humidity    = get_simulated_humidity();
-    frame.light       = get_simulated_light();
-    frame.sensor_count = 3;
+    frame.humidity = get_simulated_humidity();
+    frame.light = get_simulated_light();
+    frame.sensor_count = SENSOR_COUNT;
 
     /* Capture the timestamp. / 获取时间戳。 */
     osal_timeval tv;
     osal_gettimeofday(&tv);
-    frame.timestamp = (uint32_t)(tv.tv_sec * 1000 + tv.tv_usec / 1000);
+    frame.timestamp = (uint32_t)(tv.tv_sec * USEC_PER_MSEC + tv.tv_usec / USEC_PER_MSEC);
 
     /* Select a property according to the alarm threshold. / 根据告警阈值选择属性通道。 */
     uint16_t prop_handle;
@@ -208,10 +216,10 @@ static void sensor_report_timer_cb(unsigned long arg)
     if (is_alarm) {
         frame.frame_type = SENSOR_FRAME_TYPE_ALARM;
         prop_handle = g_alarm_property_handle;
-        osal_printk("%s ** ALARM ** temp=%d.%02dC, using IND Indicate\r\n",
-                    SENSOR_SERVER_LOG,
-                    frame.temperature / 100,
-                    (frame.temperature >= 0) ? (frame.temperature % 100) : (-frame.temperature % 100));
+        osal_printk("%s ** ALARM ** temp=%d.%02dC, using IND Indicate\r\n", SENSOR_SERVER_LOG,
+                    frame.temperature / SENSOR_TEMP_SCALE,
+                    (frame.temperature >= 0) ? (frame.temperature % SENSOR_TEMP_SCALE)
+                                             : (-frame.temperature % SENSOR_TEMP_SCALE));
     } else {
         frame.frame_type = SENSOR_FRAME_TYPE_PERIODIC;
         prop_handle = g_data_property_handle;
@@ -241,8 +249,7 @@ static void sensor_report_timer_cb(unsigned long arg)
  * @brief 处理分发给 \c ssaps_add_service_cbk 的异步事件。
  * @endif
  */
-static void ssaps_add_service_cbk(uint8_t server_id, sle_uuid_t *uuid,
-                                  uint16_t handle, errcode_t status)
+static void ssaps_add_service_cbk(uint8_t server_id, sle_uuid_t *uuid, uint16_t handle, errcode_t status)
 {
     unused(server_id);
     unused(uuid);
@@ -257,14 +264,16 @@ static void ssaps_add_service_cbk(uint8_t server_id, sle_uuid_t *uuid,
  * @brief 处理分发给 \c ssaps_add_property_cbk 的异步事件。
  * @endif
  */
-static void ssaps_add_property_cbk(uint8_t server_id, sle_uuid_t *uuid,
-                                   uint16_t service_handle, uint16_t handle, errcode_t status)
+static void ssaps_add_property_cbk(uint8_t server_id,
+                                   sle_uuid_t *uuid,
+                                   uint16_t service_handle,
+                                   uint16_t handle,
+                                   errcode_t status)
 {
     unused(server_id);
     unused(uuid);
     unused(service_handle);
-    osal_printk("%s add property cbk, handle: 0x%x, status: 0x%x\r\n",
-                SENSOR_SERVER_LOG, handle, status);
+    osal_printk("%s add property cbk, handle: 0x%x, status: 0x%x\r\n", SENSOR_SERVER_LOG, handle, status);
 }
 
 /**
@@ -274,15 +283,17 @@ static void ssaps_add_property_cbk(uint8_t server_id, sle_uuid_t *uuid,
  * @brief 处理分发给 \c ssaps_add_descriptor_cbk 的异步事件。
  * @endif
  */
-static void ssaps_add_descriptor_cbk(uint8_t server_id, sle_uuid_t *uuid,
-                                     uint16_t service_handle, uint16_t property_handle,
+static void ssaps_add_descriptor_cbk(uint8_t server_id,
+                                     sle_uuid_t *uuid,
+                                     uint16_t service_handle,
+                                     uint16_t property_handle,
                                      errcode_t status)
 {
     unused(server_id);
     unused(uuid);
     unused(service_handle);
-    osal_printk("%s add descriptor cbk, property_handle: 0x%x, status: 0x%x\r\n",
-                SENSOR_SERVER_LOG, property_handle, status);
+    osal_printk("%s add descriptor cbk, property_handle: 0x%x, status: 0x%x\r\n", SENSOR_SERVER_LOG, property_handle,
+                status);
 }
 
 /**
@@ -295,8 +306,7 @@ static void ssaps_add_descriptor_cbk(uint8_t server_id, sle_uuid_t *uuid,
 static void ssaps_start_service_cbk(uint8_t server_id, uint16_t handle, errcode_t status)
 {
     unused(server_id);
-    osal_printk("%s start service cbk, handle: 0x%x, status: 0x%x\r\n",
-                SENSOR_SERVER_LOG, handle, status);
+    osal_printk("%s start service cbk, handle: 0x%x, status: 0x%x\r\n", SENSOR_SERVER_LOG, handle, status);
 }
 
 /**
@@ -308,8 +318,7 @@ static void ssaps_start_service_cbk(uint8_t server_id, uint16_t handle, errcode_
  */
 static void ssaps_delete_all_service_cbk(uint8_t server_id, errcode_t status)
 {
-    osal_printk("%s delete all service cbk, server_id: %u, status: 0x%x\r\n",
-                SENSOR_SERVER_LOG, server_id, status);
+    osal_printk("%s delete all service cbk, server_id: %u, status: 0x%x\r\n", SENSOR_SERVER_LOG, server_id, status);
 }
 
 /**
@@ -319,13 +328,12 @@ static void ssaps_delete_all_service_cbk(uint8_t server_id, errcode_t status)
  * @brief 处理分发给 \c ssaps_mtu_changed_cbk 的异步事件。
  * @endif
  */
-static void ssaps_mtu_changed_cbk(uint8_t server_id, uint16_t conn_id,
-                                  ssap_exchange_info_t *info, errcode_t status)
+static void ssaps_mtu_changed_cbk(uint8_t server_id, uint16_t conn_id, ssap_exchange_info_t *info, errcode_t status)
 {
     unused(server_id);
     unused(conn_id);
-    osal_printk("%s mtu changed cbk, mtu: %u, status: 0x%x\r\n",
-                SENSOR_SERVER_LOG, (info != NULL) ? info->mtu_size : 0, status);
+    osal_printk("%s mtu changed cbk, mtu: %u, status: 0x%x\r\n", SENSOR_SERVER_LOG, (info != NULL) ? info->mtu_size : 0,
+                status);
 }
 
 /**
@@ -335,8 +343,10 @@ static void ssaps_mtu_changed_cbk(uint8_t server_id, uint16_t conn_id,
  * @brief 处理分发给 \c ssaps_read_request_cb 的异步事件。
  * @endif
  */
-static void ssaps_read_request_cb(uint8_t server_id, uint16_t conn_id,
-                                  ssaps_req_read_cb_t *read_cb_para, errcode_t status)
+static void ssaps_read_request_cb(uint8_t server_id,
+                                  uint16_t conn_id,
+                                  ssaps_req_read_cb_t *read_cb_para,
+                                  errcode_t status)
 {
     unused(server_id);
     unused(conn_id);
@@ -352,8 +362,10 @@ static void ssaps_read_request_cb(uint8_t server_id, uint16_t conn_id,
  * @brief 处理分发给 \c ssaps_write_request_cb 的异步事件。
  * @endif
  */
-static void ssaps_write_request_cb(uint8_t server_id, uint16_t conn_id,
-                                   ssaps_req_write_cb_t *write_cb_para, errcode_t status)
+static void ssaps_write_request_cb(uint8_t server_id,
+                                   uint16_t conn_id,
+                                   ssaps_req_write_cb_t *write_cb_para,
+                                   errcode_t status)
 {
     unused(conn_id);
     unused(status);
@@ -375,12 +387,14 @@ static void ssaps_write_request_cb(uint8_t server_id, uint16_t conn_id,
  * @brief 处理分发给 \c ssaps_indicate_cfm_cb 的异步事件。
  * @endif
  */
-static void ssaps_indicate_cfm_cb(uint8_t server_id, uint16_t conn_id,
-                                  sle_indication_cfm_result_t cfm_result, errcode_t status)
+static void ssaps_indicate_cfm_cb(uint8_t server_id,
+                                  uint16_t conn_id,
+                                  sle_indication_cfm_result_t cfm_result,
+                                  errcode_t status)
 {
     unused(server_id);
-    osal_printk("%s indicate cfm cbk, conn_id: %u, result: %u, status: 0x%x\r\n",
-                SENSOR_SERVER_LOG, conn_id, cfm_result, status);
+    osal_printk("%s indicate cfm cbk, conn_id: %u, result: %u, status: 0x%x\r\n", SENSOR_SERVER_LOG, conn_id,
+                cfm_result, status);
 }
 
 /**
@@ -393,15 +407,15 @@ static void ssaps_indicate_cfm_cb(uint8_t server_id, uint16_t conn_id,
 static errcode_t sle_sensor_report_ssaps_register_cbks(void)
 {
     ssaps_callbacks_t ssaps_cbk = {0};
-    ssaps_cbk.add_service_cb      = ssaps_add_service_cbk;
-    ssaps_cbk.add_property_cb     = ssaps_add_property_cbk;
-    ssaps_cbk.add_descriptor_cb   = ssaps_add_descriptor_cbk;
-    ssaps_cbk.start_service_cb    = ssaps_start_service_cbk;
+    ssaps_cbk.add_service_cb = ssaps_add_service_cbk;
+    ssaps_cbk.add_property_cb = ssaps_add_property_cbk;
+    ssaps_cbk.add_descriptor_cb = ssaps_add_descriptor_cbk;
+    ssaps_cbk.start_service_cb = ssaps_start_service_cbk;
     ssaps_cbk.delete_all_service_cb = ssaps_delete_all_service_cbk;
-    ssaps_cbk.mtu_changed_cb      = ssaps_mtu_changed_cbk;
-    ssaps_cbk.read_request_cb     = ssaps_read_request_cb;
-    ssaps_cbk.write_request_cb    = ssaps_write_request_cb;
-    ssaps_cbk.indicate_cfm_cb     = ssaps_indicate_cfm_cb;
+    ssaps_cbk.mtu_changed_cb = ssaps_mtu_changed_cbk;
+    ssaps_cbk.read_request_cb = ssaps_read_request_cb;
+    ssaps_cbk.write_request_cb = ssaps_write_request_cb;
+    ssaps_cbk.indicate_cfm_cb = ssaps_indicate_cfm_cb;
 
     errcode_t ret = ssaps_register_callbacks(&ssaps_cbk);
     if (ret != ERRCODE_SLE_SUCCESS) {
@@ -554,9 +568,8 @@ static errcode_t sle_sensor_report_server_add(void)
         ssaps_unregister_server(g_server_id);
         return ERRCODE_SLE_FAIL;
     }
-    osal_printk("%s add service ok, server_id:%x, svc_hdl:%x, data_hdl:%x, alarm_hdl:%x\r\n",
-                SENSOR_SERVER_LOG, g_server_id, g_service_handle,
-                g_data_property_handle, g_alarm_property_handle);
+    osal_printk("%s add service ok, server_id:%x, svc_hdl:%x, data_hdl:%x, alarm_hdl:%x\r\n", SENSOR_SERVER_LOG,
+                g_server_id, g_service_handle, g_data_property_handle, g_alarm_property_handle);
 
     ret = ssaps_start_service(g_server_id, g_service_handle);
     if (ret != ERRCODE_SLE_SUCCESS) {
@@ -577,10 +590,10 @@ static errcode_t sle_sensor_report_server_add(void)
  * @endif
  */
 static void sle_sensor_report_connect_state_changed_cbk(uint16_t conn_id,
-                                                         const sle_addr_t *addr,
-                                                         sle_acb_state_t conn_state,
-                                                         sle_pair_state_t pair_state,
-                                                         sle_disc_reason_t disc_reason)
+                                                        const sle_addr_t *addr,
+                                                        sle_acb_state_t conn_state,
+                                                        sle_pair_state_t pair_state,
+                                                        sle_disc_reason_t disc_reason)
 {
     unused(addr);
     unused(pair_state);
@@ -615,21 +628,19 @@ static void sle_sensor_report_connect_state_changed_cbk(uint16_t conn_id,
  * @brief 处理分发给 \c sle_sensor_report_pair_complete_cbk 的异步事件。
  * @endif
  */
-static void sle_sensor_report_pair_complete_cbk(uint16_t conn_id, const sle_addr_t *addr,
-                                                 errcode_t status)
+static void sle_sensor_report_pair_complete_cbk(uint16_t conn_id, const sle_addr_t *addr, errcode_t status)
 {
     unused(addr);
 
     if (status != ERRCODE_SLE_SUCCESS) {
-        osal_printk("%s pair failed, conn_id: 0x%x, status: 0x%x\r\n",
-                    SENSOR_SERVER_LOG, conn_id, status);
+        osal_printk("%s pair failed, conn_id: 0x%x, status: 0x%x\r\n", SENSOR_SERVER_LOG, conn_id, status);
         return;
     }
 
     osal_printk("%s pair complete, conn_id: 0x%x\r\n", SENSOR_SERVER_LOG, conn_id);
 
     /* Configure an MTU of 520 bytes. / 配置 520 字节 MTU。 */
-    ssap_exchange_info_t info = { .mtu_size = 520, .version = 1 };
+    ssap_exchange_info_t info = {.mtu_size = 520, .version = 1};
     (void)ssaps_set_info(g_server_id, &info);
 
     /* Start the one-second timer. / 启动 1 秒定时器。 */
@@ -676,8 +687,8 @@ static errcode_t sle_sensor_report_conn_register_cbks(void)
 {
     sle_connection_callbacks_t conn_cbks = {0};
     conn_cbks.connect_state_changed_cb = sle_sensor_report_connect_state_changed_cbk;
-    conn_cbks.pair_complete_cb         = sle_sensor_report_pair_complete_cbk;
-    conn_cbks.read_rssi_cb             = sle_sensor_report_read_rssi_cb;
+    conn_cbks.pair_complete_cb = sle_sensor_report_pair_complete_cbk;
+    conn_cbks.read_rssi_cb = sle_sensor_report_read_rssi_cb;
 
     errcode_t ret = sle_connection_register_callbacks(&conn_cbks);
     if (ret != ERRCODE_SLE_SUCCESS) {

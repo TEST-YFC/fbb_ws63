@@ -25,13 +25,14 @@
 #include "sle_sensor_report_client.h"
 #endif
 
-#define SLE_SENSOR_REPORT_TASK_PRIO         28
-#define SLE_SENSOR_REPORT_TASK_STACK_SIZE   0x1000
+#define SLE_SENSOR_REPORT_TASK_PRIO 28
+#define SLE_SENSOR_REPORT_TASK_STACK_SIZE 0x1000
+#define SENSOR_TEMP_SCALE 100
 
 /* Client-local frame matching the server layout. / 客户端本地帧，布局与服务端一致。 */
 #if defined(CONFIG_SAMPLE_SUPPORT_SLE_SENSOR_REPORT_CLIENT_SAMPLE)
-#define SENSOR_FRAME_TYPE_PERIODIC  0x01
-#define SENSOR_FRAME_TYPE_ALARM     0x02
+#define SENSOR_FRAME_TYPE_PERIODIC 0x01
+#define SENSOR_FRAME_TYPE_ALARM 0x02
 
 /**
  * @if Eng
@@ -41,11 +42,11 @@
  * @endif
  */
 typedef struct {
-    uint8_t  frame_type;
-    uint8_t  sensor_count;
+    uint8_t frame_type;
+    uint8_t sensor_count;
     uint32_t timestamp;
-    int16_t  temperature;
-    uint8_t  humidity;
+    int16_t temperature;
+    uint8_t humidity;
     uint16_t light;
 } __attribute__((packed)) sensor_data_frame_t;
 #endif
@@ -63,27 +64,25 @@ typedef struct {
  * @brief 处理从 SLE 服务端收到的通知。
  * @endif
  */
-static void sle_sensor_report_notification_cb(uint8_t client_id, uint16_t conn_id,
-                                              ssapc_handle_value_t *data, errcode_t status)
+static void sle_sensor_report_notification_cb(uint8_t client_id,
+                                              uint16_t conn_id,
+                                              ssapc_handle_value_t *data,
+                                              errcode_t status)
 {
     unused(client_id);
     unused(conn_id);
     unused(status);
 
-    if (data == NULL || data->data == NULL ||
-        data->data_len != sizeof(sensor_data_frame_t)) {
+    if (data == NULL || data->data == NULL || data->data_len != sizeof(sensor_data_frame_t)) {
         return;
     }
 
     sensor_data_frame_t *frame = (sensor_data_frame_t *)data->data;
-    osal_printk("%s [T=%ums] temp=%d.%02dC, hum=%u%%, light=%ulux, type=0x%02x\r\n",
-                SENSOR_CLIENT_LOG,
-                frame->timestamp,
-                frame->temperature / 100,
-                (frame->temperature >= 0) ? (frame->temperature % 100) : (-frame->temperature % 100),
-                frame->humidity,
-                frame->light,
-                frame->frame_type);
+    osal_printk("%s [T=%ums] temp=%d.%02dC, hum=%u%%, light=%ulux, type=0x%02x\r\n", SENSOR_CLIENT_LOG,
+                frame->timestamp, frame->temperature / SENSOR_TEMP_SCALE,
+                (frame->temperature >= 0) ? (frame->temperature % SENSOR_TEMP_SCALE)
+                                          : (-frame->temperature % SENSOR_TEMP_SCALE),
+                frame->humidity, frame->light, frame->frame_type);
 }
 
 /**
@@ -93,8 +92,10 @@ static void sle_sensor_report_notification_cb(uint8_t client_id, uint16_t conn_i
  * @brief 处理分发给 \c sle_sensor_report_indication_cb 的异步事件。
  * @endif
  */
-static void sle_sensor_report_indication_cb(uint8_t client_id, uint16_t conn_id,
-                                             ssapc_handle_value_t *data, errcode_t status)
+static void sle_sensor_report_indication_cb(uint8_t client_id,
+                                            uint16_t conn_id,
+                                            ssapc_handle_value_t *data,
+                                            errcode_t status)
 {
     unused(client_id);
     unused(conn_id);
@@ -105,10 +106,10 @@ static void sle_sensor_report_indication_cb(uint8_t client_id, uint16_t conn_id,
     }
 
     sensor_data_frame_t *frame = (sensor_data_frame_t *)data->data;
-    osal_printk("%s ** ALARM ** temp=%d.%02dC exceeds threshold! type=0x%02x\r\n",
-                SENSOR_CLIENT_LOG,
-                frame->temperature / 100,
-                (frame->temperature >= 0) ? (frame->temperature % 100) : (-frame->temperature % 100),
+    osal_printk("%s ** ALARM ** temp=%d.%02dC exceeds threshold! type=0x%02x\r\n", SENSOR_CLIENT_LOG,
+                frame->temperature / SENSOR_TEMP_SCALE,
+                (frame->temperature >= 0) ? (frame->temperature % SENSOR_TEMP_SCALE)
+                                          : (-frame->temperature % SENSOR_TEMP_SCALE),
                 frame->frame_type);
 }
 
@@ -124,8 +125,7 @@ static void sle_sensor_report_indication_cb(uint8_t client_id, uint16_t conn_id,
 static void *sle_sensor_report_client_task(const char *arg)
 {
     unused(arg);
-    sle_sensor_report_client_init(sle_sensor_report_notification_cb,
-                                   sle_sensor_report_indication_cb);
+    sle_sensor_report_client_init(sle_sensor_report_notification_cb, sle_sensor_report_indication_cb);
     return NULL;
 }
 
@@ -167,11 +167,11 @@ static void sle_sensor_report_entry(void)
     osal_kthread_lock();
 
 #if defined(CONFIG_SAMPLE_SUPPORT_SLE_SENSOR_REPORT_SERVER_SAMPLE)
-    task_handle = osal_kthread_create((osal_kthread_handler)sle_sensor_report_server_task,
-                                      0, "SensorReportServer", SLE_SENSOR_REPORT_TASK_STACK_SIZE);
+    task_handle = osal_kthread_create((osal_kthread_handler)sle_sensor_report_server_task, 0, "SensorReportServer",
+                                      SLE_SENSOR_REPORT_TASK_STACK_SIZE);
 #elif defined(CONFIG_SAMPLE_SUPPORT_SLE_SENSOR_REPORT_CLIENT_SAMPLE)
-    task_handle = osal_kthread_create((osal_kthread_handler)sle_sensor_report_client_task,
-                                      0, "SensorReportClient", SLE_SENSOR_REPORT_TASK_STACK_SIZE);
+    task_handle = osal_kthread_create((osal_kthread_handler)sle_sensor_report_client_task, 0, "SensorReportClient",
+                                      SLE_SENSOR_REPORT_TASK_STACK_SIZE);
 #endif
 
     if (task_handle != NULL) {

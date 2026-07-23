@@ -24,7 +24,7 @@
  * @endif
  */
 void sle_sensor_report_client_init(ssapc_notification_callback notification_cb,
-                                    ssapc_indication_callback indication_cb);
+                                   ssapc_indication_callback indication_cb);
 /**
  * @if Eng
  * @brief Reports whether the SLE link is connected.
