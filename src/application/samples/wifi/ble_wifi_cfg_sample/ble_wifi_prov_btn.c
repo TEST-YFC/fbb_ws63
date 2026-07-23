@@ -42,7 +42,6 @@ static int prov_btn_task(const char *arg)
 
         bool level = (uapi_gpio_get_val(g_btn_pin) == GPIO_LEVEL_LOW);
         /* active-low: LOW = pressed */
-
         /* Simple debounce: require N consecutive identical reads */
         if (level == last_stable) {
             stable_cnt = 0;
