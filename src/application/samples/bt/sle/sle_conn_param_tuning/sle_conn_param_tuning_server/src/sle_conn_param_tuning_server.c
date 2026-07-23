@@ -16,13 +16,13 @@
 #include "sle_conn_param_tuning_server_adv.h"
 #include "sle_conn_param_tuning_server.h"
 
-#define SLE_CONN_PARAM_SERVER_LOG       "[sle conn param server]"
-#define SLE_CONN_INTERVAL_MIN           0x001E
-#define SLE_CONN_INTERVAL_MAX           0x3E80
-#define SLE_CONN_LATENCY_MAX            0x01F3
-#define SLE_CONN_TIMEOUT_MIN            0x000A
-#define SLE_CONN_TIMEOUT_MAX            0x0C80
-#define SLE_CONN_TIMEOUT_SCALE          20U
+#define SLE_CONN_PARAM_SERVER_LOG "[sle conn param server]"
+#define SLE_CONN_INTERVAL_MIN 0x001E
+#define SLE_CONN_INTERVAL_MAX 0x3E80
+#define SLE_CONN_LATENCY_MAX 0x01F3
+#define SLE_CONN_TIMEOUT_MIN 0x000A
+#define SLE_CONN_TIMEOUT_MAX 0x0C80
+#define SLE_CONN_TIMEOUT_SCALE 20U
 
 /**
  * @if Eng
@@ -39,11 +39,11 @@ typedef struct {
 } sle_conn_param_profile_t;
 
 #if defined(CONFIG_SLE_CONN_PARAM_PROFILE_LOW_POWER)
-static const sle_conn_param_profile_t g_profile = {"low-power", 400, 49, 1200};
+static const sle_conn_param_profile_t PROFILE = {"low-power", 400, 49, 1200};
 #elif defined(CONFIG_SLE_CONN_PARAM_PROFILE_LOW_LATENCY)
-static const sle_conn_param_profile_t g_profile = {"low-latency", 30, 0, 200};
+static const sle_conn_param_profile_t PROFILE = {"low-latency", 30, 0, 200};
 #else
-static const sle_conn_param_profile_t g_profile = {"balanced", 50, 0, 500};
+static const sle_conn_param_profile_t PROFILE = {"balanced", 50, 0, 500};
 #endif
 
 /**
@@ -58,12 +58,9 @@ static errcode_t sle_conn_param_validate(const sle_connection_param_update_t *pa
     uint32_t timeout_scaled;
     uint32_t max_connection_gap;
 
-    if ((param->interval_min < SLE_CONN_INTERVAL_MIN) ||
-        (param->interval_max > SLE_CONN_INTERVAL_MAX) ||
-        (param->interval_min > param->interval_max) ||
-        (param->max_latency > SLE_CONN_LATENCY_MAX) ||
-        (param->supervision_timeout < SLE_CONN_TIMEOUT_MIN) ||
-        (param->supervision_timeout > SLE_CONN_TIMEOUT_MAX)) {
+    if ((param->interval_min < SLE_CONN_INTERVAL_MIN) || (param->interval_max > SLE_CONN_INTERVAL_MAX) ||
+        (param->interval_min > param->interval_max) || (param->max_latency > SLE_CONN_LATENCY_MAX) ||
+        (param->supervision_timeout < SLE_CONN_TIMEOUT_MIN) || (param->supervision_timeout > SLE_CONN_TIMEOUT_MAX)) {
         return ERRCODE_INVALID_PARAM;
     }
 
@@ -89,20 +86,20 @@ static errcode_t sle_conn_param_request_update(uint16_t conn_id)
 {
     sle_connection_param_update_t param = {
         .conn_id = conn_id,
-        .interval_min = g_profile.interval,
-        .interval_max = g_profile.interval,
-        .max_latency = g_profile.latency,
-        .supervision_timeout = g_profile.timeout,
+        .interval_min = PROFILE.interval,
+        .interval_max = PROFILE.interval,
+        .max_latency = PROFILE.latency,
+        .supervision_timeout = PROFILE.timeout,
     };
     errcode_t ret = sle_conn_param_validate(&param);
 
     if (ret != ERRCODE_SUCC) {
-        osal_printk("%s invalid profile: %s\r\n", SLE_CONN_PARAM_SERVER_LOG, g_profile.name);
+        osal_printk("%s invalid profile: %s\r\n", SLE_CONN_PARAM_SERVER_LOG, PROFILE.name);
         return ret;
     }
     osal_printk("%s update request: profile=%s, interval=%u (0.25ms), latency=%u, timeout=%u (10ms)\r\n",
-        SLE_CONN_PARAM_SERVER_LOG, g_profile.name, param.interval_min,
-        param.max_latency, param.supervision_timeout);
+                SLE_CONN_PARAM_SERVER_LOG, PROFILE.name, param.interval_min, param.max_latency,
+                param.supervision_timeout);
     ret = sle_update_connect_param(&param);
     osal_printk("%s update request sent, status=0x%x\r\n", SLE_CONN_PARAM_SERVER_LOG, ret);
     return ret;
@@ -115,8 +112,11 @@ static errcode_t sle_conn_param_request_update(uint16_t conn_id)
  * @brief 建链时触发参数调优，断链后恢复广播。
  * @endif
  */
-static void sle_conn_param_state_changed_cb(uint16_t conn_id, const sle_addr_t *addr,
-    sle_acb_state_t conn_state, sle_pair_state_t pair_state, sle_disc_reason_t disc_reason)
+static void sle_conn_param_state_changed_cb(uint16_t conn_id,
+                                            const sle_addr_t *addr,
+                                            sle_acb_state_t conn_state,
+                                            sle_pair_state_t pair_state,
+                                            sle_disc_reason_t disc_reason)
 {
     unused(addr);
     unused(pair_state);
@@ -125,8 +125,7 @@ static void sle_conn_param_state_changed_cb(uint16_t conn_id, const sle_addr_t *
         osal_printk("%s connected, conn_id=0x%02x\r\n", SLE_CONN_PARAM_SERVER_LOG, conn_id);
         (void)sle_conn_param_request_update(conn_id);
     } else if (conn_state == SLE_ACB_STATE_DISCONNECTED) {
-        osal_printk("%s disconnected, reason=0x%x, restart announce\r\n",
-            SLE_CONN_PARAM_SERVER_LOG, disc_reason);
+        osal_printk("%s disconnected, reason=0x%x, restart announce\r\n", SLE_CONN_PARAM_SERVER_LOG, disc_reason);
         (void)sle_start_announce(SLE_CONN_PARAM_ADV_HANDLE);
     }
 }
@@ -138,15 +137,16 @@ static void sle_conn_param_state_changed_cb(uint16_t conn_id, const sle_addr_t *
  * @brief 输出异步连接参数更新请求结果。
  * @endif
  */
-static void sle_conn_param_update_req_cb(uint16_t conn_id, errcode_t status,
-    const sle_connection_param_update_req_t *param)
+static void sle_conn_param_update_req_cb(uint16_t conn_id,
+                                         errcode_t status,
+                                         const sle_connection_param_update_req_t *param)
 {
     if (param == NULL) {
         return;
     }
     osal_printk("%s peer update request: conn_id=0x%02x, status=0x%x, interval=%u-%u, latency=%u, timeout=%u\r\n",
-        SLE_CONN_PARAM_SERVER_LOG, conn_id, status, param->interval_min,
-        param->interval_max, param->max_latency, param->supervision_timeout);
+                SLE_CONN_PARAM_SERVER_LOG, conn_id, status, param->interval_min, param->interval_max,
+                param->max_latency, param->supervision_timeout);
 }
 
 /**
@@ -156,15 +156,13 @@ static void sle_conn_param_update_req_cb(uint16_t conn_id, errcode_t status,
  * @brief 输出控制器最终应用的连接参数。
  * @endif
  */
-static void sle_conn_param_update_cb(uint16_t conn_id, errcode_t status,
-    const sle_connection_param_update_evt_t *param)
+static void sle_conn_param_update_cb(uint16_t conn_id, errcode_t status, const sle_connection_param_update_evt_t *param)
 {
     if (param == NULL) {
         return;
     }
     osal_printk("%s update complete: conn_id=0x%02x, status=0x%x, interval=%u, latency=%u, timeout=%u\r\n",
-        SLE_CONN_PARAM_SERVER_LOG, conn_id, status, param->interval,
-        param->latency, param->supervision);
+                SLE_CONN_PARAM_SERVER_LOG, conn_id, status, param->interval, param->latency, param->supervision);
 }
 
 /**
@@ -207,6 +205,6 @@ errcode_t sle_conn_param_tuning_server_init(void)
         osal_printk("%s register connection callbacks failed: 0x%x\r\n", SLE_CONN_PARAM_SERVER_LOG, ret);
         return ret;
     }
-    osal_printk("%s selected profile=%s\r\n", SLE_CONN_PARAM_SERVER_LOG, g_profile.name);
+    osal_printk("%s selected profile=%s\r\n", SLE_CONN_PARAM_SERVER_LOG, PROFILE.name);
     return sle_conn_param_tuning_server_announce_start();
 }
