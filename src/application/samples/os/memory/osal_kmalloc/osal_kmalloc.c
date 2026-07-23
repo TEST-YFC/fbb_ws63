@@ -13,17 +13,19 @@
 #include "common_def.h"
 #include "soc_osal.h"
 #include "app_init.h"
+
+#define OSAL_MEMORY_TEST_COUNT 7U
 #include "osal_addr.h"
 
-#define OSAL_MEMORY_TASK_PRIO         24
-#define OSAL_MEMORY_TASK_STACK_SIZE   0x1000
-#define OSAL_MEMORY_NORMAL_SIZE       256U
-#define OSAL_MEMORY_LARGE_SIZE        8192U
-#define OSAL_MEMORY_FAILURE_SIZE      (1024U * 1024U)
-#define OSAL_MEMORY_ALIGNMENT         32U
-#define OSAL_MEMORY_PATTERN_SEED      0x5AU
+#define OSAL_MEMORY_TASK_PRIO 24
+#define OSAL_MEMORY_TASK_STACK_SIZE 0x1000
+#define OSAL_MEMORY_NORMAL_SIZE 256U
+#define OSAL_MEMORY_LARGE_SIZE 8192U
+#define OSAL_MEMORY_FAILURE_SIZE (1024U * 1024U)
+#define OSAL_MEMORY_ALIGNMENT 32U
+#define OSAL_MEMORY_PATTERN_SEED 0x5AU
 
-#define OSAL_MEMORY_LOG               "[osal memory]"
+#define OSAL_MEMORY_LOG "[osal memory]"
 
 /**
  * @if Eng
@@ -114,8 +116,8 @@ static bool osal_memory_test_kmalloc(osal_memory_stats_t *stats)
     buffer = NULL;
     stats->freed++;
 
-    osal_printk("%s kmalloc size=%u checksum=0x%x %s\r\n", OSAL_MEMORY_LOG,
-        OSAL_MEMORY_NORMAL_SIZE, checksum, passed ? "PASS" : "FAIL");
+    osal_printk("%s kmalloc size=%u checksum=0x%x %s\r\n", OSAL_MEMORY_LOG, OSAL_MEMORY_NORMAL_SIZE, checksum,
+                passed ? "PASS" : "FAIL");
     return passed;
 }
 
@@ -139,8 +141,8 @@ static bool osal_memory_test_kzalloc(osal_memory_stats_t *stats)
     buffer = NULL;
     stats->freed++;
 
-    osal_printk("%s kzalloc size=%u zero_check %s\r\n", OSAL_MEMORY_LOG,
-        OSAL_MEMORY_NORMAL_SIZE, passed ? "PASS" : "FAIL");
+    osal_printk("%s kzalloc size=%u zero_check %s\r\n", OSAL_MEMORY_LOG, OSAL_MEMORY_NORMAL_SIZE,
+                passed ? "PASS" : "FAIL");
     return passed;
 }
 
@@ -154,8 +156,7 @@ static bool osal_memory_test_kzalloc(osal_memory_stats_t *stats)
 static bool osal_memory_test_kmalloc_align(osal_memory_stats_t *stats)
 {
     uint32_t checksum = 0;
-    uint8_t *buffer = (uint8_t *)osal_kmalloc_align(OSAL_MEMORY_NORMAL_SIZE, OSAL_GFP_KERNEL,
-        OSAL_MEMORY_ALIGNMENT);
+    uint8_t *buffer = (uint8_t *)osal_kmalloc_align(OSAL_MEMORY_NORMAL_SIZE, OSAL_GFP_KERNEL, OSAL_MEMORY_ALIGNMENT);
     if (buffer == NULL) {
         return osal_memory_handle_alloc_failure("kmalloc_align", OSAL_MEMORY_NORMAL_SIZE);
     }
@@ -168,8 +169,8 @@ static bool osal_memory_test_kmalloc_align(osal_memory_stats_t *stats)
     buffer = NULL;
     stats->freed++;
 
-    osal_printk("%s kmalloc_align size=%u align=%u checksum=0x%x %s\r\n", OSAL_MEMORY_LOG,
-        OSAL_MEMORY_NORMAL_SIZE, OSAL_MEMORY_ALIGNMENT, checksum, passed ? "PASS" : "FAIL");
+    osal_printk("%s kmalloc_align size=%u align=%u checksum=0x%x %s\r\n", OSAL_MEMORY_LOG, OSAL_MEMORY_NORMAL_SIZE,
+                OSAL_MEMORY_ALIGNMENT, checksum, passed ? "PASS" : "FAIL");
     return passed;
 }
 
@@ -182,8 +183,7 @@ static bool osal_memory_test_kmalloc_align(osal_memory_stats_t *stats)
  */
 static bool osal_memory_test_kzalloc_align(osal_memory_stats_t *stats)
 {
-    uint8_t *buffer = (uint8_t *)osal_kzalloc_align(OSAL_MEMORY_NORMAL_SIZE, OSAL_GFP_KERNEL,
-        OSAL_MEMORY_ALIGNMENT);
+    uint8_t *buffer = (uint8_t *)osal_kzalloc_align(OSAL_MEMORY_NORMAL_SIZE, OSAL_GFP_KERNEL, OSAL_MEMORY_ALIGNMENT);
     if (buffer == NULL) {
         return osal_memory_handle_alloc_failure("kzalloc_align", OSAL_MEMORY_NORMAL_SIZE);
     }
@@ -195,8 +195,8 @@ static bool osal_memory_test_kzalloc_align(osal_memory_stats_t *stats)
     buffer = NULL;
     stats->freed++;
 
-    osal_printk("%s kzalloc_align size=%u align=%u zero_check %s\r\n", OSAL_MEMORY_LOG,
-        OSAL_MEMORY_NORMAL_SIZE, OSAL_MEMORY_ALIGNMENT, passed ? "PASS" : "FAIL");
+    osal_printk("%s kzalloc_align size=%u align=%u zero_check %s\r\n", OSAL_MEMORY_LOG, OSAL_MEMORY_NORMAL_SIZE,
+                OSAL_MEMORY_ALIGNMENT, passed ? "PASS" : "FAIL");
     return passed;
 }
 
@@ -221,8 +221,8 @@ static bool osal_memory_test_vmalloc(osal_memory_stats_t *stats)
     buffer = NULL;
     stats->freed++;
 
-    osal_printk("%s vmalloc size=%u checksum=0x%x %s\r\n", OSAL_MEMORY_LOG,
-        OSAL_MEMORY_LARGE_SIZE, checksum, passed ? "PASS" : "FAIL");
+    osal_printk("%s vmalloc size=%u checksum=0x%x %s\r\n", OSAL_MEMORY_LOG, OSAL_MEMORY_LARGE_SIZE, checksum,
+                passed ? "PASS" : "FAIL");
     return passed;
 }
 
@@ -246,8 +246,8 @@ static bool osal_memory_test_vzalloc(osal_memory_stats_t *stats)
     buffer = NULL;
     stats->freed++;
 
-    osal_printk("%s vzalloc size=%u zero_check %s\r\n", OSAL_MEMORY_LOG,
-        OSAL_MEMORY_LARGE_SIZE, passed ? "PASS" : "FAIL");
+    osal_printk("%s vzalloc size=%u zero_check %s\r\n", OSAL_MEMORY_LOG, OSAL_MEMORY_LARGE_SIZE,
+                passed ? "PASS" : "FAIL");
     return passed;
 }
 
@@ -263,7 +263,7 @@ static bool osal_memory_test_expected_failure(osal_memory_stats_t *stats)
     uint8_t *buffer = (uint8_t *)osal_kmalloc(OSAL_MEMORY_FAILURE_SIZE, OSAL_GFP_KERNEL);
     if (buffer == NULL) {
         osal_printk("%s expected_failure size=%u return=NULL handled PASS\r\n", OSAL_MEMORY_LOG,
-            OSAL_MEMORY_FAILURE_SIZE);
+                    OSAL_MEMORY_FAILURE_SIZE);
         return true;
     }
 
@@ -272,7 +272,7 @@ static bool osal_memory_test_expected_failure(osal_memory_stats_t *stats)
     buffer = NULL;
     stats->freed++;
     osal_printk("%s expected_failure size=%u return=NON-NULL unexpected FAIL\r\n", OSAL_MEMORY_LOG,
-        OSAL_MEMORY_FAILURE_SIZE);
+                OSAL_MEMORY_FAILURE_SIZE);
     return false;
 }
 
@@ -302,7 +302,7 @@ static void osal_memory_record_result(osal_memory_stats_t *stats, bool passed)
 static void *osal_memory_test_task(const char *arg)
 {
     unused(arg);
-    osal_memory_stats_t stats = { 0 };
+    osal_memory_stats_t stats = {0};
 
     osal_printk("%s sample start\r\n", OSAL_MEMORY_LOG);
     osal_memory_record_result(&stats, osal_memory_test_kmalloc(&stats));
@@ -314,10 +314,11 @@ static void *osal_memory_test_task(const char *arg)
     osal_memory_record_result(&stats, osal_memory_test_expected_failure(&stats));
 
     uint32_t leak = stats.allocated - stats.freed;
-    osal_printk("%s summary passed=%u failed=%u alloc=%u free=%u leak=%u\r\n", OSAL_MEMORY_LOG,
-        stats.passed, stats.failed, stats.allocated, stats.freed, leak);
+    osal_printk("%s summary passed=%u failed=%u alloc=%u free=%u leak=%u\r\n", OSAL_MEMORY_LOG, stats.passed,
+                stats.failed, stats.allocated, stats.freed, leak);
     osal_printk("%s %s\r\n", OSAL_MEMORY_LOG,
-        (stats.passed == 7 && stats.failed == 0 && leak == 0) ? "ALL TESTS PASS" : "TESTS FAILED");
+                (stats.passed == OSAL_MEMORY_TEST_COUNT && stats.failed == 0 && leak == 0) ? "ALL TESTS PASS"
+                                                                                           : "TESTS FAILED");
     return NULL;
 }
 
@@ -334,7 +335,7 @@ static void osal_memory_entry(void)
 
     osal_kthread_lock();
     task_handle = osal_kthread_create((osal_kthread_handler)osal_memory_test_task, 0, "OsalMemoryTask",
-        OSAL_MEMORY_TASK_STACK_SIZE);
+                                      OSAL_MEMORY_TASK_STACK_SIZE);
     if (task_handle != NULL) {
         osal_kthread_set_priority(task_handle, OSAL_MEMORY_TASK_PRIO);
         osal_kfree(task_handle);
