@@ -13,23 +13,24 @@
 #include "sle_connection_manager.h"
 #include "sle_hello_client.h"
 
-#define SLE_MTU_SIZE_DEFAULT            520
-#define SLE_SEEK_INTERVAL_DEFAULT       100
-#define SLE_SEEK_WINDOW_DEFAULT         100
+#define SLE_MTU_SIZE_DEFAULT 520
+#define SLE_SEEK_INTERVAL_DEFAULT 100
+#define SLE_SEEK_WINDOW_DEFAULT 100
 #define SLE_HELLO_WAIT_SLE_CORE_READY_MS 5000
 
 #ifndef SLE_HELLO_SERVER_NAME
-#define SLE_HELLO_SERVER_NAME           "hello_server"
+#define SLE_HELLO_SERVER_NAME "hello_server"
 #endif
 
-#define SLE_HELLO_CLIENT_LOG            "[sle hello client]"
+#define SLE_HELLO_CLIENT_LOG "[sle hello client]"
 
-static ssapc_find_service_result_t g_sle_hello_find_service_result = { 0 };
-static sle_announce_seek_callbacks_t g_sle_hello_seek_cbk = { 0 };
-static sle_connection_callbacks_t g_sle_hello_connect_cbk = { 0 };
-static ssapc_callbacks_t g_sle_hello_ssapc_cbk = { 0 };
-static sle_addr_t g_sle_hello_remote_addr = { 0 };
+static ssapc_find_service_result_t g_sle_hello_find_service_result = {0};
+static sle_announce_seek_callbacks_t g_sle_hello_seek_cbk = {0};
+static sle_connection_callbacks_t g_sle_hello_connect_cbk = {0};
+static ssapc_callbacks_t g_sle_hello_ssapc_cbk = {0};
+static sle_addr_t g_sle_hello_remote_addr = {0};
 static uint16_t g_sle_hello_conn_id = 0;
+static uint16_t g_sle_hello_property_handle = 0;
 
 /* 保存用户回调，确保 sle_enable_cbk 重入时不丢失 */
 static ssapc_notification_callback g_saved_notification_cb = NULL;
@@ -39,7 +40,7 @@ static ssapc_write_cfm_callback g_saved_write_cfm_cb = NULL;
 
 void sle_hello_client_start_scan(void)
 {
-    sle_seek_param_t param = { 0 };
+    sle_seek_param_t param = {0};
     param.own_addr_type = 0;
     param.filter_duplicates = 0;
     param.seek_filter_policy = 0;
@@ -55,9 +56,9 @@ void sle_hello_client_start_scan(void)
 static void sle_hello_seek_cbk_register(void);
 static void sle_hello_connect_cbk_register(void);
 static void sle_hello_ssapc_cbk_register(ssapc_notification_callback notification_cb,
-                                          ssapc_indication_callback indication_cb,
-                                          ssapc_read_cfm_callback read_cfm_cb,
-                                          ssapc_write_cfm_callback write_cfm_cb);
+                                         ssapc_indication_callback indication_cb,
+                                         ssapc_read_cfm_callback read_cfm_cb,
+                                         ssapc_write_cfm_callback write_cfm_cb);
 
 static void sle_hello_sle_enable_cbk(errcode_t status)
 {
@@ -65,8 +66,8 @@ static void sle_hello_sle_enable_cbk(errcode_t status)
     /* 重新注册回调（使用保存的用户回调，避免被NULL覆盖） */
     sle_hello_seek_cbk_register();
     sle_hello_connect_cbk_register();
-    sle_hello_ssapc_cbk_register(g_saved_notification_cb, g_saved_indication_cb,
-                                 g_saved_read_cfm_cb, g_saved_write_cfm_cb);
+    sle_hello_ssapc_cbk_register(g_saved_notification_cb, g_saved_indication_cb, g_saved_read_cfm_cb,
+                                 g_saved_write_cfm_cb);
     sle_hello_client_start_scan();
 }
 
@@ -111,14 +112,16 @@ static void sle_hello_seek_cbk_register(void)
     sle_announce_seek_register_callbacks(&g_sle_hello_seek_cbk);
 }
 
-static void sle_hello_connect_state_changed_cbk(uint16_t conn_id, const sle_addr_t *addr,
-                                                sle_acb_state_t conn_state, sle_pair_state_t pair_state,
+static void sle_hello_connect_state_changed_cbk(uint16_t conn_id,
+                                                const sle_addr_t *addr,
+                                                sle_acb_state_t conn_state,
+                                                sle_pair_state_t pair_state,
                                                 sle_disc_reason_t disc_reason)
 {
     unused(addr);
     unused(pair_state);
-    osal_printk("%s conn state changed, conn_id:0x%02x, state:0x%x, disc_reason:0x%x\r\n",
-                SLE_HELLO_CLIENT_LOG, conn_id, conn_state, disc_reason);
+    osal_printk("%s conn state changed, conn_id:0x%02x, state:0x%x, disc_reason:0x%x\r\n", SLE_HELLO_CLIENT_LOG,
+                conn_id, conn_state, disc_reason);
 
     g_sle_hello_conn_id = conn_id;
 
@@ -137,9 +140,8 @@ static void sle_hello_connect_state_changed_cbk(uint16_t conn_id, const sle_addr
 
 static void sle_hello_pair_complete_cbk(uint16_t conn_id, const sle_addr_t *addr, errcode_t status)
 {
-    osal_printk("%s pair complete conn_id:%d, addr:%02x***%02x%02x, status:%d\r\n",
-                SLE_HELLO_CLIENT_LOG, conn_id,
-                addr->addr[0], addr->addr[4], addr->addr[5], status);
+    osal_printk("%s pair complete conn_id:%d, addr:%02x***%02x%02x, status:%d\r\n", SLE_HELLO_CLIENT_LOG, conn_id,
+                addr->addr[0], addr->addr[SLE_ADDR_LEN - 2], addr->addr[SLE_ADDR_LEN - 1], status);
     if (status == 0) {
         ssap_exchange_info_t info = {0};
         info.mtu_size = SLE_MTU_SIZE_DEFAULT;
@@ -156,16 +158,17 @@ static void sle_hello_connect_cbk_register(void)
     sle_connection_register_callbacks(&g_sle_hello_connect_cbk);
 }
 
-static void sle_hello_exchange_info_cbk(uint8_t client_id, uint16_t conn_id,
-                                         ssap_exchange_info_t *param, errcode_t status)
+static void sle_hello_exchange_info_cbk(uint8_t client_id,
+                                        uint16_t conn_id,
+                                        ssap_exchange_info_t *param,
+                                        errcode_t status)
 {
-    osal_printk("%s exchange info cbk client_id:%d, conn_id:%d, status:%d\r\n",
-                SLE_HELLO_CLIENT_LOG, client_id, conn_id, status);
-    osal_printk("%s mtu size: %d, version: %d.\r\n",
-                SLE_HELLO_CLIENT_LOG, param->mtu_size, param->version);
+    osal_printk("%s exchange info cbk client_id:%d, conn_id:%d, status:%d\r\n", SLE_HELLO_CLIENT_LOG, client_id,
+                conn_id, status);
+    osal_printk("%s mtu size: %d, version: %d.\r\n", SLE_HELLO_CLIENT_LOG, param->mtu_size, param->version);
 
     /* 开始发现服务 */
-    ssapc_find_structure_param_t find_param = { 0 };
+    ssapc_find_structure_param_t find_param = {0};
     find_param.type = SSAP_FIND_TYPE_PROPERTY;
     find_param.start_hdl = 1;
     find_param.end_hdl = 0xFFFF;
@@ -173,57 +176,67 @@ static void sle_hello_exchange_info_cbk(uint8_t client_id, uint16_t conn_id,
     osal_printk("%s start find structure...\r\n", SLE_HELLO_CLIENT_LOG);
 }
 
-static void sle_hello_find_structure_cbk(uint8_t client_id, uint16_t conn_id,
-                                          ssapc_find_service_result_t *service, errcode_t status)
+static void sle_hello_find_structure_cbk(uint8_t client_id,
+                                         uint16_t conn_id,
+                                         ssapc_find_service_result_t *service,
+                                         errcode_t status)
 {
-    osal_printk("%s find structure cbk client:%d, conn_id:%d, status:%d\r\n",
-                SLE_HELLO_CLIENT_LOG, client_id, conn_id, status);
-    osal_printk("%s start_hdl:0x%02x, end_hdl:0x%02x, uuid len:%d\r\n",
-                SLE_HELLO_CLIENT_LOG, service->start_hdl, service->end_hdl, service->uuid.len);
+    osal_printk("%s find structure cbk client:%d, conn_id:%d, status:%d\r\n", SLE_HELLO_CLIENT_LOG, client_id, conn_id,
+                status);
+    osal_printk("%s start_hdl:0x%02x, end_hdl:0x%02x, uuid len:%d\r\n", SLE_HELLO_CLIENT_LOG, service->start_hdl,
+                service->end_hdl, service->uuid.len);
     g_sle_hello_find_service_result.start_hdl = service->start_hdl;
     g_sle_hello_find_service_result.end_hdl = service->end_hdl;
     memcpy_s(&g_sle_hello_find_service_result.uuid, sizeof(sle_uuid_t), &service->uuid, sizeof(sle_uuid_t));
 }
 
-static void sle_hello_find_property_cbk(uint8_t client_id, uint16_t conn_id,
-                                         ssapc_find_property_result_t *property, errcode_t status)
+static void sle_hello_find_property_cbk(uint8_t client_id,
+                                        uint16_t conn_id,
+                                        ssapc_find_property_result_t *property,
+                                        errcode_t status)
 {
-    osal_printk("%s find property cbk, client:%d, conn:%d, operate_ind:%d, "
-                "descriptors_count:%d, status:%d, handle:%d\r\n",
-                SLE_HELLO_CLIENT_LOG, client_id, conn_id, property->operate_indication,
-                property->descriptors_count, status, property->handle);
+    osal_printk(
+        "%s find property cbk, client:%d, conn:%d, operate_ind:%d, "
+        "descriptors_count:%d, status:%d, handle:%d\r\n",
+        SLE_HELLO_CLIENT_LOG, client_id, conn_id, property->operate_indication, property->descriptors_count, status,
+        property->handle);
+    if (status == ERRCODE_SUCC) {
+        g_sle_hello_property_handle = property->handle;
+    }
 }
 
-static void sle_hello_find_structure_cmp_cbk(uint8_t client_id, uint16_t conn_id,
-                                              ssapc_find_structure_result_t *structure_result, errcode_t status)
+static void sle_hello_find_structure_cmp_cbk(uint8_t client_id,
+                                             uint16_t conn_id,
+                                             ssapc_find_structure_result_t *structure_result,
+                                             errcode_t status)
 {
     unused(conn_id);
-    osal_printk("%s find structure cmp cbk, client:%d, status:%d, type:%d\r\n",
-                SLE_HELLO_CLIENT_LOG, client_id, status, structure_result->type);
+    osal_printk("%s find structure cmp cbk, client:%d, status:%d, type:%d\r\n", SLE_HELLO_CLIENT_LOG, client_id, status,
+                structure_result->type);
     osal_printk("%s service discovery complete, ready to receive data.\r\n", SLE_HELLO_CLIENT_LOG);
 
     /* 服务发现完成后，主动发起读请求 */
-    uint16_t handle = g_sle_hello_find_service_result.start_hdl;
+    uint16_t handle = g_sle_hello_property_handle;
     osal_printk("%s sending read request, handle=0x%04x\r\n", SLE_HELLO_CLIENT_LOG, handle);
     ssapc_read_req(0, g_sle_hello_conn_id, handle, SSAP_PROPERTY_TYPE_VALUE);
 }
 
-void sle_hello_client_send_write_req(uint16_t conn_id, uint16_t handle)
+void sle_hello_client_send_write_req(uint16_t conn_id)
 {
     ssapc_write_param_t param = {0};
     uint8_t new_value[] = "new_config_value";
-    param.handle = handle;
+    param.handle = g_sle_hello_property_handle;
     param.type = SSAP_PROPERTY_TYPE_VALUE;
     param.data = new_value;
     param.data_len = sizeof(new_value);
-    osal_printk("%s sending write request, handle=0x%04x\r\n", SLE_HELLO_CLIENT_LOG, handle);
+    osal_printk("%s sending write request, handle=0x%04x\r\n", SLE_HELLO_CLIENT_LOG, param.handle);
     ssapc_write_req(0, conn_id, &param);
 }
 
 static void sle_hello_ssapc_cbk_register(ssapc_notification_callback notification_cb,
-                                          ssapc_indication_callback indication_cb,
-                                          ssapc_read_cfm_callback read_cfm_cb,
-                                          ssapc_write_cfm_callback write_cfm_cb)
+                                         ssapc_indication_callback indication_cb,
+                                         ssapc_read_cfm_callback read_cfm_cb,
+                                         ssapc_write_cfm_callback write_cfm_cb)
 {
     g_sle_hello_ssapc_cbk.exchange_info_cb = sle_hello_exchange_info_cbk;
     g_sle_hello_ssapc_cbk.find_structure_cb = sle_hello_find_structure_cbk;

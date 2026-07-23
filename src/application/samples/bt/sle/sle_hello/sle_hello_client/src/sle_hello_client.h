@@ -17,7 +17,7 @@ void sle_hello_client_init(ssapc_notification_callback notification_cb,
                            ssapc_read_cfm_callback read_cfm_cb,
                            ssapc_write_cfm_callback write_cfm_cb);
 
-void sle_hello_client_send_write_req(uint16_t conn_id, uint16_t handle);
+void sle_hello_client_send_write_req(uint16_t conn_id);
 
 void sle_hello_client_start_scan(void);
 
