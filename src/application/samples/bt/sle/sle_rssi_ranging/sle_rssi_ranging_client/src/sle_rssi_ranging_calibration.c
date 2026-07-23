@@ -17,28 +17,37 @@
 #include "soc_osal.h"
 #include "sle_rssi_ranging_calibration.h"
 
+#define SLE_RSSI_CAL_RSSI_MIN (-100)
+#define SLE_RSSI_CAL_RSSI_MAX (-20)
+#define SLE_RSSI_CAL_RAW_MIN (-127)
+#define SLE_RSSI_CAL_RAW_MAX 20
+#define SLE_RSSI_CAL_MAD_MAX 30U
+#define SK6805_ONE_HIGH_DELAY 20
+#define SK6805_ONE_LOW_DELAY 4
+#define SK6805_ZERO_HIGH_DELAY 7
+#define SK6805_ZERO_LOW_DELAY 18
 /*
  * GPIO and task parameters are fixed for the HiHope WS63E board used by this sample.
  * GPIO 和任务参数对应本案例使用的 HiHope WS63E 开发板。
  */
-#define SLE_RSSI_CAL_LOG                 "[sle rssi cal]"
-#define SLE_RSSI_CAL_BUTTON_PIN          13
-#define SLE_RSSI_CAL_LED_PIN             5
-#define SLE_RSSI_CAL_LED_PIN_MODE        4
-#define SLE_RSSI_CAL_BUTTON_POLL_MS      50
-#define SLE_RSSI_CAL_BUTTON_DEBOUNCE     3
-#define SLE_RSSI_CAL_LONG_PRESS_COUNT    40
-#define SLE_RSSI_CAL_SAMPLE_COUNT        31
-#define SLE_RSSI_CAL_LED_BLINK_COUNT     5
-#define SLE_RSSI_CAL_LED_HOLD_COUNT      60
+#define SLE_RSSI_CAL_LOG "[sle rssi cal]"
+#define SLE_RSSI_CAL_BUTTON_PIN 13
+#define SLE_RSSI_CAL_LED_PIN 5
+#define SLE_RSSI_CAL_LED_PIN_MODE 4
+#define SLE_RSSI_CAL_BUTTON_POLL_MS 50
+#define SLE_RSSI_CAL_BUTTON_DEBOUNCE 3
+#define SLE_RSSI_CAL_LONG_PRESS_COUNT 40
+#define SLE_RSSI_CAL_SAMPLE_COUNT 31
+#define SLE_RSSI_CAL_LED_BLINK_COUNT 5
+#define SLE_RSSI_CAL_LED_HOLD_COUNT 60
 #define SLE_RSSI_CAL_LED_BOOT_CLEAR_COUNT 10
-#define SLE_RSSI_CAL_TASK_PRIO           30
-#define SLE_RSSI_CAL_TASK_STACK_SIZE     0x800
-#define SLE_RSSI_CAL_NV_ID               0x5101
-#define SLE_RSSI_CAL_NV_MAGIC            0x52535349
-#define SLE_RSSI_CAL_NV_VERSION          1
-#define SLE_RSSI_CAL_GPIO_SET_ADDR       0x44028030
-#define SLE_RSSI_CAL_GPIO_CLEAR_ADDR     0x44028034
+#define SLE_RSSI_CAL_TASK_PRIO 30
+#define SLE_RSSI_CAL_TASK_STACK_SIZE 0x800
+#define SLE_RSSI_CAL_NV_ID 0x5101
+#define SLE_RSSI_CAL_NV_MAGIC 0x52535349
+#define SLE_RSSI_CAL_NV_VERSION 1
+#define SLE_RSSI_CAL_GPIO_SET_ADDR 0x44028030
+#define SLE_RSSI_CAL_GPIO_CLEAR_ADDR 0x44028034
 
 /*
  * The LED task runs every 50 ms. Therefore, the count constants above represent:
@@ -96,8 +105,8 @@ static uint32_t sle_rssi_calibration_checksum(const sle_rssi_calibration_nv_t *r
      * This XOR checksum detects accidental NV corruption; it is not a security checksum.
      * 该异或校验用于发现意外的 NV 数据损坏，不属于安全校验算法。
      */
-    return record->magic ^ record->version ^ (uint32_t)record->rssi_at_1m ^ record->mad ^
-        (uint32_t)record->min_rssi ^ (uint32_t)record->max_rssi ^ record->sample_count ^ 0xA55A5AA5U;
+    return record->magic ^ record->version ^ (uint32_t)record->rssi_at_1m ^ record->mad ^ (uint32_t)record->min_rssi ^
+           (uint32_t)record->max_rssi ^ record->sample_count ^ 0xA55A5AA5U;
 }
 
 /**
@@ -122,12 +131,12 @@ static bool sle_rssi_calibration_record_valid(const sle_rssi_calibration_nv_t *r
      * 使用 A 之前，校验记录格式、物理取值范围、采样策略和校验和。
      */
     return (length == sizeof(*record)) && (record->magic == SLE_RSSI_CAL_NV_MAGIC) &&
-        (record->version == SLE_RSSI_CAL_NV_VERSION) &&
-        (record->rssi_at_1m >= -100) && (record->rssi_at_1m <= -20) &&
-        (record->mad <= 30U) && (record->min_rssi >= -127) && (record->max_rssi <= 20) &&
-        (record->min_rssi <= record->rssi_at_1m) && (record->rssi_at_1m <= record->max_rssi) &&
-        (record->sample_count == SLE_RSSI_CAL_SAMPLE_COUNT) &&
-        (record->checksum == sle_rssi_calibration_checksum(record));
+           (record->version == SLE_RSSI_CAL_NV_VERSION) && (record->rssi_at_1m >= SLE_RSSI_CAL_RSSI_MIN) &&
+           (record->rssi_at_1m <= SLE_RSSI_CAL_RSSI_MAX) && (record->mad <= SLE_RSSI_CAL_MAD_MAX) &&
+           (record->min_rssi >= SLE_RSSI_CAL_RAW_MIN) && (record->max_rssi <= SLE_RSSI_CAL_RAW_MAX) &&
+           (record->min_rssi <= record->rssi_at_1m) && (record->rssi_at_1m <= record->max_rssi) &&
+           (record->sample_count == SLE_RSSI_CAL_SAMPLE_COUNT) &&
+           (record->checksum == sle_rssi_calibration_checksum(record));
 }
 
 /**
@@ -146,12 +155,11 @@ static void sle_rssi_calibration_load(void)
     if ((ret == ERRCODE_SUCC) && sle_rssi_calibration_record_valid(&record, length)) {
         g_rssi_at_1m = (int8_t)record.rssi_at_1m;
         osal_printk("%s NV calibration loaded: A=%d dBm, MAD=%u dB, range=[%d,%d] dBm, samples=%u\r\n",
-            SLE_RSSI_CAL_LOG, record.rssi_at_1m, record.mad, record.min_rssi, record.max_rssi,
-            record.sample_count);
+                    SLE_RSSI_CAL_LOG, record.rssi_at_1m, record.mad, record.min_rssi, record.max_rssi,
+                    record.sample_count);
         return;
     }
-    osal_printk("%s no valid NV calibration, use default A=%d dBm\r\n",
-        SLE_RSSI_CAL_LOG, g_rssi_at_1m);
+    osal_printk("%s no valid NV calibration, use default A=%d dBm\r\n", SLE_RSSI_CAL_LOG, g_rssi_at_1m);
 }
 
 /**
@@ -277,9 +285,9 @@ static inline void sle_rssi_led_delay(uint8_t read_count)
 static inline void sle_rssi_led_send_one(void)
 {
     uapi_reg_setbit(SLE_RSSI_CAL_GPIO_SET_ADDR, SLE_RSSI_CAL_LED_PIN);
-    sle_rssi_led_delay(20);
+    sle_rssi_led_delay(SK6805_ONE_HIGH_DELAY);
     uapi_reg_setbit(SLE_RSSI_CAL_GPIO_CLEAR_ADDR, SLE_RSSI_CAL_LED_PIN);
-    sle_rssi_led_delay(4);
+    sle_rssi_led_delay(SK6805_ONE_LOW_DELAY);
 }
 
 /**
@@ -292,9 +300,9 @@ static inline void sle_rssi_led_send_one(void)
 static inline void sle_rssi_led_send_zero(void)
 {
     uapi_reg_setbit(SLE_RSSI_CAL_GPIO_SET_ADDR, SLE_RSSI_CAL_LED_PIN);
-    sle_rssi_led_delay(7);
+    sle_rssi_led_delay(SK6805_ZERO_HIGH_DELAY);
     uapi_reg_setbit(SLE_RSSI_CAL_GPIO_CLEAR_ADDR, SLE_RSSI_CAL_LED_PIN);
-    sle_rssi_led_delay(18);
+    sle_rssi_led_delay(SK6805_ZERO_LOW_DELAY);
 }
 
 /**
@@ -434,7 +442,7 @@ static void sle_rssi_led_service(void)
         blink_on = !blink_on;
         sle_rssi_led_set(0, 0, blink_on ? 0xFF : 0);
     } else if (((state == SLE_RSSI_LED_SUCCESS) || (state == SLE_RSSI_LED_FAILURE)) &&
-        (state_ticks >= SLE_RSSI_CAL_LED_HOLD_COUNT)) {
+               (state_ticks >= SLE_RSSI_CAL_LED_HOLD_COUNT)) {
         g_led_state = SLE_RSSI_LED_IDLE;
     }
 }
@@ -459,8 +467,8 @@ static void sle_rssi_calibration_start(void)
     g_calibration_count = 0;
     g_calibrating = true;
     g_led_state = SLE_RSSI_LED_RECORDING;
-    osal_printk("%s long press detected, calibration start: distance=100 cm, samples=%u\r\n",
-        SLE_RSSI_CAL_LOG, SLE_RSSI_CAL_SAMPLE_COUNT);
+    osal_printk("%s long press detected, calibration start: distance=100 cm, samples=%u\r\n", SLE_RSSI_CAL_LOG,
+                SLE_RSSI_CAL_SAMPLE_COUNT);
 }
 
 /**
@@ -551,8 +559,8 @@ errcode_t sle_rssi_calibration_init(void)
     sle_rssi_calibration_load();
 
     osal_kthread_lock();
-    task_handle = osal_kthread_create((osal_kthread_handler)sle_rssi_calibration_button_task, 0,
-        "SLERssiCal", SLE_RSSI_CAL_TASK_STACK_SIZE);
+    task_handle = osal_kthread_create((osal_kthread_handler)sle_rssi_calibration_button_task, 0, "SLERssiCal",
+                                      SLE_RSSI_CAL_TASK_STACK_SIZE);
     if (task_handle != NULL) {
         osal_kthread_set_priority(task_handle, SLE_RSSI_CAL_TASK_PRIO);
     }
@@ -561,7 +569,7 @@ errcode_t sle_rssi_calibration_init(void)
         return ERRCODE_MALLOC;
     }
     osal_printk("%s ready: hold GPIO13 for 2000 ms at 100 cm; LED GPIO5 blue=recording, green=saved\r\n",
-        SLE_RSSI_CAL_LOG);
+                SLE_RSSI_CAL_LOG);
     return ERRCODE_SUCC;
 }
 
@@ -599,8 +607,8 @@ bool sle_rssi_calibration_add_sample(int8_t rssi)
     }
     g_calibration_samples[g_calibration_count++] = rssi;
     if (((g_calibration_count % 5U) == 0U) || (g_calibration_count == SLE_RSSI_CAL_SAMPLE_COUNT)) {
-        osal_printk("%s recording: %u/%u, rssi=%d dBm\r\n", SLE_RSSI_CAL_LOG,
-            g_calibration_count, SLE_RSSI_CAL_SAMPLE_COUNT, rssi);
+        osal_printk("%s recording: %u/%u, rssi=%d dBm\r\n", SLE_RSSI_CAL_LOG, g_calibration_count,
+                    SLE_RSSI_CAL_SAMPLE_COUNT, rssi);
     }
     if (g_calibration_count < SLE_RSSI_CAL_SAMPLE_COUNT) {
         return false;
@@ -633,9 +641,10 @@ bool sle_rssi_calibration_add_sample(int8_t rssi)
     ret = sle_rssi_calibration_save(median, mad, sorted[0], sorted[SLE_RSSI_CAL_SAMPLE_COUNT - 1U]);
     g_calibrating = false;
     g_led_state = (ret == ERRCODE_SUCC) ? SLE_RSSI_LED_SUCCESS : SLE_RSSI_LED_FAILURE;
-    osal_printk("%s calibration complete: A=%d dBm, MAD=%u dB, range=[%d,%d] dBm, "
-        "samples=%u, nv=%s\r\n", SLE_RSSI_CAL_LOG, median, mad, sorted[0],
-        sorted[SLE_RSSI_CAL_SAMPLE_COUNT - 1U], SLE_RSSI_CAL_SAMPLE_COUNT,
+    osal_printk(
+        "%s calibration complete: A=%d dBm, MAD=%u dB, range=[%d,%d] dBm, "
+        "samples=%u, nv=%s\r\n",
+        SLE_RSSI_CAL_LOG, median, mad, sorted[0], sorted[SLE_RSSI_CAL_SAMPLE_COUNT - 1U], SLE_RSSI_CAL_SAMPLE_COUNT,
         (ret == ERRCODE_SUCC) ? "ok" : "failed");
     return true;
 }

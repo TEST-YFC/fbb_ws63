@@ -14,13 +14,15 @@
 #include "sle_errcode.h"
 #include "sle_rssi_ranging_server_adv.h"
 
-#define SLE_RSSI_SERVER_LOG          "[sle rssi server]"
-#define SLE_RSSI_ADV_DATA_MAX_LEN    251
-#define SLE_RSSI_ADV_INTERVAL        0xC8
-#define SLE_RSSI_CONN_INTERVAL       50
-#define SLE_RSSI_CONN_TIMEOUT        500
-#define SLE_RSSI_ADV_TX_POWER        10
-#define SLE_RSSI_LOCAL_NAME          "sle_rssi_server"
+#define SLE_ADV_ELEMENT_HEADER_LEN 2U
+#define SLE_ADV_TX_POWER_DBM 18
+#define SLE_RSSI_SERVER_LOG "[sle rssi server]"
+#define SLE_RSSI_ADV_DATA_MAX_LEN 251
+#define SLE_RSSI_ADV_INTERVAL 0xC8
+#define SLE_RSSI_CONN_INTERVAL 50
+#define SLE_RSSI_CONN_TIMEOUT 500
+#define SLE_RSSI_ADV_TX_POWER 10
+#define SLE_RSSI_LOCAL_NAME "sle_rssi_server"
 
 enum {
     SLE_RSSI_ADV_CHANNEL_MAP_DEFAULT = 0x07,
@@ -53,10 +55,11 @@ static uint16_t sle_rssi_set_local_name(uint8_t *data, uint16_t max_len)
     }
     data[0] = local_name_len + 1U;
     data[1] = SLE_RSSI_DATA_COMPLETE_LOCAL_NAME;
-    if (memcpy_s(&data[2], max_len - 2U, local_name, local_name_len) != EOK) {
+    if (memcpy_s(&data[SLE_ADV_ELEMENT_HEADER_LEN], max_len - SLE_ADV_ELEMENT_HEADER_LEN, local_name, local_name_len) !=
+        EOK) {
         return 0;
     }
-    return (uint16_t)(local_name_len + 2U);
+    return (uint16_t)(local_name_len + SLE_ADV_ELEMENT_HEADER_LEN);
 }
 
 /**
@@ -84,13 +87,11 @@ static uint16_t sle_rssi_set_announce_data(uint8_t *data)
     };
     uint16_t index = 0;
 
-    if (memcpy_s(&data[index], SLE_RSSI_ADV_DATA_MAX_LEN - index,
-        &discovery, sizeof(discovery)) != EOK) {
+    if (memcpy_s(&data[index], SLE_RSSI_ADV_DATA_MAX_LEN - index, &discovery, sizeof(discovery)) != EOK) {
         return 0;
     }
     index += sizeof(discovery);
-    if (memcpy_s(&data[index], SLE_RSSI_ADV_DATA_MAX_LEN - index,
-        &access_mode, sizeof(access_mode)) != EOK) {
+    if (memcpy_s(&data[index], SLE_RSSI_ADV_DATA_MAX_LEN - index, &access_mode, sizeof(access_mode)) != EOK) {
         return 0;
     }
     return (uint16_t)(index + sizeof(access_mode));
@@ -152,7 +153,7 @@ static errcode_t sle_rssi_set_announce_param(void)
     param.conn_interval_max = SLE_RSSI_CONN_INTERVAL;
     param.conn_max_latency = 0;
     param.conn_supervision_timeout = SLE_RSSI_CONN_TIMEOUT;
-    param.announce_tx_power = 18;
+    param.announce_tx_power = SLE_ADV_TX_POWER_DBM;
     param.own_addr.type = 0;
     if (memcpy_s(param.own_addr.addr, SLE_ADDR_LEN, local_addr, SLE_ADDR_LEN) != EOK) {
         return ERRCODE_SLE_FAIL;

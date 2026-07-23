@@ -20,22 +20,24 @@
 #include "sle_rssi_ranging_calibration.h"
 #include "sle_rssi_ranging_client.h"
 
-#define SLE_RSSI_CLIENT_LOG             "[sle rssi client]"
-#define SLE_RSSI_SERVER_NAME            "sle_rssi_server"
-#define SLE_RSSI_SEEK_INTERVAL          100
-#define SLE_RSSI_SEEK_WINDOW            100
-#define SLE_RSSI_CORE_READY_DELAY_MS    5000
-#define SLE_RSSI_SAMPLE_INTERVAL_MS     1000
+#define SLE_RSSI_Q8_SCALE 256
+#define SLE_RSSI_DECIMAL_SCALE 10U
+#define SLE_RSSI_CLIENT_LOG "[sle rssi client]"
+#define SLE_RSSI_SERVER_NAME "sle_rssi_server"
+#define SLE_RSSI_SEEK_INTERVAL 100
+#define SLE_RSSI_SEEK_WINDOW 100
+#define SLE_RSSI_CORE_READY_DELAY_MS 5000
+#define SLE_RSSI_SAMPLE_INTERVAL_MS 1000
 #define SLE_RSSI_CAL_SAMPLE_INTERVAL_MS 200
-#define SLE_RSSI_MEDIAN_WINDOW_SIZE     7
-#define SLE_RSSI_EMA_OLD_WEIGHT         3
-#define SLE_RSSI_EMA_TOTAL_WEIGHT       4
-#define SLE_RSSI_INVALID_VALUE          0x7F
-#define SLE_RSSI_NEAR_LIMIT_CM          150
-#define SLE_RSSI_MIDDLE_LIMIT_CM        500
-#define SLE_RSSI_MAX_DISTANCE_CM        10000
-#define SLE_RSSI_RANGING_TASK_PRIO      27
-#define SLE_RSSI_RANGING_STACK_SIZE     0x1000
+#define SLE_RSSI_MEDIAN_WINDOW_SIZE 7
+#define SLE_RSSI_EMA_OLD_WEIGHT 3
+#define SLE_RSSI_EMA_TOTAL_WEIGHT 4
+#define SLE_RSSI_INVALID_VALUE 0x7F
+#define SLE_RSSI_NEAR_LIMIT_CM 150
+#define SLE_RSSI_MIDDLE_LIMIT_CM 500
+#define SLE_RSSI_MAX_DISTANCE_CM 10000
+#define SLE_RSSI_RANGING_TASK_PRIO 27
+#define SLE_RSSI_RANGING_STACK_SIZE 0x1000
 
 static sle_addr_t g_remote_addr = {0};
 static volatile bool g_target_found = false;
@@ -164,19 +166,21 @@ static void sle_rssi_process_sample(int8_t rssi)
     }
     median = sle_rssi_get_median();
     if (!g_ema_valid) {
-        g_ema_q8 = (int32_t)median * 256;
+        g_ema_q8 = (int32_t)median * SLE_RSSI_Q8_SCALE;
         g_ema_valid = true;
     } else {
-        g_ema_q8 = ((g_ema_q8 * SLE_RSSI_EMA_OLD_WEIGHT) + ((int32_t)median * 256)) /
-            SLE_RSSI_EMA_TOTAL_WEIGHT;
+        g_ema_q8 =
+            ((g_ema_q8 * SLE_RSSI_EMA_OLD_WEIGHT) + ((int32_t)median * SLE_RSSI_Q8_SCALE)) / SLE_RSSI_EMA_TOTAL_WEIGHT;
     }
     distance_cm = sle_rssi_estimate_distance_cm(g_ema_q8);
-    filtered_whole = g_ema_q8 / 256;
-    filtered_tenths = (uint32_t)((g_ema_q8 >= 0) ? (g_ema_q8 % 256) : -(g_ema_q8 % 256));
-    filtered_tenths = (filtered_tenths * 10U) / 256U;
-    osal_printk("%s range: raw=%d dBm, median=%d dBm, filtered=%d.%u dBm, samples=%u, "
-        "distance=%u cm, zone=%s\r\n", SLE_RSSI_CLIENT_LOG, rssi, median, filtered_whole,
-        filtered_tenths, g_rssi_count, distance_cm, sle_rssi_distance_zone(distance_cm));
+    filtered_whole = g_ema_q8 / SLE_RSSI_Q8_SCALE;
+    filtered_tenths = (uint32_t)((g_ema_q8 >= 0) ? (g_ema_q8 % SLE_RSSI_Q8_SCALE) : -(g_ema_q8 % SLE_RSSI_Q8_SCALE));
+    filtered_tenths = (filtered_tenths * SLE_RSSI_DECIMAL_SCALE) / SLE_RSSI_Q8_SCALE;
+    osal_printk(
+        "%s range: raw=%d dBm, median=%d dBm, filtered=%d.%u dBm, samples=%u, "
+        "distance=%u cm, zone=%s\r\n",
+        SLE_RSSI_CLIENT_LOG, rssi, median, filtered_whole, filtered_tenths, g_rssi_count, distance_cm,
+        sle_rssi_distance_zone(distance_cm));
 }
 
 /**
@@ -300,8 +304,8 @@ static void sle_rssi_seek_result_cb(sle_seek_result_info_t *result)
         return;
     }
     g_target_found = true;
-    osal_printk("%s found %s, scan_rssi=%d dBm, stop seek\r\n",
-        SLE_RSSI_CLIENT_LOG, SLE_RSSI_SERVER_NAME, (int8_t)result->rssi);
+    osal_printk("%s found %s, scan_rssi=%d dBm, stop seek\r\n", SLE_RSSI_CLIENT_LOG, SLE_RSSI_SERVER_NAME,
+                (int8_t)result->rssi);
     (void)sle_stop_seek();
 }
 
@@ -343,8 +347,11 @@ static void sle_rssi_seek_disable_cb(errcode_t status)
  * @param [in] disc_reason 断链原因。
  * @endif
  */
-static void sle_rssi_state_changed_cb(uint16_t conn_id, const sle_addr_t *addr,
-    sle_acb_state_t conn_state, sle_pair_state_t pair_state, sle_disc_reason_t disc_reason)
+static void sle_rssi_state_changed_cb(uint16_t conn_id,
+                                      const sle_addr_t *addr,
+                                      sle_acb_state_t conn_state,
+                                      sle_pair_state_t pair_state,
+                                      sle_disc_reason_t disc_reason)
 {
     unused(addr);
     unused(pair_state);
@@ -354,10 +361,10 @@ static void sle_rssi_state_changed_cb(uint16_t conn_id, const sle_addr_t *addr,
         g_connected = true;
         sle_rssi_calibration_set_connected(true);
         sle_rssi_reset_filter();
-        osal_printk("%s connected, conn_id=0x%02x, calibration=%d dBm@1m, path_loss=%d.%u\r\n",
-            SLE_RSSI_CLIENT_LOG, conn_id, sle_rssi_calibration_get_rssi_at_1m(),
-            CONFIG_SLE_RSSI_RANGING_PATH_LOSS_TENTHS / 10,
-            CONFIG_SLE_RSSI_RANGING_PATH_LOSS_TENTHS % 10);
+        osal_printk("%s connected, conn_id=0x%02x, calibration=%d dBm@1m, path_loss=%d.%u\r\n", SLE_RSSI_CLIENT_LOG,
+                    conn_id, sle_rssi_calibration_get_rssi_at_1m(),
+                    CONFIG_SLE_RSSI_RANGING_PATH_LOSS_TENTHS / SLE_RSSI_DECIMAL_SCALE,
+                    CONFIG_SLE_RSSI_RANGING_PATH_LOSS_TENTHS % SLE_RSSI_DECIMAL_SCALE);
     } else if (conn_state == SLE_ACB_STATE_DISCONNECTED) {
         g_connected = false;
         sle_rssi_calibration_set_connected(false);
@@ -470,8 +477,8 @@ static void *sle_rssi_poll_task(const char *arg)
          * Calibration needs 31 closely spaced samples; normal ranging remains once per second.
          * 校准需要连续采集 31 个密集样本，普通测距仍保持每秒一次。
          */
-        (void)osal_msleep(sle_rssi_calibration_is_active() ?
-            SLE_RSSI_CAL_SAMPLE_INTERVAL_MS : SLE_RSSI_SAMPLE_INTERVAL_MS);
+        (void)osal_msleep(sle_rssi_calibration_is_active() ? SLE_RSSI_CAL_SAMPLE_INTERVAL_MS
+                                                           : SLE_RSSI_SAMPLE_INTERVAL_MS);
     }
     return NULL;
 }
@@ -492,8 +499,8 @@ static errcode_t sle_rssi_start_poll_task(void)
     osal_task *task_handle;
 
     osal_kthread_lock();
-    task_handle = osal_kthread_create((osal_kthread_handler)sle_rssi_poll_task, 0,
-        "SLERssiPoll", SLE_RSSI_RANGING_STACK_SIZE);
+    task_handle =
+        osal_kthread_create((osal_kthread_handler)sle_rssi_poll_task, 0, "SLERssiPoll", SLE_RSSI_RANGING_STACK_SIZE);
     if (task_handle != NULL) {
         osal_kthread_set_priority(task_handle, SLE_RSSI_RANGING_TASK_PRIO);
     }
