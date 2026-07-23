@@ -19,17 +19,17 @@
 #include "sle_uart_server_adv.h"
 #include "sle_uart_server.h"
 
-#define OCTET_BIT_LEN           8
-#define UUID_LEN_2              2
-#define UUID_INDEX              14
-#define BT_INDEX_4              4
-#define BT_INDEX_0              0
+#define OCTET_BIT_LEN 8
+#define UUID_LEN_2 2
+#define UUID_INDEX 14
+#define BT_INDEX_4 4
+#define BT_INDEX_0 0
 
 /* Advertising identifier. / 广播标识。 */
-#define SLE_ADV_HANDLE_DEFAULT  1
+#define SLE_ADV_HANDLE_DEFAULT 1
 
 /* SLE server application UUID. / SLE 服务端应用 UUID。 */
-static char g_sle_uart_app_uuid[UUID_LEN_2] = { 0x12, 0x34 };
+static char g_sle_uart_app_uuid[UUID_LEN_2] = {0x12, 0x34};
 
 /* SLE connection ACB handle. / SLE 连接 ACB 句柄。 */
 static uint16_t g_sle_conn_hdl = 0;
@@ -48,8 +48,8 @@ static uint16_t g_property_handle = 0;
 
 #define SLE_UART_SERVER_LOG "[sle uart server]"
 
-static uint8_t g_sle_uart_base[] = { 0x37, 0xBE, 0xA8, 0x80, 0xFC, 0x70, 0x11, 0xEA, \
-    0xB7, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+static uint8_t g_sle_uart_base[] = {0x37, 0xBE, 0xA8, 0x80, 0xFC, 0x70, 0x11, 0xEA,
+                                    0xB7, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 /* Callbacks supplied by the application. / 应用层传入的回调。 */
 static ssaps_read_request_callback g_read_cb = NULL;
@@ -76,10 +76,10 @@ uint16_t sle_uart_server_is_connected(void)
  * @brief 按小端序编码 16 位数值。
  * @endif
  */
-static void encode2byte_little(uint8_t *_ptr, uint16_t data)
+static void encode2byte_little(uint8_t *ptr, uint16_t data)
 {
-    *(uint8_t *)((_ptr) + 1) = (uint8_t)((data) >> 0x8);
-    *(uint8_t *)(_ptr) = (uint8_t)(data);
+    *(uint8_t *)(ptr + 1) = (uint8_t)(data >> 0x8);
+    *(uint8_t *)ptr = (uint8_t)data;
 }
 
 /**
@@ -121,11 +121,10 @@ static void sle_uuid_setu2(uint16_t u2, sle_uuid_t *out)
  * @brief 处理分发给 \c ssaps_mtu_changed_cbk 的异步事件。
  * @endif
  */
-static void ssaps_mtu_changed_cbk(uint8_t server_id, uint16_t conn_id, ssap_exchange_info_t *mtu_size,
-    errcode_t status)
+static void ssaps_mtu_changed_cbk(uint8_t server_id, uint16_t conn_id, ssap_exchange_info_t *mtu_size, errcode_t status)
 {
-    osal_printk("%s ssaps_mtu_changed_cbk server_id:%x, conn_id:%x, mtu_size:%x, status:%x\r\n",
-        SLE_UART_SERVER_LOG, server_id, conn_id, mtu_size->mtu_size, status);
+    osal_printk("%s ssaps_mtu_changed_cbk server_id:%x, conn_id:%x, mtu_size:%x, status:%x\r\n", SLE_UART_SERVER_LOG,
+                server_id, conn_id, mtu_size->mtu_size, status);
 }
 
 /**
@@ -137,8 +136,8 @@ static void ssaps_mtu_changed_cbk(uint8_t server_id, uint16_t conn_id, ssap_exch
  */
 static void ssaps_start_service_cbk(uint8_t server_id, uint16_t handle, errcode_t status)
 {
-    osal_printk("%s start service cbk server_id:%d, handle:%x, status:%x\r\n", SLE_UART_SERVER_LOG,
-        server_id, handle, status);
+    osal_printk("%s start service cbk server_id:%d, handle:%x, status:%x\r\n", SLE_UART_SERVER_LOG, server_id, handle,
+                status);
 }
 
 /**
@@ -151,8 +150,8 @@ static void ssaps_start_service_cbk(uint8_t server_id, uint16_t handle, errcode_
 static void ssaps_add_service_cbk(uint8_t server_id, sle_uuid_t *uuid, uint16_t handle, errcode_t status)
 {
     unused(uuid);
-    osal_printk("%s add service cbk server_id:%x, handle:%x, status:%x\r\n", SLE_UART_SERVER_LOG,
-        server_id, handle, status);
+    osal_printk("%s add service cbk server_id:%x, handle:%x, status:%x\r\n", SLE_UART_SERVER_LOG, server_id, handle,
+                status);
 }
 
 /**
@@ -162,12 +161,15 @@ static void ssaps_add_service_cbk(uint8_t server_id, sle_uuid_t *uuid, uint16_t 
  * @brief 处理分发给 \c ssaps_add_property_cbk 的异步事件。
  * @endif
  */
-static void ssaps_add_property_cbk(uint8_t server_id, sle_uuid_t *uuid, uint16_t service_handle,
-    uint16_t handle, errcode_t status)
+static void ssaps_add_property_cbk(uint8_t server_id,
+                                   sle_uuid_t *uuid,
+                                   uint16_t service_handle,
+                                   uint16_t handle,
+                                   errcode_t status)
 {
     unused(uuid);
-    osal_printk("%s add property cbk server_id:%x, service_handle:%x, handle:%x, status:%x\r\n",
-        SLE_UART_SERVER_LOG, server_id, service_handle, handle, status);
+    osal_printk("%s add property cbk server_id:%x, service_handle:%x, handle:%x, status:%x\r\n", SLE_UART_SERVER_LOG,
+                server_id, service_handle, handle, status);
 }
 
 /**
@@ -177,12 +179,15 @@ static void ssaps_add_property_cbk(uint8_t server_id, sle_uuid_t *uuid, uint16_t
  * @brief 处理分发给 \c ssaps_add_descriptor_cbk 的异步事件。
  * @endif
  */
-static void ssaps_add_descriptor_cbk(uint8_t server_id, sle_uuid_t *uuid, uint16_t service_handle,
-    uint16_t property_handle, errcode_t status)
+static void ssaps_add_descriptor_cbk(uint8_t server_id,
+                                     sle_uuid_t *uuid,
+                                     uint16_t service_handle,
+                                     uint16_t property_handle,
+                                     errcode_t status)
 {
     unused(uuid);
     osal_printk("%s add descriptor cbk server_id:%x, service_handle:%x, property_handle:%x, status:%x\r\n",
-        SLE_UART_SERVER_LOG, server_id, service_handle, property_handle, status);
+                SLE_UART_SERVER_LOG, server_id, service_handle, property_handle, status);
 }
 
 /**
@@ -226,13 +231,16 @@ errcode_t sle_uart_server_send_notification(const uint8_t *data, uint16_t len)
  * @brief 处理分发给 \c sle_uart_server_connect_state_changed_cbk 的异步事件。
  * @endif
  */
-static void sle_uart_server_connect_state_changed_cbk(uint16_t conn_id, const sle_addr_t *addr,
-    sle_acb_state_t conn_state, sle_pair_state_t pair_state, sle_disc_reason_t disc_reason)
+static void sle_uart_server_connect_state_changed_cbk(uint16_t conn_id,
+                                                      const sle_addr_t *addr,
+                                                      sle_acb_state_t conn_state,
+                                                      sle_pair_state_t pair_state,
+                                                      sle_disc_reason_t disc_reason)
 {
     osal_printk("%s connect state changed conn_id:0x%02x, conn_state:0x%x, pair_state:0x%x, disc_reason:0x%x\r\n",
-        SLE_UART_SERVER_LOG, conn_id, conn_state, pair_state, disc_reason);
-    osal_printk("%s addr:%02x:**:**:**:%02x:%02x\r\n", SLE_UART_SERVER_LOG,
-        addr->addr[BT_INDEX_0], addr->addr[BT_INDEX_4]);
+                SLE_UART_SERVER_LOG, conn_id, conn_state, pair_state, disc_reason);
+    osal_printk("%s addr:%02x:**:**:**:%02x:%02x\r\n", SLE_UART_SERVER_LOG, addr->addr[BT_INDEX_0],
+                addr->addr[BT_INDEX_4]);
 
     if (conn_state == SLE_ACB_STATE_CONNECTED) {
         g_sle_conn_hdl = conn_id;
@@ -244,11 +252,9 @@ static void sle_uart_server_connect_state_changed_cbk(uint16_t conn_id, const sl
         osal_printk("%s disconnected, re-start announce\r\n", SLE_UART_SERVER_LOG);
 
         /* Drain stale queued data. / 清空消息队列中的残留数据。 */
-        extern unsigned long g_sle_uart_server_msgq_id;
         uint8_t dummy[CONFIG_SLE_UART_MSGQ_ITEM_SIZE];
         uint32_t len = CONFIG_SLE_UART_MSGQ_ITEM_SIZE;
-        while (osal_msg_queue_read_copy(g_sle_uart_server_msgq_id, dummy,
-                                        &len, 0) == OSAL_SUCCESS) {
+        while (osal_msg_queue_read_copy(g_sle_uart_server_msgq_id, dummy, &len, 0) == OSAL_SUCCESS) {
             len = CONFIG_SLE_UART_MSGQ_ITEM_SIZE;
         }
 
@@ -266,11 +272,11 @@ static void sle_uart_server_connect_state_changed_cbk(uint16_t conn_id, const sl
 static void sle_uart_server_pair_complete_cbk(uint16_t conn_id, const sle_addr_t *addr, errcode_t status)
 {
     osal_printk("%s pair complete conn_id:%02x, status:%x\r\n", SLE_UART_SERVER_LOG, conn_id, status);
-    osal_printk("%s pair complete addr:%02x:**:**:**:%02x:%02x\r\n", SLE_UART_SERVER_LOG,
-        addr->addr[BT_INDEX_0], addr->addr[BT_INDEX_4]);
+    osal_printk("%s pair complete addr:%02x:**:**:**:%02x:%02x\r\n", SLE_UART_SERVER_LOG, addr->addr[BT_INDEX_0],
+                addr->addr[BT_INDEX_4]);
 
     /* Configure the MTU after pairing. / 配对完成后配置 MTU。 */
-    ssap_exchange_info_t parameter = { 0 };
+    ssap_exchange_info_t parameter = {0};
     parameter.mtu_size = CONFIG_SLE_UART_MTU_SIZE;
     parameter.version = 1;
     ssaps_set_info(g_server_id, &parameter);
@@ -397,8 +403,8 @@ static errcode_t sle_uart_server_add(void)
         ssaps_unregister_server(g_server_id);
         return ERRCODE_SLE_FAIL;
     }
-    osal_printk("%s add service ok, server_id:%x, service_handle:%x, property_handle:%x\r\n",
-        SLE_UART_SERVER_LOG, g_server_id, g_service_handle, g_property_handle);
+    osal_printk("%s add service ok, server_id:%x, service_handle:%x, property_handle:%x\r\n", SLE_UART_SERVER_LOG,
+                g_server_id, g_service_handle, g_property_handle);
     ret = ssaps_start_service(g_server_id, g_service_handle);
     if (ret != ERRCODE_SLE_SUCCESS) {
         osal_printk("%s start service fail, ret:%x\r\n", SLE_UART_SERVER_LOG, ret);
@@ -436,8 +442,7 @@ static errcode_t sle_uart_server_conn_register_cbks(void)
  * @brief 初始化 \c sle_uart_server_init 对应的功能。
  * @endif
  */
-errcode_t sle_uart_server_init(ssaps_read_request_callback read_cb,
-                               ssaps_write_request_callback write_cb)
+errcode_t sle_uart_server_init(ssaps_read_request_callback read_cb, ssaps_write_request_callback write_cb)
 {
     errcode_t ret;
 

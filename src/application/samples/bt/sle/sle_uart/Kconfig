@@ -24,27 +24,27 @@ config UART_RXD_PIN_MODE
     default 1
 
 config SLE_UART_BAUDRATE
-    int "  UART Baudrate"
+    int "UART Baudrate"
     default 115200
 
 config SLE_UART_RX_BUF_SIZE
-    int "  UART RX Buffer Size (bytes)"
+    int "UART RX Buffer Size (bytes)"
     default 512
 
 config SLE_UART_MSGQ_LEN
-    int "  Message Queue Depth"
+    int "Message Queue Depth"
     default 16
 
 config SLE_UART_MSGQ_ITEM_SIZE
-    int "  Message Queue Item Size (bytes)"
+    int "Message Queue Item Size (bytes)"
     default 520
 
 config SLE_UART_MTU_SIZE
-    int "  SLE MTU Size"
+    int "SLE MTU Size"
     default 520
 
 config SLE_UART_CONN_INTERVAL
-    int "  Connection Interval (x1.25ms)"
+    int "Connection Interval (x1.25ms)"
     default 12
     range 6 32
     help

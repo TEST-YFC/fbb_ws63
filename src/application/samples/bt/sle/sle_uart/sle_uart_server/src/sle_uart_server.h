@@ -25,21 +25,20 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Service UUID. / 服务 UUID。 */
-#define SLE_UART_SERVER_SERVICE        0x2222
+#define SLE_UART_SERVER_SERVICE 0x2222
 
 /* Property UUID. / 属性 UUID。 */
-#define SLE_UART_SERVER_NTF_REPORT     0x2323
+#define SLE_UART_SERVER_NTF_REPORT 0x2323
 
 /* Property permissions: read and write. / 属性权限：读和写。 */
-#define SLE_UART_SRV_PROPERTIES        (SSAP_PERMISSION_READ | SSAP_PERMISSION_WRITE)
+#define SLE_UART_SRV_PROPERTIES (SSAP_PERMISSION_READ | SSAP_PERMISSION_WRITE)
 
 /* Supported operations: read, write, and notify. / 支持的操作：读、写和通知。 */
-#define SLE_UART_SRV_OPERATION         (SSAP_OPERATE_INDICATION_BIT_READ | \
-                                        SSAP_OPERATE_INDICATION_BIT_WRITE | \
-                                        SSAP_OPERATE_INDICATION_BIT_NOTIFY)
+#define SLE_UART_SRV_OPERATION \
+    (SSAP_OPERATE_INDICATION_BIT_READ | SSAP_OPERATE_INDICATION_BIT_WRITE | SSAP_OPERATE_INDICATION_BIT_NOTIFY)
 
 /* Descriptor permissions. / 描述符权限。 */
-#define SLE_UART_SRV_DESCRIPTOR        (SSAP_PERMISSION_READ)
+#define SLE_UART_SRV_DESCRIPTOR (SSAP_PERMISSION_READ)
 
 /**
  * @if Eng
@@ -48,8 +47,7 @@ extern "C" {
  * @brief 初始化 \c sle_uart_server_init 对应的功能。
  * @endif
  */
-errcode_t sle_uart_server_init(ssaps_read_request_callback read_cb,
-                               ssaps_write_request_callback write_cb);
+errcode_t sle_uart_server_init(ssaps_read_request_callback read_cb, ssaps_write_request_callback write_cb);
 
 /**
  * @if Eng
@@ -68,6 +66,8 @@ errcode_t sle_uart_server_send_notification(const uint8_t *data, uint16_t len);
  * @endif
  */
 uint16_t sle_uart_server_is_connected(void);
+
+extern unsigned long g_sle_uart_server_msgq_id;
 
 #ifdef __cplusplus
 #if __cplusplus

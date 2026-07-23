@@ -18,20 +18,22 @@
 #include "sle_device_discovery.h"
 #include "sle_errcode.h"
 #include "sle_uart_server_adv.h"
+
+#define SLE_ANNOUNCE_TX_POWER_DBM 18
 #include "string.h"
 
 /* Connection interval: 15 ms; advertising interval: 25 ms. / 连接间隔：15 ms；广播间隔：25 ms。 */
-#define SLE_CONN_INTV_MIN_DEFAULT              CONFIG_SLE_UART_CONN_INTERVAL
-#define SLE_CONN_INTV_MAX_DEFAULT              CONFIG_SLE_UART_CONN_INTERVAL
-#define SLE_ADV_INTERVAL_MIN_DEFAULT           0xC8
-#define SLE_ADV_INTERVAL_MAX_DEFAULT           0xC8
-#define SLE_CONN_SUPERVISION_TIMEOUT_DEFAULT   0x1F4
-#define SLE_CONN_MAX_LATENCY                   0x1F3
+#define SLE_CONN_INTV_MIN_DEFAULT CONFIG_SLE_UART_CONN_INTERVAL
+#define SLE_CONN_INTV_MAX_DEFAULT CONFIG_SLE_UART_CONN_INTERVAL
+#define SLE_ADV_INTERVAL_MIN_DEFAULT 0xC8
+#define SLE_ADV_INTERVAL_MAX_DEFAULT 0xC8
+#define SLE_CONN_SUPERVISION_TIMEOUT_DEFAULT 0x1F4
+#define SLE_CONN_MAX_LATENCY 0x1F3
 
-#define SLE_ADV_TX_POWER                       10
-#define SLE_ADV_HANDLE_DEFAULT                 1
-#define SLE_ADV_DATA_LEN_MAX                   251
-#define NAME_MAX_LENGTH                        16
+#define SLE_ADV_TX_POWER 10
+#define SLE_ADV_HANDLE_DEFAULT 1
+#define SLE_ADV_DATA_LEN_MAX 251
+#define NAME_MAX_LENGTH 16
 
 static uint8_t g_sle_local_name[NAME_MAX_LENGTH] = "uart_server";
 
@@ -140,7 +142,7 @@ static int sle_set_default_announce_param(void)
 {
     errno_t ret;
     sle_announce_param_t param = {0};
-    unsigned char local_addr[SLE_ADDR_LEN] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 };
+    unsigned char local_addr[SLE_ADDR_LEN] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
     param.announce_mode = SLE_ANNOUNCE_MODE_CONNECTABLE_SCANABLE;
     param.announce_handle = SLE_ADV_HANDLE_DEFAULT;
     param.announce_gt_role = SLE_ANNOUNCE_ROLE_T_CAN_NEGO;
@@ -152,7 +154,7 @@ static int sle_set_default_announce_param(void)
     param.conn_interval_max = SLE_CONN_INTV_MAX_DEFAULT;
     param.conn_max_latency = SLE_CONN_MAX_LATENCY;
     param.conn_supervision_timeout = SLE_CONN_SUPERVISION_TIMEOUT_DEFAULT;
-    param.announce_tx_power = 18;
+    param.announce_tx_power = SLE_ANNOUNCE_TX_POWER_DBM;
     param.own_addr.type = 0;
     ret = memcpy_s(param.own_addr.addr, SLE_ADDR_LEN, local_addr, SLE_ADDR_LEN);
     if (ret != EOK) {

@@ -17,31 +17,28 @@
 #include "sle_connection_manager.h"
 #include "sle_uart_client.h"
 
-#define SLE_SEEK_INTERVAL_DEFAULT       100
-#define SLE_SEEK_WINDOW_DEFAULT         100
+#define SLE_SEEK_INTERVAL_DEFAULT 100
+#define SLE_SEEK_WINDOW_DEFAULT 100
 #define SLE_UART_WAIT_SLE_CORE_READY_MS 5000
 
 #ifndef SLE_UART_SERVER_NAME
-#define SLE_UART_SERVER_NAME           "uart_server"
+#define SLE_UART_SERVER_NAME "uart_server"
 #endif
 
-#define SLE_UART_CLIENT_LOG            "[sle uart client]"
+#define SLE_UART_CLIENT_LOG "[sle uart client]"
 
 /* Global connection handle used by the forwarding task. / 透传任务使用的全局连接句柄。 */
 uint16_t g_conn_id = 0;
 
-static ssapc_find_service_result_t g_find_service_result = { 0 };
-static sle_announce_seek_callbacks_t g_seek_cbk = { 0 };
-static sle_connection_callbacks_t g_connect_cbk = { 0 };
-static ssapc_callbacks_t g_ssapc_cbk = { 0 };
-static sle_addr_t g_remote_addr = { 0 };
+static ssapc_find_service_result_t g_find_service_result = {0};
+static sle_announce_seek_callbacks_t g_seek_cbk = {0};
+static sle_connection_callbacks_t g_connect_cbk = {0};
+static ssapc_callbacks_t g_ssapc_cbk = {0};
+static sle_addr_t g_remote_addr = {0};
 
 /* Store callbacks supplied by the application. / 保存应用层传入的回调。 */
 static ssapc_notification_callback g_saved_notification_cb = NULL;
 static ssapc_write_cfm_callback g_saved_write_cfm_cb = NULL;
-
-/* Discovery stores the handle and type here. / 服务发现阶段在此保存句柄和类型。 */
-extern ssapc_write_param_t g_write_param;
 
 static bool g_connected = false;
 
@@ -66,7 +63,7 @@ uint16_t sle_uart_client_is_connected(void)
  */
 void sle_uart_client_start_scan(void)
 {
-    sle_seek_param_t param = { 0 };
+    sle_seek_param_t param = {0};
     param.own_addr_type = 0;
     param.filter_duplicates = 0;
     param.seek_filter_policy = 0;
@@ -82,7 +79,7 @@ void sle_uart_client_start_scan(void)
 static void sle_uart_client_seek_cbk_register(void);
 static void sle_uart_client_connect_cbk_register(void);
 static void sle_uart_client_ssapc_cbk_register(ssapc_notification_callback notification_cb,
-                                                ssapc_write_cfm_callback write_cfm_cb);
+                                               ssapc_write_cfm_callback write_cfm_cb);
 
 /**
  * @if Eng
@@ -176,14 +173,16 @@ static void sle_uart_client_seek_cbk_register(void)
  * @brief 处理分发给 \c sle_uart_client_connect_state_changed_cbk 的异步事件。
  * @endif
  */
-static void sle_uart_client_connect_state_changed_cbk(uint16_t conn_id, const sle_addr_t *addr,
-                                                       sle_acb_state_t conn_state, sle_pair_state_t pair_state,
-                                                       sle_disc_reason_t disc_reason)
+static void sle_uart_client_connect_state_changed_cbk(uint16_t conn_id,
+                                                      const sle_addr_t *addr,
+                                                      sle_acb_state_t conn_state,
+                                                      sle_pair_state_t pair_state,
+                                                      sle_disc_reason_t disc_reason)
 {
     unused(addr);
     unused(pair_state);
-    osal_printk("%s conn state changed, conn_id:0x%02x, state:0x%x, disc_reason:0x%x\r\n",
-                SLE_UART_CLIENT_LOG, conn_id, conn_state, disc_reason);
+    osal_printk("%s conn state changed, conn_id:0x%02x, state:0x%x, disc_reason:0x%x\r\n", SLE_UART_CLIENT_LOG, conn_id,
+                conn_state, disc_reason);
 
     g_conn_id = conn_id;
 
@@ -201,11 +200,9 @@ static void sle_uart_client_connect_state_changed_cbk(uint16_t conn_id, const sl
         sle_remove_paired_remote_device(&g_remote_addr);
 
         /* Drain stale queued data. / 清空消息队列中的残留数据。 */
-        extern unsigned long g_sle_uart_client_msgq_id;
         uint8_t dummy[CONFIG_SLE_UART_MSGQ_ITEM_SIZE];
         uint32_t len = CONFIG_SLE_UART_MSGQ_ITEM_SIZE;
-        while (osal_msg_queue_read_copy(g_sle_uart_client_msgq_id, dummy,
-                                        &len, 0) == OSAL_SUCCESS) {
+        while (osal_msg_queue_read_copy(g_sle_uart_client_msgq_id, dummy, &len, 0) == OSAL_SUCCESS) {
             len = CONFIG_SLE_UART_MSGQ_ITEM_SIZE;
         }
 
@@ -222,9 +219,8 @@ static void sle_uart_client_connect_state_changed_cbk(uint16_t conn_id, const sl
  */
 static void sle_uart_client_pair_complete_cbk(uint16_t conn_id, const sle_addr_t *addr, errcode_t status)
 {
-    osal_printk("%s pair complete conn_id:%d, addr:%02x***%02x%02x, status:%d\r\n",
-                SLE_UART_CLIENT_LOG, conn_id,
-                addr->addr[0], addr->addr[4], addr->addr[5], status);
+    osal_printk("%s pair complete conn_id:%d, addr:%02x***%02x%02x, status:%d\r\n", SLE_UART_CLIENT_LOG, conn_id,
+                addr->addr[0], addr->addr[SLE_ADDR_LEN - 2], addr->addr[SLE_ADDR_LEN - 1], status);
     if (status == 0) {
         ssap_exchange_info_t info = {0};
         info.mtu_size = CONFIG_SLE_UART_MTU_SIZE;
@@ -255,16 +251,17 @@ static void sle_uart_client_connect_cbk_register(void)
  * @brief 处理分发给 \c sle_uart_client_exchange_info_cbk 的异步事件。
  * @endif
  */
-static void sle_uart_client_exchange_info_cbk(uint8_t client_id, uint16_t conn_id,
-                                               ssap_exchange_info_t *param, errcode_t status)
+static void sle_uart_client_exchange_info_cbk(uint8_t client_id,
+                                              uint16_t conn_id,
+                                              ssap_exchange_info_t *param,
+                                              errcode_t status)
 {
-    osal_printk("%s exchange info cbk client_id:%d, conn_id:%d, status:%d\r\n",
-                SLE_UART_CLIENT_LOG, client_id, conn_id, status);
-    osal_printk("%s mtu size: %d, version: %d.\r\n",
-                SLE_UART_CLIENT_LOG, param->mtu_size, param->version);
+    osal_printk("%s exchange info cbk client_id:%d, conn_id:%d, status:%d\r\n", SLE_UART_CLIENT_LOG, client_id, conn_id,
+                status);
+    osal_printk("%s mtu size: %d, version: %d.\r\n", SLE_UART_CLIENT_LOG, param->mtu_size, param->version);
 
     /* Start service discovery. / 开始服务发现。 */
-    ssapc_find_structure_param_t find_param = { 0 };
+    ssapc_find_structure_param_t find_param = {0};
     find_param.type = SSAP_FIND_TYPE_PROPERTY;
     find_param.start_hdl = 1;
     find_param.end_hdl = 0xFFFF;
@@ -279,11 +276,13 @@ static void sle_uart_client_exchange_info_cbk(uint8_t client_id, uint16_t conn_i
  * @brief 处理分发给 \c sle_uart_client_find_structure_cbk 的异步事件。
  * @endif
  */
-static void sle_uart_client_find_structure_cbk(uint8_t client_id, uint16_t conn_id,
-                                                ssapc_find_service_result_t *service, errcode_t status)
+static void sle_uart_client_find_structure_cbk(uint8_t client_id,
+                                               uint16_t conn_id,
+                                               ssapc_find_service_result_t *service,
+                                               errcode_t status)
 {
-    osal_printk("%s find structure cbk client:%d, conn_id:%d, status:%d\r\n",
-                SLE_UART_CLIENT_LOG, client_id, conn_id, status);
+    osal_printk("%s find structure cbk client:%d, conn_id:%d, status:%d\r\n", SLE_UART_CLIENT_LOG, client_id, conn_id,
+                status);
     g_find_service_result.start_hdl = service->start_hdl;
     g_find_service_result.end_hdl = service->end_hdl;
     memcpy_s(&g_find_service_result.uuid, sizeof(sle_uuid_t), &service->uuid, sizeof(sle_uuid_t));
@@ -296,12 +295,13 @@ static void sle_uart_client_find_structure_cbk(uint8_t client_id, uint16_t conn_
  * @brief 处理分发给 \c sle_uart_client_find_property_cbk 的异步事件。
  * @endif
  */
-static void sle_uart_client_find_property_cbk(uint8_t client_id, uint16_t conn_id,
-                                               ssapc_find_property_result_t *property, errcode_t status)
+static void sle_uart_client_find_property_cbk(uint8_t client_id,
+                                              uint16_t conn_id,
+                                              ssapc_find_property_result_t *property,
+                                              errcode_t status)
 {
     osal_printk("%s find property cbk, client:%d, conn:%d, handle:%d, operate_ind:%d, status:%d\r\n",
-                SLE_UART_CLIENT_LOG, client_id, conn_id, property->handle,
-                property->operate_indication, status);
+                SLE_UART_CLIENT_LOG, client_id, conn_id, property->handle, property->operate_indication, status);
 
     /* Save the handle and type for the forwarding task. / 保存句柄和类型，供透传发送任务使用。 */
     g_write_param.handle = property->handle;
@@ -315,13 +315,14 @@ static void sle_uart_client_find_property_cbk(uint8_t client_id, uint16_t conn_i
  * @brief 处理分发给 \c sle_uart_client_find_structure_cmp_cbk 的异步事件。
  * @endif
  */
-static void sle_uart_client_find_structure_cmp_cbk(uint8_t client_id, uint16_t conn_id,
-                                                    ssapc_find_structure_result_t *structure_result,
-                                                    errcode_t status)
+static void sle_uart_client_find_structure_cmp_cbk(uint8_t client_id,
+                                                   uint16_t conn_id,
+                                                   ssapc_find_structure_result_t *structure_result,
+                                                   errcode_t status)
 {
     unused(conn_id);
-    osal_printk("%s find structure cmp cbk, client:%d, status:%d, type:%d\r\n",
-                SLE_UART_CLIENT_LOG, client_id, status, structure_result->type);
+    osal_printk("%s find structure cmp cbk, client:%d, status:%d, type:%d\r\n", SLE_UART_CLIENT_LOG, client_id, status,
+                structure_result->type);
     osal_printk("%s service discovery complete\r\n", SLE_UART_CLIENT_LOG);
     osal_printk("%s === bridge ready ===\r\n", SLE_UART_CLIENT_LOG);
 }
@@ -334,14 +335,14 @@ static void sle_uart_client_find_structure_cmp_cbk(uint8_t client_id, uint16_t c
  * @endif
  */
 static void sle_uart_client_ssapc_cbk_register(ssapc_notification_callback notification_cb,
-                                                ssapc_write_cfm_callback write_cfm_cb)
+                                               ssapc_write_cfm_callback write_cfm_cb)
 {
     g_ssapc_cbk.exchange_info_cb = sle_uart_client_exchange_info_cbk;
     g_ssapc_cbk.find_structure_cb = sle_uart_client_find_structure_cbk;
     g_ssapc_cbk.ssapc_find_property_cbk = sle_uart_client_find_property_cbk;
     g_ssapc_cbk.find_structure_cmp_cb = sle_uart_client_find_structure_cmp_cbk;
     g_ssapc_cbk.notification_cb = notification_cb;
-    g_ssapc_cbk.indication_cb = NULL;  /* Indications are unused. / 不使用指示。 */
+    g_ssapc_cbk.indication_cb = NULL; /* Indications are unused. / 不使用指示。 */
     g_ssapc_cbk.write_cfm_cb = write_cfm_cb;
     ssapc_register_callbacks(&g_ssapc_cbk);
 }
@@ -353,8 +354,7 @@ static void sle_uart_client_ssapc_cbk_register(ssapc_notification_callback notif
  * @brief 初始化 \c sle_uart_client_init 对应的功能。
  * @endif
  */
-void sle_uart_client_init(ssapc_notification_callback notification_cb,
-                          ssapc_write_cfm_callback write_cfm_cb)
+void sle_uart_client_init(ssapc_notification_callback notification_cb, ssapc_write_cfm_callback write_cfm_cb)
 {
     g_saved_notification_cb = notification_cb;
     g_saved_write_cfm_cb = write_cfm_cb;
