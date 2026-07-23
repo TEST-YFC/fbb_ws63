@@ -244,14 +244,16 @@ static errcode_t add_chara_with_cccd(const ble_hid_characteristic_t *characteris
  */
 static errcode_t add_hid_metadata(void)
 {
-    errcode_t ret = add_chara(&(ble_hid_characteristic_t){BLE_UUID_HID_INFORMATION, GATT_CHARACTER_PROPERTY_BIT_READ,
+    errcode_t ret = add_chara(&(ble_hid_characteristic_t) {BLE_UUID_HID_INFORMATION,
+                                                          GATT_CHARACTER_PROPERTY_BIT_READ,
                                                           GATT_ATTRIBUTE_PERMISSION_READ, HID_INFO, sizeof(HID_INFO)},
                               NULL);
     if (ret != ERRCODE_BT_SUCCESS) {
         return ret;
     }
     uint8_t control_point = 0;
-    return add_chara(&(ble_hid_characteristic_t){BLE_UUID_HID_CONTROL_POINT, GATT_CHARACTER_PROPERTY_BIT_WRITE_NO_RSP,
+    return add_chara(&(ble_hid_characteristic_t) {BLE_UUID_HID_CONTROL_POINT,
+                                                 GATT_CHARACTER_PROPERTY_BIT_WRITE_NO_RSP,
                                                  GATT_ATTRIBUTE_PERMISSION_WRITE, &control_point,
                                                  sizeof(control_point)},
                      NULL);
@@ -261,7 +263,7 @@ static errcode_t add_hid_reports(void)
 {
     uint8_t zero_report[sizeof(hid_kb_report_t)] = {0};
     errcode_t ret = add_chara_with_cccd(
-        &(ble_hid_characteristic_t){BLE_UUID_BOOT_KB_INPUT,
+        &(ble_hid_characteristic_t) {BLE_UUID_BOOT_KB_INPUT,
                                     GATT_CHARACTER_PROPERTY_BIT_READ | GATT_CHARACTER_PROPERTY_BIT_NOTIFY,
                                     GATT_ATTRIBUTE_PERMISSION_READ, zero_report, sizeof(zero_report)},
         &g_input_val_handle, NULL);
@@ -269,7 +271,7 @@ static errcode_t add_hid_reports(void)
         return ret;
     }
     return add_chara(
-        &(ble_hid_characteristic_t){
+        &(ble_hid_characteristic_t) {
             BLE_UUID_BOOT_KB_OUTPUT,
             GATT_CHARACTER_PROPERTY_BIT_READ | GATT_CHARACTER_PROPERTY_BIT_WRITE |
                 GATT_CHARACTER_PROPERTY_BIT_WRITE_NO_RSP,
@@ -283,7 +285,7 @@ static errcode_t add_hid_reports(void)
 static errcode_t add_hid_protocol(void)
 {
     errcode_t ret = add_chara(
-        &(ble_hid_characteristic_t){
+        &(ble_hid_characteristic_t) {
             BLE_UUID_PROTOCOL_MODE,
             GATT_CHARACTER_PROPERTY_BIT_READ | GATT_CHARACTER_PROPERTY_BIT_WRITE_NO_RSP,
             GATT_ATTRIBUTE_PERMISSION_READ | GATT_ATTRIBUTE_PERMISSION_WRITE,
@@ -294,7 +296,7 @@ static errcode_t add_hid_protocol(void)
     if (ret != ERRCODE_BT_SUCCESS) {
         return ret;
     }
-    return add_chara(&(ble_hid_characteristic_t){BLE_UUID_REPORT_MAP, GATT_CHARACTER_PROPERTY_BIT_READ,
+    return add_chara(&(ble_hid_characteristic_t) {BLE_UUID_REPORT_MAP, GATT_CHARACTER_PROPERTY_BIT_READ,
                                                  GATT_ATTRIBUTE_PERMISSION_READ, REPORT_MAP, sizeof(REPORT_MAP)},
                      NULL);
 }
