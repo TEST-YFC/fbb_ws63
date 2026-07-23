@@ -170,7 +170,6 @@ static void task_concurrency_entry(void)
                                           TASK_CONCURRENCY_MEDIUM_PRIORITY);
     low_task = task_concurrency_create((osal_kthread_handler)task_concurrency_low_handler, "LowTask",
                                        TASK_CONCURRENCY_LOW_PRIORITY);
-
     if ((high_task == NULL) || (medium_task == NULL) || (low_task == NULL)) {
         if (high_task != NULL) {
             osal_kthread_destroy(high_task, 1);
