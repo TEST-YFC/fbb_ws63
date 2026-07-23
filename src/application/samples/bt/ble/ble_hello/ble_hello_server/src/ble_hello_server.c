@@ -17,7 +17,7 @@
 #include "ble_hello_server_adv.h"
 
 #define BLE_HELLO_SERVER_LOG "[ble hello server]"
-#define BLE_HELLO_UUID_LEN   2
+#define BLE_HELLO_UUID_LEN 2
 
 static uint8_t g_server_id;
 static uint16_t g_conn_id;
@@ -30,33 +30,46 @@ static bool g_hello_notify_enabled;
 static bool g_stack_reset_done;
 static uint8_t g_property_value[BLE_HELLO_PROPERTY_MAX_LEN] = "device_status_ok";
 static uint16_t g_property_value_len = sizeof("device_status_ok") - 1;
-static const uint8_t g_default_value[] = "device_status_ok";
-static const uint8_t g_hello_message[] = "hello world";
+static const uint8_t DEFAULT_VALUE[] = "device_status_ok";
+static const uint8_t HELLO_MESSAGE[] = "hello world";
+#define BLE_UUID_HIGH_BYTE_SHIFT 8
+#define BLE_CCCD_VALUE_LEN 2
+#define BLE_CCCD_NOTIFY_ENABLED 1
 
-static errcode_t ble_hello_send_value_notification(uint16_t handle, const uint8_t *data, uint16_t len,
-    const char *name);
+typedef struct {
+    uint16_t request_id;
+    uint8_t status;
+    uint8_t *value;
+    uint16_t value_len;
+} ble_hello_response_t;
+
+static errcode_t ble_hello_send_value_notification(uint16_t handle,
+                                                   const uint8_t *data,
+                                                   uint16_t len,
+                                                   const char *name);
 
 static void ble_hello_uuid16(uint16_t value, bt_uuid_t *uuid)
 {
     uuid->uuid_len = BLE_HELLO_UUID_LEN;
-    uuid->uuid[0] = (uint8_t)(value >> 8);
+    uuid->uuid[0] = (uint8_t)(value >> BLE_UUID_HIGH_BYTE_SHIFT);
     uuid->uuid[1] = (uint8_t)value;
 }
 
-static errcode_t ble_hello_send_response(uint8_t server_id, uint16_t conn_id, uint16_t request_id,
-    uint8_t status, uint8_t *value, uint16_t value_len)
+static errcode_t ble_hello_send_response(uint8_t server_id, uint16_t conn_id, const ble_hello_response_t *response_data)
 {
     gatts_send_rsp_t response = {0};
-    response.request_id = request_id;
-    response.status = status;
+    response.request_id = response_data->request_id;
+    response.status = response_data->status;
     response.offset = 0;
-    response.value = value;
-    response.value_len = value_len;
+    response.value = response_data->value;
+    response.value_len = response_data->value_len;
     return gatts_send_response(server_id, conn_id, &response);
 }
 
-static void ble_hello_read_request_cb(uint8_t server_id, uint16_t conn_id,
-    gatts_req_read_cb_t *request, errcode_t status)
+static void ble_hello_read_request_cb(uint8_t server_id,
+                                      uint16_t conn_id,
+                                      gatts_req_read_cb_t *request,
+                                      errcode_t status)
 {
     (void)status;
     osal_printk("%s read request received, handle=0x%04x\r\n", BLE_HELLO_SERVER_LOG, request->handle);
@@ -65,57 +78,58 @@ static void ble_hello_read_request_cb(uint8_t server_id, uint16_t conn_id,
     }
 
     if (request->handle != g_data_handle) {
-        (void)ble_hello_send_response(server_id, conn_id, request->request_id,
-            GATT_STATUS_INVALID_HANDLE, NULL, 0);
+        ble_hello_response_t response = {request->request_id, GATT_STATUS_INVALID_HANDLE, NULL, 0};
+        (void)ble_hello_send_response(server_id, conn_id, &response);
         return;
     }
 
-    if (ble_hello_send_response(server_id, conn_id, request->request_id, GATT_STATUS_SUCCESS,
-        g_property_value, g_property_value_len) == ERRCODE_BT_SUCCESS) {
-        osal_printk("%s read response sent: value=%.*s\r\n", BLE_HELLO_SERVER_LOG,
-            g_property_value_len, g_property_value);
+    ble_hello_response_t response = {request->request_id, GATT_STATUS_SUCCESS, g_property_value, g_property_value_len};
+    if (ble_hello_send_response(server_id, conn_id, &response) == ERRCODE_BT_SUCCESS) {
+        osal_printk("%s read response sent: value=%.*s\r\n", BLE_HELLO_SERVER_LOG, g_property_value_len,
+                    g_property_value);
     }
 }
 
-static void ble_hello_handle_cccd_write(uint8_t server_id, uint16_t conn_id,
-    gatts_req_write_cb_t *request)
+static void ble_hello_handle_cccd_write(uint8_t server_id, uint16_t conn_id, gatts_req_write_cb_t *request)
 {
     uint16_t cccd_value = 0;
     uint8_t response_status = GATT_STATUS_SUCCESS;
 
-    if (request->length != 2) {
+    if (request->length != BLE_CCCD_VALUE_LEN) {
         response_status = GATT_STATUS_INVALID_ATTRIBUTE_VALUE_LENGTH;
     } else {
-        cccd_value = (uint16_t)request->value[0] | ((uint16_t)request->value[1] << 8);
+        cccd_value = (uint16_t)request->value[0] | ((uint16_t)request->value[1] << BLE_UUID_HIGH_BYTE_SHIFT);
         if (cccd_value != 0 && cccd_value != 1) {
             response_status = GATT_STATUS_VALUE_NOT_ALLOWED;
         }
     }
 
     if (request->need_rsp) {
-        (void)ble_hello_send_response(server_id, conn_id, request->request_id, response_status, NULL, 0);
+        ble_hello_response_t response = {request->request_id, response_status, NULL, 0};
+        (void)ble_hello_send_response(server_id, conn_id, &response);
     }
     if (response_status != GATT_STATUS_SUCCESS) {
         osal_printk("%s invalid CCCD write, status=0x%x\r\n", BLE_HELLO_SERVER_LOG, response_status);
         return;
     }
 
-    g_hello_notify_enabled = (cccd_value == 1);
-    osal_printk("%s hello CCCD %s\r\n", BLE_HELLO_SERVER_LOG,
-        g_hello_notify_enabled ? "enabled" : "disabled");
+    g_hello_notify_enabled = (cccd_value == BLE_CCCD_NOTIFY_ENABLED);
+    osal_printk("%s hello CCCD %s\r\n", BLE_HELLO_SERVER_LOG, g_hello_notify_enabled ? "enabled" : "disabled");
     if (g_hello_notify_enabled) {
-        (void)ble_hello_server_send_notification(g_hello_message, sizeof(g_hello_message) - 1);
+        (void)ble_hello_server_send_notification(HELLO_MESSAGE, sizeof(HELLO_MESSAGE) - 1);
     }
 }
 
-static void ble_hello_write_request_cb(uint8_t server_id, uint16_t conn_id,
-    gatts_req_write_cb_t *request, errcode_t status)
+static void ble_hello_write_request_cb(uint8_t server_id,
+                                       uint16_t conn_id,
+                                       gatts_req_write_cb_t *request,
+                                       errcode_t status)
 {
     uint8_t response_status = GATT_STATUS_SUCCESS;
     (void)status;
 
-    osal_printk("%s write request received, handle=0x%04x, len=%u\r\n",
-        BLE_HELLO_SERVER_LOG, request->handle, request->length);
+    osal_printk("%s write request received, handle=0x%04x, len=%u\r\n", BLE_HELLO_SERVER_LOG, request->handle,
+                request->length);
     if (request->handle == g_notify_cccd_handle) {
         ble_hello_handle_cccd_write(server_id, conn_id, request);
         return;
@@ -134,66 +148,56 @@ static void ble_hello_write_request_cb(uint8_t server_id, uint16_t conn_id,
     }
 
     if (request->need_rsp) {
-        (void)ble_hello_send_response(server_id, conn_id, request->request_id, response_status, NULL, 0);
+        ble_hello_response_t response = {request->request_id, response_status, NULL, 0};
+        (void)ble_hello_send_response(server_id, conn_id, &response);
     }
     if (response_status == GATT_STATUS_SUCCESS) {
-        ble_hello_server_set_adv_default_state(g_property_value_len == sizeof(g_default_value) - 1 &&
-            memcmp(g_property_value, g_default_value, sizeof(g_default_value) - 1) == 0);
-        osal_printk("%s property updated: %.*s\r\n", BLE_HELLO_SERVER_LOG,
-            g_property_value_len, g_property_value);
+        ble_hello_server_set_adv_default_state(g_property_value_len == sizeof(DEFAULT_VALUE) - 1 &&
+                                               memcmp(g_property_value, DEFAULT_VALUE, sizeof(DEFAULT_VALUE) - 1) == 0);
+        osal_printk("%s property updated: %.*s\r\n", BLE_HELLO_SERVER_LOG, g_property_value_len, g_property_value);
         osal_printk("%s write response sent: success\r\n", BLE_HELLO_SERVER_LOG);
     } else {
         osal_printk("%s write rejected, status=0x%x\r\n", BLE_HELLO_SERVER_LOG, response_status);
     }
 }
 
-static errcode_t ble_hello_add_gatt_service(void)
+static errcode_t ble_hello_add_data_characteristic(void)
 {
-    bt_uuid_t app_uuid = {0};
-    bt_uuid_t service_uuid = {0};
     bt_uuid_t data_uuid = {0};
-    bt_uuid_t notify_uuid = {0};
-    bt_uuid_t cccd_uuid = {0};
     gatts_add_chara_info_t characteristic = {0};
     gatts_add_character_result_t data_result = {0};
-    gatts_add_character_result_t notify_result = {0};
-    gatts_add_desc_info_t descriptor = {0};
-    uint8_t cccd_value[2] = {0, 0};
-    errcode_t ret;
-
-    ble_hello_uuid16(BLE_HELLO_SERVICE_UUID, &app_uuid);
-    ret = gatts_register_server(&app_uuid, &g_server_id);
-    if (ret != ERRCODE_BT_SUCCESS) {
-        return ret;
-    }
-
-    ble_hello_uuid16(BLE_HELLO_SERVICE_UUID, &service_uuid);
-    ret = gatts_add_service_sync(g_server_id, &service_uuid, true, &g_service_handle);
-    if (ret != ERRCODE_BT_SUCCESS) {
-        return ret;
-    }
 
     ble_hello_uuid16(BLE_HELLO_DATA_UUID, &data_uuid);
     characteristic.chara_uuid = data_uuid;
     characteristic.properties = GATT_CHARACTER_PROPERTY_BIT_READ | GATT_CHARACTER_PROPERTY_BIT_WRITE;
-    characteristic.permissions = GATT_ATTRIBUTE_PERMISSION_READ | GATT_ATTRIBUTE_PERMISSION_WRITE |
-        GATT_ATTRIBUTE_PERMISSION_AUTHORIZATION_NEED;
+    characteristic.permissions =
+        GATT_ATTRIBUTE_PERMISSION_READ | GATT_ATTRIBUTE_PERMISSION_WRITE | GATT_ATTRIBUTE_PERMISSION_AUTHORIZATION_NEED;
     characteristic.value = g_property_value;
     characteristic.value_len = g_property_value_len;
-    ret = gatts_add_characteristic_sync(g_server_id, g_service_handle, &characteristic, &data_result);
+    errcode_t ret = gatts_add_characteristic_sync(g_server_id, g_service_handle, &characteristic, &data_result);
     if (ret != ERRCODE_BT_SUCCESS) {
         return ret;
     }
     g_data_handle = data_result.value_handle;
+    return ERRCODE_BT_SUCCESS;
+}
 
-    (void)memset_s(&characteristic, sizeof(characteristic), 0, sizeof(characteristic));
+static errcode_t ble_hello_add_notify_characteristic(void)
+{
+    bt_uuid_t notify_uuid = {0};
+    bt_uuid_t cccd_uuid = {0};
+    gatts_add_chara_info_t characteristic = {0};
+    gatts_add_character_result_t notify_result = {0};
+    gatts_add_desc_info_t descriptor = {0};
+    uint8_t cccd_value[BLE_CCCD_VALUE_LEN] = {0};
+
     ble_hello_uuid16(BLE_HELLO_NOTIFY_UUID, &notify_uuid);
     characteristic.chara_uuid = notify_uuid;
     characteristic.properties = GATT_CHARACTER_PROPERTY_BIT_NOTIFY;
     characteristic.permissions = GATT_ATTRIBUTE_PERMISSION_READ;
-    characteristic.value = (uint8_t *)g_hello_message;
-    characteristic.value_len = sizeof(g_hello_message) - 1;
-    ret = gatts_add_characteristic_sync(g_server_id, g_service_handle, &characteristic, &notify_result);
+    characteristic.value = (uint8_t *)HELLO_MESSAGE;
+    characteristic.value_len = sizeof(HELLO_MESSAGE) - 1;
+    errcode_t ret = gatts_add_characteristic_sync(g_server_id, g_service_handle, &characteristic, &notify_result);
     if (ret != ERRCODE_BT_SUCCESS) {
         return ret;
     }
@@ -208,9 +212,35 @@ static errcode_t ble_hello_add_gatt_service(void)
     if (ret != ERRCODE_BT_SUCCESS) {
         return ret;
     }
+    return ERRCODE_BT_SUCCESS;
+}
+
+static errcode_t ble_hello_add_gatt_service(void)
+{
+    bt_uuid_t app_uuid = {0};
+    bt_uuid_t service_uuid = {0};
+
+    ble_hello_uuid16(BLE_HELLO_SERVICE_UUID, &app_uuid);
+    errcode_t ret = gatts_register_server(&app_uuid, &g_server_id);
+    if (ret != ERRCODE_BT_SUCCESS) {
+        return ret;
+    }
+    ble_hello_uuid16(BLE_HELLO_SERVICE_UUID, &service_uuid);
+    ret = gatts_add_service_sync(g_server_id, &service_uuid, true, &g_service_handle);
+    if (ret != ERRCODE_BT_SUCCESS) {
+        return ret;
+    }
+    ret = ble_hello_add_data_characteristic();
+    if (ret != ERRCODE_BT_SUCCESS) {
+        return ret;
+    }
+    ret = ble_hello_add_notify_characteristic();
+    if (ret != ERRCODE_BT_SUCCESS) {
+        return ret;
+    }
 
     osal_printk("%s service ready: service=0x%04x data=0x%04x notify=0x%04x notify_cccd=0x%04x\r\n",
-        BLE_HELLO_SERVER_LOG, g_service_handle, g_data_handle, g_notify_handle, g_notify_cccd_handle);
+                BLE_HELLO_SERVER_LOG, g_service_handle, g_data_handle, g_notify_handle, g_notify_cccd_handle);
     return gatts_start_service(g_server_id, g_service_handle);
 }
 
@@ -230,8 +260,11 @@ static void ble_hello_service_start_cb(uint8_t server_id, uint16_t handle, errco
     }
 }
 
-static void ble_hello_conn_state_cb(uint16_t conn_id, bd_addr_t *addr, gap_ble_conn_state_t conn_state,
-    gap_ble_pair_state_t pair_state, gap_ble_disc_reason_t reason)
+static void ble_hello_conn_state_cb(uint16_t conn_id,
+                                    bd_addr_t *addr,
+                                    gap_ble_conn_state_t conn_state,
+                                    gap_ble_pair_state_t pair_state,
+                                    gap_ble_disc_reason_t reason)
 {
     (void)addr;
     (void)pair_state;
@@ -250,11 +283,9 @@ static void ble_hello_conn_state_cb(uint16_t conn_id, bd_addr_t *addr, gap_ble_c
 
 static void ble_hello_pair_result_cb(uint16_t conn_id, const bd_addr_t *addr, errcode_t status)
 {
-    osal_printk("%s pair complete, conn_id=0x%04x, status=0x%x\r\n",
-        BLE_HELLO_SERVER_LOG, conn_id, status);
+    osal_printk("%s pair complete, conn_id=0x%04x, status=0x%x\r\n", BLE_HELLO_SERVER_LOG, conn_id, status);
     if (status != ERRCODE_BT_SUCCESS) {
-        osal_printk("%s remove stale pair, ret=0x%x\r\n", BLE_HELLO_SERVER_LOG,
-            gap_ble_remove_pair(addr));
+        osal_printk("%s remove stale pair, ret=0x%x\r\n", BLE_HELLO_SERVER_LOG, gap_ble_remove_pair(addr));
     }
 }
 
@@ -275,8 +306,8 @@ static void ble_hello_enable_cb(errcode_t status)
         }
         osal_printk("%s stack reset request failed: 0x%x\r\n", BLE_HELLO_SERVER_LOG, ret);
     }
-    ble_hello_server_set_adv_default_state(g_property_value_len == sizeof(g_default_value) - 1 &&
-        memcmp(g_property_value, g_default_value, sizeof(g_default_value) - 1) == 0);
+    ble_hello_server_set_adv_default_state(g_property_value_len == sizeof(DEFAULT_VALUE) - 1 &&
+                                           memcmp(g_property_value, DEFAULT_VALUE, sizeof(DEFAULT_VALUE) - 1) == 0);
     security.bondable = 1;
     security.io_capability = GAP_BLE_IO_CAPABILITY_NOINPUTNOOUTPUT;
     security.sc_enable = 0;
@@ -287,8 +318,7 @@ static void ble_hello_enable_cb(errcode_t status)
         return;
     }
     ret = ble_hello_add_gatt_service();
-    osal_printk("%s init %s, ret=0x%x\r\n", BLE_HELLO_SERVER_LOG,
-        ret == ERRCODE_BT_SUCCESS ? "ok" : "failed", ret);
+    osal_printk("%s init %s, ret=0x%x\r\n", BLE_HELLO_SERVER_LOG, ret == ERRCODE_BT_SUCCESS ? "ok" : "failed", ret);
 }
 
 static void ble_hello_disable_cb(errcode_t status)
@@ -326,8 +356,7 @@ static errcode_t ble_hello_register_callbacks(void)
     return gatts_register_callbacks(&gatt_callbacks);
 }
 
-static errcode_t ble_hello_send_value_notification(uint16_t handle, const uint8_t *data, uint16_t len,
-    const char *name)
+static errcode_t ble_hello_send_value_notification(uint16_t handle, const uint8_t *data, uint16_t len, const char *name)
 {
     gatts_ntf_ind_t notification = {0};
     errcode_t ret;

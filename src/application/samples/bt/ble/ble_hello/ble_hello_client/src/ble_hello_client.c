@@ -15,21 +15,27 @@
 #include "bts_gatt_client.h"
 #include "ble_hello_client.h"
 
-#define BLE_HELLO_CLIENT_LOG          "[ble hello client]"
-#define BLE_HELLO_SERVICE_UUID        0x3333
-#define BLE_HELLO_DATA_UUID           0x3434
-#define BLE_HELLO_NOTIFY_UUID         0x3435
-#define BLE_HELLO_CCCD_UUID           0x2902
-#define BLE_HELLO_UUID_LEN            2
-#define BLE_HELLO_MTU                 247
-#define BLE_HELLO_SCAN_INTERVAL       0x30
-#define BLE_HELLO_AD_COMPLETE_NAME    0x09
-#define BLE_HELLO_AD_SERVICE_DATA16   0x16
-#define BLE_HELLO_STATE_DEFAULT       0x00
+#define BLE_HELLO_CLIENT_LOG "[ble hello client]"
+#define BLE_HELLO_SERVICE_UUID 0x3333
+#define BLE_HELLO_DATA_UUID 0x3434
+#define BLE_HELLO_NOTIFY_UUID 0x3435
+#define BLE_HELLO_CCCD_UUID 0x2902
+#define BLE_HELLO_UUID_LEN 2
+#define BLE_HELLO_MTU 247
+#define BLE_HELLO_SCAN_INTERVAL 0x30
+#define BLE_HELLO_AD_COMPLETE_NAME 0x09
+#define BLE_HELLO_AD_SERVICE_DATA16 0x16
+#define BLE_HELLO_STATE_DEFAULT 0x00
+#define BLE_UUID_HIGH_BYTE_SHIFT 8
+#define BLE_AD_HEADER_LEN 2
+#define BLE_AD_SERVICE_DATA_FIELD_LEN 4
+#define BLE_AD_SERVICE_DATA_STATE_OFFSET 4
+#define BLE_AD_UUID_LOW_OFFSET 2
+#define BLE_AD_UUID_HIGH_OFFSET 3
 
-static const uint8_t g_target_name[] = "ble_hello_server";
-static const uint8_t g_default_value[] = "device_status_ok";
-static const uint8_t g_new_value[] = "new_config_value";
+static const uint8_t TARGET_NAME[] = "ble_hello_server";
+static const uint8_t DEFAULT_VALUE[] = "device_status_ok";
+static const uint8_t NEW_VALUE[] = "new_config_value";
 static bt_uuid_t g_client_app_uuid = {BLE_HELLO_UUID_LEN, {0x33, 0x33}};
 static uint8_t g_client_id;
 static uint16_t g_conn_id;
@@ -56,14 +62,14 @@ static bool g_cache_sync_write_started;
 static void ble_hello_uuid16(uint16_t value, bt_uuid_t *uuid)
 {
     uuid->uuid_len = BLE_HELLO_UUID_LEN;
-    uuid->uuid[0] = (uint8_t)(value >> 8);
+    uuid->uuid[0] = (uint8_t)(value >> BLE_UUID_HIGH_BYTE_SHIFT);
     uuid->uuid[1] = (uint8_t)value;
 }
 
 static bool ble_hello_uuid_is(const bt_uuid_t *uuid, uint16_t value)
 {
-    return uuid->uuid_len == BLE_HELLO_UUID_LEN && uuid->uuid[0] == (uint8_t)(value >> 8) &&
-        uuid->uuid[1] == (uint8_t)value;
+    return uuid->uuid_len == BLE_HELLO_UUID_LEN && uuid->uuid[0] == (uint8_t)(value >> BLE_UUID_HIGH_BYTE_SHIFT) &&
+           uuid->uuid[1] == (uint8_t)value;
 }
 
 static void ble_hello_reset_discovery_state(void)
@@ -86,7 +92,7 @@ static void ble_hello_reset_discovery_state(void)
 static bool ble_hello_parse_adv(const uint8_t *data, uint8_t data_len, bool *default_state)
 {
     uint16_t index = 0;
-    const uint16_t target_len = sizeof(g_target_name) - 1;
+    const uint16_t target_len = sizeof(TARGET_NAME) - 1;
     bool name_matched = false;
     bool state_found = false;
 
@@ -101,12 +107,13 @@ static bool ble_hello_parse_adv(const uint8_t *data, uint8_t data_len, bool *def
             break;
         }
         if (data[index + 1] == BLE_HELLO_AD_COMPLETE_NAME && field_len == target_len + 1 &&
-            memcmp(&data[index + 2], g_target_name, target_len) == 0) {
+            memcmp(&data[index + BLE_AD_HEADER_LEN], TARGET_NAME, target_len) == 0) {
             name_matched = true;
-        } else if (data[index + 1] == BLE_HELLO_AD_SERVICE_DATA16 && field_len == 4 &&
-            data[index + 2] == (uint8_t)(BLE_HELLO_SERVICE_UUID & 0xFF) &&
-            data[index + 3] == (uint8_t)(BLE_HELLO_SERVICE_UUID >> 8)) {
-            *default_state = (data[index + 4] == BLE_HELLO_STATE_DEFAULT);
+        } else if (data[index + 1] == BLE_HELLO_AD_SERVICE_DATA16 && field_len == BLE_AD_SERVICE_DATA_FIELD_LEN &&
+                   data[index + BLE_AD_UUID_LOW_OFFSET] == (uint8_t)(BLE_HELLO_SERVICE_UUID & 0xFF) &&
+                   data[index + BLE_AD_UUID_HIGH_OFFSET] ==
+                       (uint8_t)(BLE_HELLO_SERVICE_UUID >> BLE_UUID_HIGH_BYTE_SHIFT)) {
+            *default_state = (data[index + BLE_AD_SERVICE_DATA_STATE_OFFSET] == BLE_HELLO_STATE_DEFAULT);
             state_found = true;
         }
         index = field_end;
@@ -143,7 +150,7 @@ static void ble_hello_scan_result_cb(gap_scan_result_data_t *result)
     g_peer_default_state = default_state;
     g_connecting = true;
     osal_printk("%s found ble_hello_server, state=%s, connecting\r\n", BLE_HELLO_CLIENT_LOG,
-        g_peer_default_state ? "device_status_ok" : "retained");
+                g_peer_default_state ? "device_status_ok" : "retained");
     (void)gap_ble_stop_scan();
     if (gap_ble_connect_remote_device(&g_peer_addr) != ERRCODE_BT_SUCCESS) {
         g_connecting = false;
@@ -171,8 +178,11 @@ static errcode_t ble_hello_exchange_mtu(uint16_t conn_id)
     return ret;
 }
 
-static void ble_hello_conn_state_cb(uint16_t conn_id, bd_addr_t *addr, gap_ble_conn_state_t conn_state,
-    gap_ble_pair_state_t pair_state, gap_ble_disc_reason_t reason)
+static void ble_hello_conn_state_cb(uint16_t conn_id,
+                                    bd_addr_t *addr,
+                                    gap_ble_conn_state_t conn_state,
+                                    gap_ble_pair_state_t pair_state,
+                                    gap_ble_disc_reason_t reason)
 {
     errcode_t ret;
     if (conn_state == GAP_BLE_STATE_CONNECTED) {
@@ -191,8 +201,8 @@ static void ble_hello_conn_state_cb(uint16_t conn_id, bd_addr_t *addr, gap_ble_c
         }
     } else if (conn_state == GAP_BLE_STATE_DISCONNECTED) {
         if (g_pairing_started) {
-            osal_printk("%s remove stale pair after pairing disconnect, ret=0x%x\r\n",
-                BLE_HELLO_CLIENT_LOG, gap_ble_remove_pair(addr));
+            osal_printk("%s remove stale pair after pairing disconnect, ret=0x%x\r\n", BLE_HELLO_CLIENT_LOG,
+                        gap_ble_remove_pair(addr));
         }
         g_pairing_started = false;
         g_connected = false;
@@ -219,15 +229,17 @@ static void ble_hello_mtu_changed_cb(uint8_t client_id, uint16_t conn_id, uint16
 {
     (void)client_id;
     osal_printk("%s MTU changed: %u, status=0x%x\r\n", BLE_HELLO_CLIENT_LOG, mtu_size, status);
-    if (status == ERRCODE_BT_SUCCESS && g_connected && conn_id == g_conn_id &&
-        g_mtu_exchange_started && !g_discovery_started) {
+    if (status == ERRCODE_BT_SUCCESS && g_connected && conn_id == g_conn_id && g_mtu_exchange_started &&
+        !g_discovery_started) {
         g_discovery_started = true;
         (void)ble_hello_discover_service(conn_id);
     }
 }
 
-static void ble_hello_discovery_service_cb(uint8_t client_id, uint16_t conn_id,
-    gattc_discovery_service_result_t *service, errcode_t status)
+static void ble_hello_discovery_service_cb(uint8_t client_id,
+                                           uint16_t conn_id,
+                                           gattc_discovery_service_result_t *service,
+                                           errcode_t status)
 {
     gattc_discovery_character_param_t param = {0};
     (void)client_id;
@@ -238,13 +250,15 @@ static void ble_hello_discovery_service_cb(uint8_t client_id, uint16_t conn_id,
     g_service_end_handle = service->end_hdl;
     param.service_handle = service->start_hdl;
     param.uuid.uuid_len = 0;
-    osal_printk("%s service discovered, handles=0x%04x-0x%04x\r\n",
-        BLE_HELLO_CLIENT_LOG, service->start_hdl, service->end_hdl);
+    osal_printk("%s service discovered, handles=0x%04x-0x%04x\r\n", BLE_HELLO_CLIENT_LOG, service->start_hdl,
+                service->end_hdl);
     (void)gattc_discovery_character(g_client_id, conn_id, &param);
 }
 
-static void ble_hello_discovery_character_cb(uint8_t client_id, uint16_t conn_id,
-    gattc_discovery_character_result_t *character, errcode_t status)
+static void ble_hello_discovery_character_cb(uint8_t client_id,
+                                             uint16_t conn_id,
+                                             gattc_discovery_character_result_t *character,
+                                             errcode_t status)
 {
     (void)client_id;
     (void)conn_id;
@@ -254,18 +268,18 @@ static void ble_hello_discovery_character_cb(uint8_t client_id, uint16_t conn_id
     if (ble_hello_uuid_is(&character->uuid, BLE_HELLO_DATA_UUID)) {
         g_data_declare_handle = character->declare_handle;
         g_data_handle = character->value_handle;
-        osal_printk("%s data characteristic discovered, value=0x%04x\r\n",
-            BLE_HELLO_CLIENT_LOG, g_data_handle);
+        osal_printk("%s data characteristic discovered, value=0x%04x\r\n", BLE_HELLO_CLIENT_LOG, g_data_handle);
     } else if (ble_hello_uuid_is(&character->uuid, BLE_HELLO_NOTIFY_UUID)) {
         g_notify_declare_handle = character->declare_handle;
         g_notify_handle = character->value_handle;
-        osal_printk("%s notify characteristic discovered, value=0x%04x\r\n",
-            BLE_HELLO_CLIENT_LOG, g_notify_handle);
+        osal_printk("%s notify characteristic discovered, value=0x%04x\r\n", BLE_HELLO_CLIENT_LOG, g_notify_handle);
     }
 }
 
-static void ble_hello_discovery_character_complete_cb(uint8_t client_id, uint16_t conn_id,
-    gattc_discovery_character_param_t *param, errcode_t status)
+static void ble_hello_discovery_character_complete_cb(uint8_t client_id,
+                                                      uint16_t conn_id,
+                                                      gattc_discovery_character_param_t *param,
+                                                      errcode_t status)
 {
     (void)client_id;
     (void)param;
@@ -276,15 +290,16 @@ static void ble_hello_discovery_character_complete_cb(uint8_t client_id, uint16_
     (void)gattc_discovery_descriptor(g_client_id, conn_id, g_notify_declare_handle);
 }
 
-static void ble_hello_discovery_descriptor_cb(uint8_t client_id, uint16_t conn_id,
-    gattc_discovery_descriptor_result_t *descriptor, errcode_t status)
+static void ble_hello_discovery_descriptor_cb(uint8_t client_id,
+                                              uint16_t conn_id,
+                                              gattc_discovery_descriptor_result_t *descriptor,
+                                              errcode_t status)
 {
     (void)client_id;
     (void)conn_id;
     if (status == ERRCODE_BT_SUCCESS && ble_hello_uuid_is(&descriptor->uuid, BLE_HELLO_CCCD_UUID)) {
         g_notify_cccd_handle = descriptor->descriptor_hdl;
-        osal_printk("%s hello CCCD discovered, handle=0x%04x\r\n",
-            BLE_HELLO_CLIENT_LOG, g_notify_cccd_handle);
+        osal_printk("%s hello CCCD discovered, handle=0x%04x\r\n", BLE_HELLO_CLIENT_LOG, g_notify_cccd_handle);
     }
 }
 
@@ -299,22 +314,24 @@ static errcode_t ble_hello_enable_cccd(uint16_t conn_id, uint16_t handle, const 
     return gattc_write_req(g_client_id, conn_id, &write_value);
 }
 
-static void ble_hello_discovery_descriptor_complete_cb(uint8_t client_id, uint16_t conn_id,
-    uint16_t characteristic_handle, errcode_t status)
+static void ble_hello_discovery_descriptor_complete_cb(uint8_t client_id,
+                                                       uint16_t conn_id,
+                                                       uint16_t characteristic_handle,
+                                                       errcode_t status)
 {
     gattc_handle_value_t write_value = {0};
     errcode_t ret;
     (void)client_id;
     (void)conn_id;
     if (status != ERRCODE_BT_SUCCESS || !g_connected || conn_id != g_conn_id || g_notify_cccd_handle == 0) {
-        osal_printk("%s descriptor discovery failed, char=0x%04x, status=0x%x\r\n",
-            BLE_HELLO_CLIENT_LOG, characteristic_handle, status);
+        osal_printk("%s descriptor discovery failed, char=0x%04x, status=0x%x\r\n", BLE_HELLO_CLIENT_LOG,
+                    characteristic_handle, status);
         return;
     }
     if (g_peer_default_state) {
         write_value.handle = g_data_handle;
-        write_value.data = (uint8_t *)g_default_value;
-        write_value.data_len = sizeof(g_default_value) - 1;
+        write_value.data = (uint8_t *)DEFAULT_VALUE;
+        write_value.data_len = sizeof(DEFAULT_VALUE) - 1;
         g_cache_sync_write_started = true;
         osal_printk("%s syncing data attribute: device_status_ok\r\n", BLE_HELLO_CLIENT_LOG);
         ret = gattc_write_req(g_client_id, conn_id, &write_value);
@@ -328,8 +345,7 @@ static void ble_hello_discovery_descriptor_complete_cb(uint8_t client_id, uint16
     (void)ble_hello_enable_cccd(conn_id, g_notify_cccd_handle, "hello");
 }
 
-static void ble_hello_notification_cb(uint8_t client_id, uint16_t conn_id,
-    gattc_handle_value_t *data, errcode_t status)
+static void ble_hello_notification_cb(uint8_t client_id, uint16_t conn_id, gattc_handle_value_t *data, errcode_t status)
 {
     errcode_t ret;
     (void)client_id;
@@ -349,8 +365,10 @@ static void ble_hello_notification_cb(uint8_t client_id, uint16_t conn_id,
     }
 }
 
-static void ble_hello_read_cb(uint8_t client_id, uint16_t conn_id,
-    gattc_handle_value_t *read_result, gatt_status_t status)
+static void ble_hello_read_cb(uint8_t client_id,
+                              uint16_t conn_id,
+                              gattc_handle_value_t *read_result,
+                              gatt_status_t status)
 {
     gattc_handle_value_t write_value = {0};
     (void)client_id;
@@ -358,17 +376,32 @@ static void ble_hello_read_cb(uint8_t client_id, uint16_t conn_id,
         osal_printk("%s read failed, status=0x%x\r\n", BLE_HELLO_CLIENT_LOG, status);
         return;
     }
-    osal_printk("%s read result: %.*s\r\n", BLE_HELLO_CLIENT_LOG,
-        read_result->data_len, read_result->data);
+    osal_printk("%s read result: %.*s\r\n", BLE_HELLO_CLIENT_LOG, read_result->data_len, read_result->data);
     if (g_write_started) {
         return;
     }
     g_write_started = true;
     write_value.handle = g_data_handle;
-    write_value.data = (uint8_t *)g_new_value;
-    write_value.data_len = sizeof(g_new_value) - 1;
+    write_value.data = (uint8_t *)NEW_VALUE;
+    write_value.data_len = sizeof(NEW_VALUE) - 1;
     osal_printk("%s write request sent: new_config_value\r\n", BLE_HELLO_CLIENT_LOG);
     (void)gattc_write_req(g_client_id, conn_id, &write_value);
+}
+
+static void ble_hello_cache_sync_write_complete(gatt_status_t status)
+{
+    g_cache_sync_write_started = false;
+    osal_printk("%s cache sync write %s\r\n", BLE_HELLO_CLIENT_LOG,
+                status == GATT_STATUS_SUCCESS ? "success" : "failed");
+    if ((status != GATT_STATUS_SUCCESS) || g_hello_cccd_started) {
+        return;
+    }
+
+    g_hello_cccd_started = true;
+    if (ble_hello_enable_cccd(g_conn_id, g_notify_cccd_handle, "hello") != ERRCODE_BT_SUCCESS) {
+        g_hello_cccd_started = false;
+        osal_printk("%s hello CCCD write request failed\r\n", BLE_HELLO_CLIENT_LOG);
+    }
 }
 
 static void ble_hello_write_cb(uint8_t client_id, uint16_t conn_id, uint16_t handle, gatt_status_t status)
@@ -377,23 +410,13 @@ static void ble_hello_write_cb(uint8_t client_id, uint16_t conn_id, uint16_t han
     (void)conn_id;
     if (handle == g_notify_cccd_handle) {
         osal_printk("%s hello CCCD write %s\r\n", BLE_HELLO_CLIENT_LOG,
-            status == GATT_STATUS_SUCCESS ? "success" : "failed");
+                    status == GATT_STATUS_SUCCESS ? "success" : "failed");
     } else if (handle == g_data_handle) {
         if (g_cache_sync_write_started) {
-            g_cache_sync_write_started = false;
-            osal_printk("%s cache sync write %s\r\n", BLE_HELLO_CLIENT_LOG,
-                status == GATT_STATUS_SUCCESS ? "success" : "failed");
-            if (status == GATT_STATUS_SUCCESS && !g_hello_cccd_started) {
-                g_hello_cccd_started = true;
-                if (ble_hello_enable_cccd(g_conn_id, g_notify_cccd_handle, "hello") != ERRCODE_BT_SUCCESS) {
-                    g_hello_cccd_started = false;
-                    osal_printk("%s hello CCCD write request failed\r\n", BLE_HELLO_CLIENT_LOG);
-                }
-            }
+            ble_hello_cache_sync_write_complete(status);
             return;
         }
-        osal_printk("%s write cfm: %s\r\n", BLE_HELLO_CLIENT_LOG,
-            status == GATT_STATUS_SUCCESS ? "success" : "failed");
+        osal_printk("%s write cfm: %s\r\n", BLE_HELLO_CLIENT_LOG, status == GATT_STATUS_SUCCESS ? "success" : "failed");
     }
 }
 

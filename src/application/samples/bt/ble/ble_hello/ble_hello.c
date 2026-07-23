@@ -12,10 +12,10 @@
 #include "ble_hello_client.h"
 #endif
 
-#define BLE_HELLO_TASK_PRIO       26
+#define BLE_HELLO_TASK_PRIO 26
 #define BLE_HELLO_TASK_STACK_SIZE 0x2000
 
-static int ble_hello_task(const void *arg)
+static int ble_hello_task(const char *arg)
 {
     (void)arg;
 #if defined(CONFIG_SAMPLE_SUPPORT_BLE_HELLO_SERVER_SAMPLE)
@@ -32,8 +32,8 @@ static void ble_hello_entry(void)
     osal_task *task_handle = NULL;
 
     osal_kthread_lock();
-    task_handle = osal_kthread_create((osal_kthread_handler)ble_hello_task, NULL,
-        "ble_hello", BLE_HELLO_TASK_STACK_SIZE);
+    task_handle =
+        osal_kthread_create((osal_kthread_handler)ble_hello_task, NULL, "ble_hello", BLE_HELLO_TASK_STACK_SIZE);
     if (task_handle != NULL) {
         osal_kthread_set_priority(task_handle, BLE_HELLO_TASK_PRIO);
         osal_kfree(task_handle);

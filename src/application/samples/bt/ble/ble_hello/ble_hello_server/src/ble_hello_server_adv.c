@@ -11,20 +11,26 @@
 #include "ble_hello_server.h"
 #include "ble_hello_server_adv.h"
 
-#define BLE_HELLO_ADV_INTERVAL          0x30
-#define BLE_HELLO_ADV_CHANNEL_MAP       0x07
-#define BLE_HELLO_ADV_TYPE_CONN_UNDIR   0x00
-#define BLE_HELLO_ADV_FILTER_ALLOW_ALL  0x00
-#define BLE_HELLO_ADV_DURATION_FOREVER  0
-#define BLE_AD_TYPE_FLAGS               0x01
-#define BLE_AD_TYPE_COMPLETE_UUID16     0x03
-#define BLE_AD_TYPE_COMPLETE_NAME       0x09
-#define BLE_AD_TYPE_SERVICE_DATA16      0x16
-#define BLE_AD_FLAGS_GENERAL            0x06
-#define BLE_HELLO_STATE_DEFAULT         0x00
-#define BLE_HELLO_STATE_RETAINED        0x01
+#define BLE_HELLO_ADV_INTERVAL 0x30
+#define BLE_HELLO_ADV_CHANNEL_MAP 0x07
+#define BLE_HELLO_ADV_TYPE_CONN_UNDIR 0x00
+#define BLE_HELLO_ADV_FILTER_ALLOW_ALL 0x00
+#define BLE_HELLO_ADV_DURATION_FOREVER 0
+#define BLE_AD_TYPE_FLAGS 0x01
+#define BLE_AD_TYPE_COMPLETE_UUID16 0x03
+#define BLE_AD_TYPE_COMPLETE_NAME 0x09
+#define BLE_AD_TYPE_SERVICE_DATA16 0x16
+#define BLE_AD_FLAGS_GENERAL 0x06
+#define BLE_HELLO_STATE_DEFAULT 0x00
+#define BLE_HELLO_STATE_RETAINED 0x01
+#define BLE_UUID_HIGH_BYTE_SHIFT 8
+#define BLE_AD_FLAGS_FIELD_LEN 2
+#define BLE_AD_UUID16_FIELD_LEN 3
+#define BLE_AD_SERVICE_DATA_FIELD_LEN 4
+#define BLE_AD_ELEMENT_HEADER_LEN 2
+#define BLE_AD_FIXED_PAYLOAD_LEN 5
 
-static const uint8_t g_ble_hello_name[] = "ble_hello_server";
+static const uint8_t BLE_HELLO_NAME[] = "ble_hello_server";
 static bool g_ble_hello_default_state = true;
 
 void ble_hello_server_set_adv_default_state(bool is_default)
@@ -35,32 +41,33 @@ void ble_hello_server_set_adv_default_state(bool is_default)
 static uint16_t ble_hello_build_adv_data(uint8_t *data, uint16_t capacity)
 {
     uint16_t index = 0;
-    uint16_t name_len = (uint16_t)(sizeof(g_ble_hello_name) - 1);
+    uint16_t name_len = (uint16_t)(sizeof(BLE_HELLO_NAME) - 1);
 
-    if (capacity < (uint16_t)(3 + 4 + name_len + 2 + 5)) {
+    if (capacity < (uint16_t)(BLE_AD_UUID16_FIELD_LEN + BLE_AD_SERVICE_DATA_FIELD_LEN + name_len +
+                              BLE_AD_ELEMENT_HEADER_LEN + BLE_AD_FIXED_PAYLOAD_LEN)) {
         return 0;
     }
 
-    data[index++] = 2;
+    data[index++] = BLE_AD_FLAGS_FIELD_LEN;
     data[index++] = BLE_AD_TYPE_FLAGS;
     data[index++] = BLE_AD_FLAGS_GENERAL;
 
-    data[index++] = 3;
+    data[index++] = BLE_AD_UUID16_FIELD_LEN;
     data[index++] = BLE_AD_TYPE_COMPLETE_UUID16;
     data[index++] = (uint8_t)(BLE_HELLO_SERVICE_UUID & 0xFF);
-    data[index++] = (uint8_t)(BLE_HELLO_SERVICE_UUID >> 8);
+    data[index++] = (uint8_t)(BLE_HELLO_SERVICE_UUID >> BLE_UUID_HIGH_BYTE_SHIFT);
 
     data[index++] = (uint8_t)(name_len + 1);
     data[index++] = BLE_AD_TYPE_COMPLETE_NAME;
-    if (memcpy_s(&data[index], capacity - index, g_ble_hello_name, name_len) != EOK) {
+    if (memcpy_s(&data[index], capacity - index, BLE_HELLO_NAME, name_len) != EOK) {
         return 0;
     }
     index = (uint16_t)(index + name_len);
 
-    data[index++] = 4;
+    data[index++] = BLE_AD_SERVICE_DATA_FIELD_LEN;
     data[index++] = BLE_AD_TYPE_SERVICE_DATA16;
     data[index++] = (uint8_t)(BLE_HELLO_SERVICE_UUID & 0xFF);
-    data[index++] = (uint8_t)(BLE_HELLO_SERVICE_UUID >> 8);
+    data[index++] = (uint8_t)(BLE_HELLO_SERVICE_UUID >> BLE_UUID_HIGH_BYTE_SHIFT);
     data[index++] = g_ble_hello_default_state ? BLE_HELLO_STATE_DEFAULT : BLE_HELLO_STATE_RETAINED;
     return index;
 }
