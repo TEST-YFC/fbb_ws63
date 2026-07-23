@@ -92,7 +92,6 @@ static errcode_t sle_conn_param_request_update(uint16_t conn_id)
         .supervision_timeout = PROFILE.timeout,
     };
     errcode_t ret = sle_conn_param_validate(&param);
-
     if (ret != ERRCODE_SUCC) {
         osal_printk("%s invalid profile: %s\r\n", SLE_CONN_PARAM_SERVER_LOG, PROFILE.name);
         return ret;
