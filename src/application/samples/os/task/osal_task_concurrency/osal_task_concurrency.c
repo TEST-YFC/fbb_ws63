@@ -12,13 +12,13 @@
 #include "soc_osal.h"
 #include "app_init.h"
 
-#define TASK_CONCURRENCY_STACK_SIZE          0x1000
-#define TASK_CONCURRENCY_MEDIUM_PERIOD_MS    400
-#define TASK_CONCURRENCY_LOW_PERIOD_MS       1000
+#define TASK_CONCURRENCY_STACK_SIZE 0x1000
+#define TASK_CONCURRENCY_MEDIUM_PERIOD_MS 400
+#define TASK_CONCURRENCY_LOW_PERIOD_MS 1000
 
-#define TASK_CONCURRENCY_HIGH_PRIORITY       OSAL_TASK_PRIORITY_HIGH
-#define TASK_CONCURRENCY_MEDIUM_PRIORITY     OSAL_TASK_PRIORITY_MIDDLE
-#define TASK_CONCURRENCY_LOW_PRIORITY        OSAL_TASK_PRIORITY_LOW
+#define TASK_CONCURRENCY_HIGH_PRIORITY OSAL_TASK_PRIORITY_HIGH
+#define TASK_CONCURRENCY_MEDIUM_PRIORITY OSAL_TASK_PRIORITY_MIDDLE
+#define TASK_CONCURRENCY_LOW_PRIORITY OSAL_TASK_PRIORITY_LOW
 
 /* Wake-up semaphore for the high-priority task. / 高优先级任务的唤醒信号量。 */
 static osal_semaphore g_high_task_sem;
@@ -34,7 +34,7 @@ static osal_semaphore g_high_task_sem;
  * @return 常驻任务不会返回。
  * @endif
  */
-static int task_concurrency_high_handler(void *data)
+static int task_concurrency_high_handler(const char *data)
 {
     uint32_t event_count = 0;
     unused(data);
@@ -66,7 +66,7 @@ static int task_concurrency_high_handler(void *data)
  * @return 常驻任务不会返回。
  * @endif
  */
-static int task_concurrency_medium_handler(void *data)
+static int task_concurrency_medium_handler(const char *data)
 {
     uint32_t heartbeat_count = 0;
     unused(data);
@@ -93,7 +93,7 @@ static int task_concurrency_medium_handler(void *data)
  * @return 常驻任务不会返回。
  * @endif
  */
-static int task_concurrency_low_handler(void *data)
+static int task_concurrency_low_handler(const char *data)
 {
     uint32_t round_count = 0;
     unused(data);
@@ -164,11 +164,11 @@ static void task_concurrency_entry(void)
     /* Prevent a newly created task from running before all priorities are configured. /
      * 防止新任务在全部优先级配置完成前开始运行。 */
     osal_kthread_lock();
-    high_task = task_concurrency_create(task_concurrency_high_handler, "HighTask",
+    high_task = task_concurrency_create((osal_kthread_handler)task_concurrency_high_handler, "HighTask",
                                         TASK_CONCURRENCY_HIGH_PRIORITY);
-    medium_task = task_concurrency_create(task_concurrency_medium_handler, "MediumTask",
+    medium_task = task_concurrency_create((osal_kthread_handler)task_concurrency_medium_handler, "MediumTask",
                                           TASK_CONCURRENCY_MEDIUM_PRIORITY);
-    low_task = task_concurrency_create(task_concurrency_low_handler, "LowTask",
+    low_task = task_concurrency_create((osal_kthread_handler)task_concurrency_low_handler, "LowTask",
                                        TASK_CONCURRENCY_LOW_PRIORITY);
 
     if ((high_task == NULL) || (medium_task == NULL) || (low_task == NULL)) {
@@ -193,9 +193,8 @@ static void task_concurrency_entry(void)
     osal_kfree(medium_task);
     osal_kfree(low_task);
 
-    osal_printk("[task_concurrency] started: high=%u medium=%u low=%u\r\n",
-                TASK_CONCURRENCY_HIGH_PRIORITY, TASK_CONCURRENCY_MEDIUM_PRIORITY,
-                TASK_CONCURRENCY_LOW_PRIORITY);
+    osal_printk("[task_concurrency] started: high=%u medium=%u low=%u\r\n", TASK_CONCURRENCY_HIGH_PRIORITY,
+                TASK_CONCURRENCY_MEDIUM_PRIORITY, TASK_CONCURRENCY_LOW_PRIORITY);
     osal_kthread_unlock();
 }
 
