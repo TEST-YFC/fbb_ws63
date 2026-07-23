@@ -173,7 +173,6 @@ static void sle_sensor_report_entry(void)
     task_handle = osal_kthread_create((osal_kthread_handler)sle_sensor_report_client_task, 0, "SensorReportClient",
                                       SLE_SENSOR_REPORT_TASK_STACK_SIZE);
 #endif
-
     if (task_handle != NULL) {
         osal_kthread_set_priority(task_handle, SLE_SENSOR_REPORT_TASK_PRIO);
     }
