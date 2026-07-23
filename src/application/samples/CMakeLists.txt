@@ -37,6 +37,12 @@ add_subdirectory_if_exist(custom)
 set(PRIVATE_HEADER
 )
 
+if(DEFINED CONFIG_SAMPLE_SUPPORT_BLE_WIFI_CFG_SAMPLE)
+    list(APPEND PRIVATE_HEADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/bt/ble/ble_wifi_cfg_server/inc"
+    )
+endif()
+
 set(PRIVATE_DEFINES
 )
 
