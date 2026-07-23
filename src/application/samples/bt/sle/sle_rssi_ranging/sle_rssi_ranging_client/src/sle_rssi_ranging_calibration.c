@@ -151,7 +151,6 @@ static void sle_rssi_calibration_load(void)
     sle_rssi_calibration_nv_t record = {0};
     uint16_t length = 0;
     errcode_t ret = uapi_nv_read(SLE_RSSI_CAL_NV_ID, sizeof(record), &length, (uint8_t *)&record);
-
     if ((ret == ERRCODE_SUCC) && sle_rssi_calibration_record_valid(&record, length)) {
         g_rssi_at_1m = (int8_t)record.rssi_at_1m;
         osal_printk("%s NV calibration loaded: A=%d dBm, MAD=%u dB, range=[%d,%d] dBm, samples=%u\r\n",
@@ -493,7 +492,6 @@ static void *sle_rssi_calibration_button_task(const char *arg)
     unused(arg);
     while (1) {
         bool raw_pressed = (uapi_gpio_get_val(SLE_RSSI_CAL_BUTTON_PIN) == GPIO_LEVEL_LOW);
-
         /*
          * Accept a new level only after three identical samples (150 ms debounce).
          * 连续获得 3 次相同采样值后才接受新电平，实现 150 ms 按键消抖。

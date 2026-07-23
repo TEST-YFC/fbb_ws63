@@ -112,7 +112,6 @@ static uint32_t sle_rssi_estimate_distance_cm(int32_t filtered_rssi_q8)
     float path_loss = (float)CONFIG_SLE_RSSI_RANGING_PATH_LOSS_TENTHS / 10.0f;
     float exponent = ((float)sle_rssi_calibration_get_rssi_at_1m() - filtered_rssi) / (10.0f * path_loss);
     float distance_cm = 100.0f * powf(10.0f, exponent);
-
     if (distance_cm < 1.0f) {
         distance_cm = 1.0f;
     } else if (distance_cm > (float)SLE_RSSI_MAX_DISTANCE_CM) {
