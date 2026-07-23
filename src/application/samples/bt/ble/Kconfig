@@ -18,4 +18,22 @@ config SAMPLE_SUPPORT_BLE_SPEED_CLIENT_SAMPLE
 
 config SAMPLE_SUPPORT_BLE_CFG_SAMPLE
     bool "Support BLE WIFI CFG Sample"
+
+config SAMPLE_SUPPORT_BLE_UART_BRIDGE_SERVER_SAMPLE
+    bool "Support BLE UART Bridge Server Sample"
+
+config SAMPLE_SUPPORT_BLE_UART_BRIDGE_CLIENT_SAMPLE
+    bool "Support BLE UART Bridge Client Sample"
+
+config SAMPLE_SUPPORT_BLE_SENSOR_REPORT_SERVER_SAMPLE
+    bool "Support BLE Sensor Report Server Sample"
+
+config SAMPLE_SUPPORT_BLE_SENSOR_REPORT_CLIENT_SAMPLE
+    bool "Support BLE Sensor Report Client Sample"
+
+config SAMPLE_SUPPORT_BLE_GATEWAY_SERVER_SAMPLE
+    bool "Support BLE Gateway Sensor Node Sample"
+
+config SAMPLE_SUPPORT_BLE_GATEWAY_CLIENT_SAMPLE
+    bool "Support BLE Gateway Central Sample"
 endchoice
