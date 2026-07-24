@@ -20,6 +20,13 @@
 
 #define SLE_DEVICE_CONFIG_TASK_PRIO 28
 #define SLE_DEVICE_CONFIG_TASK_STACK_SIZE 0x1000
+#define SLE_DEVICE_CONFIG_TEST_STEP_INIT 0
+#define SLE_DEVICE_CONFIG_TEST_STEP_VALID_SENT 1
+#define SLE_DEVICE_CONFIG_TEST_STEP_VALID_CONFIRMED 2
+#define SLE_DEVICE_CONFIG_TEST_STEP_PERSISTENCE_READ 3
+#define SLE_DEVICE_CONFIG_EXPECTED_INTERVAL_MS 500
+#define SLE_DEVICE_CONFIG_EXPECTED_THRESHOLD 750
+#define SLE_DEVICE_CONFIG_EXPECTED_MODE 1
 
 #if defined(CONFIG_SAMPLE_SUPPORT_SLE_DEVICE_CONFIG_CLIENT_SAMPLE)
 static uint8_t g_config_test_step;
@@ -63,12 +70,14 @@ static void sle_device_config_read_cfm_cb(uint8_t client_id,
     }
     osal_printk("[sle device config client] read config: interval=%u, threshold=%d, mode=%u\r\n",
                 config.report_interval_ms, config.alarm_threshold_decicelsius, config.mode);
-    if (g_config_test_step == 0) {
-        g_config_test_step = 1;
+    if (g_config_test_step == SLE_DEVICE_CONFIG_TEST_STEP_INIT) {
+        g_config_test_step = SLE_DEVICE_CONFIG_TEST_STEP_VALID_SENT;
         sle_device_config_client_send_valid_config(conn_id);
-    } else if (g_config_test_step == 2) {
-        g_config_test_step = 3;
-        if ((config.report_interval_ms == 500) && (config.alarm_threshold_decicelsius == 750) && (config.mode == 1)) {
+    } else if (g_config_test_step == SLE_DEVICE_CONFIG_TEST_STEP_VALID_CONFIRMED) {
+        g_config_test_step = SLE_DEVICE_CONFIG_TEST_STEP_PERSISTENCE_READ;
+        if ((config.report_interval_ms == SLE_DEVICE_CONFIG_EXPECTED_INTERVAL_MS) &&
+            (config.alarm_threshold_decicelsius == SLE_DEVICE_CONFIG_EXPECTED_THRESHOLD) &&
+            (config.mode == SLE_DEVICE_CONFIG_EXPECTED_MODE)) {
             osal_printk("[sle device config client] persisted config verified\r\n");
         }
         sle_device_config_client_send_invalid_config(conn_id);
@@ -81,11 +90,11 @@ static void sle_device_config_write_cfm_cb(uint8_t client_id,
                                            errcode_t status)
 {
     unused(client_id);
-    if ((g_config_test_step == 1) && (status == ERRCODE_SUCC)) {
+    if ((g_config_test_step == SLE_DEVICE_CONFIG_TEST_STEP_VALID_SENT) && (status == ERRCODE_SUCC)) {
         osal_printk("[sle device config client] valid config accepted, handle=0x%02x\r\n", write_result->handle);
-        g_config_test_step = 2;
+        g_config_test_step = SLE_DEVICE_CONFIG_TEST_STEP_VALID_CONFIRMED;
         sle_device_config_client_read_config(conn_id);
-    } else if ((g_config_test_step == 3) && (status != ERRCODE_SUCC)) {
+    } else if ((g_config_test_step == SLE_DEVICE_CONFIG_TEST_STEP_PERSISTENCE_READ) && (status != ERRCODE_SUCC)) {
         osal_printk("[sle device config client] invalid config rejected, status=0x%x\r\n", status);
         osal_printk("[sle device config client] test passed\r\n");
     } else {

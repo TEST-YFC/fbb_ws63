@@ -113,7 +113,7 @@ static bool ble_gateway_parse_adv(const uint8_t *data, uint8_t data_len, bool *d
         } else if (data[index + 1] == BLE_GATEWAY_AD_SERVICE_DATA16 && field_len == BLE_AD_SERVICE_DATA_FIELD_LEN &&
                    data[index + BLE_AD_UUID_LOW_OFFSET] == (uint8_t)(BLE_GATEWAY_SERVICE_UUID & 0xFF) &&
                    data[index + BLE_AD_UUID_HIGH_OFFSET] ==
-                       (uint8_t)(BLE_GATEWAY_SERVICE_UUID >> BLE_UUID_HIGH_BYTE_SHIFT)) {
+                   (uint8_t)(BLE_GATEWAY_SERVICE_UUID >> BLE_UUID_HIGH_BYTE_SHIFT)) {
             *default_state = (data[index + BLE_AD_SERVICE_DATA_STATE_OFFSET] == BLE_GATEWAY_STATE_DEFAULT);
             state_found = true;
         }

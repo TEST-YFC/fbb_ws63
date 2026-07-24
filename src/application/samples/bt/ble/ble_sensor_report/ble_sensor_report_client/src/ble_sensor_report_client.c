@@ -114,7 +114,7 @@ static bool ble_sensor_report_parse_adv(const uint8_t *data, uint8_t data_len, b
                    field_len == BLE_AD_SERVICE_DATA_FIELD_LEN &&
                    data[index + BLE_AD_UUID_LOW_OFFSET] == (uint8_t)(BLE_SENSOR_REPORT_SERVICE_UUID & 0xFF) &&
                    data[index + BLE_AD_UUID_HIGH_OFFSET] ==
-                       (uint8_t)(BLE_SENSOR_REPORT_SERVICE_UUID >> BLE_UUID_HIGH_BYTE_SHIFT)) {
+                   (uint8_t)(BLE_SENSOR_REPORT_SERVICE_UUID >> BLE_UUID_HIGH_BYTE_SHIFT)) {
             *default_state = (data[index + BLE_AD_SERVICE_DATA_STATE_OFFSET] == BLE_SENSOR_REPORT_STATE_DEFAULT);
             state_found = true;
         }

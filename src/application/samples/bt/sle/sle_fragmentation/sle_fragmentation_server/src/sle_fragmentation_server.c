@@ -50,6 +50,9 @@ static uint16_t g_property_handle = 0;
 #define UUID_128BIT_LEN 16
 
 #define SLE_FRAGMENTATION_SERVER_LOG "[sle fragmentation server]"
+#define SLE_FRAGMENTATION_SEND_INTERVAL_MS 20
+#define SLE_FRAGMENTATION_SEND_TASK_PRIORITY 27
+#define SLE_FRAGMENTATION_SEND_TASK_STACK_SIZE 0x1000
 
 static uint8_t g_sle_fragmentation_base[] = {0x37, 0xBE, 0xA8, 0x80, 0xFC, 0x70, 0x11, 0xEA,
                                              0xB7, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -185,7 +188,7 @@ static void *sle_fragmentation_send_task(const char *arg)
         }
         osal_printk("%s fragment sent: %u/%u, payload=%u\r\n", SLE_FRAGMENTATION_SERVER_LOG, index + 1, packet.total,
                     packet.payload_len);
-        osal_msleep(20);
+        osal_msleep(SLE_FRAGMENTATION_SEND_INTERVAL_MS);
     }
     osal_printk("%s transfer complete\r\n", SLE_FRAGMENTATION_SERVER_LOG);
     return NULL;
@@ -195,9 +198,10 @@ static void sle_fragmentation_start_transfer(void)
 {
     osal_task *task_handle = NULL;
     osal_kthread_lock();
-    task_handle = osal_kthread_create((osal_kthread_handler)sle_fragmentation_send_task, 0, "SLEFragmentTx", 0x1000);
+    task_handle = osal_kthread_create((osal_kthread_handler)sle_fragmentation_send_task, 0, "SLEFragmentTx",
+                                      SLE_FRAGMENTATION_SEND_TASK_STACK_SIZE);
     if (task_handle != NULL) {
-        osal_kthread_set_priority(task_handle, 27);
+        osal_kthread_set_priority(task_handle, SLE_FRAGMENTATION_SEND_TASK_PRIORITY);
         osal_kfree(task_handle);
     }
     osal_kthread_unlock();
