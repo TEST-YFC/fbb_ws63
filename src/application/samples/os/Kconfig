@@ -32,3 +32,27 @@ config SAMPLE_SUPPORT_OSAL_SEMAPHORE
         This option enables the OSAL producer-consumer semaphore sample.
 
 endchoice
+
+config SAMPLE_SUPPORT_OSAL_KMALLOC
+    bool
+    prompt "Support OSAL dynamic memory Sample."
+    default n
+    depends on ENABLE_OS_SAMPLE
+    help
+        This option enables the OSAL dynamic memory allocation sample.
+
+config SAMPLE_SUPPORT_OSAL_TASK_CONCURRENCY
+    bool
+    prompt "Support OSAL task concurrency Sample."
+    default n
+    depends on ENABLE_OS_SAMPLE
+    help
+        This option enables the OSAL task concurrency and priority preemption sample.
+
+config SAMPLE_SUPPORT_OSAL_INTERRUPT
+    bool
+    prompt "Support OSAL interrupt management Sample."
+    default n
+    depends on ENABLE_OS_SAMPLE
+    help
+        This option enables the OSAL interrupt registration and handling sample.

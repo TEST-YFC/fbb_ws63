@@ -30,5 +30,11 @@ if(DEFINED CONFIG_SAMPLE_SUPPORT_BLE_GATEWAY_SERVER_SAMPLE OR
     add_subdirectory_if_exist(ble_gateway)
 endif()
 
+if(DEFINED CONFIG_SAMPLE_SUPPORT_BLE_HID_BTN_SAMPLE)
+    add_subdirectory_if_exist(ble_hid_btn)
+endif()
+
+add_subdirectory_if_exist(ble_hello)
+
 set(SOURCES "${SOURCES}" PARENT_SCOPE)
 set(PUBLIC_HEADER "${PUBLIC_HEADER}" PARENT_SCOPE)

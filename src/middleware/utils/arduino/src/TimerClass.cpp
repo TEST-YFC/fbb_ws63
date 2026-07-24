@@ -57,15 +57,6 @@ static uint32_t get_timer_irqn(uint8_t index)
 }
 
 /* *
- * @brief Timer interrupt priority (same as SDK timer_demo.c)
- *
- * SDK demo uses TIMER_PRIO = 1.
- * main.c uses irq_prio(TIMER_1_IRQN) which reads from the priority table.
- * We use priority 1 to match the SDK convention.
- */
-#define ARDUINO_TIMER_IRQ_PRIORITY 1
-
-/* *
  * @brief Ensure a specific timer index has its interrupt adapter registered
  *
  * Each timer instance MUST call uapi_timer_adapter() before uapi_timer_start()
@@ -395,7 +386,9 @@ TimerClass Timer2(TIMER_INSTANCE_2); // /< Timer instance 2
 /* *
  * @brief Initialize timer with period and callback
  *
- * Uses Timer1 as default timer instance
+ * Uses the chip's default timer instance (ARDUINO_DEFAULT_TIMER, provided by
+ * the chip porting layer's arduino_config.h — points to a free TimerN that the
+ * system/RTOS does not use).
  *
  * @param period_us Period in microseconds
  * @param callback Callback function
@@ -406,14 +399,8 @@ void timerInit(uint32_t period_us, void (*callback)())
         return;
     }
 
-    // Prefer Timer2 for the C-style API because:
-    //   - Timer0 is reserved by LiteOS (systick). Its soft-timer slot count
-    //     is 0 (CONFIG_TIMER_MAX_TIMERS_NUM_0=0), so SDK timer_create() on
-    //     Timer0 either fails or disables the systick handler.
-    //   - Timer1 is used by main.c as the test timebase.
-    //   - Timer2 has 4 soft-timer slots and is otherwise free.
     if (g_default_timer == nullptr) {
-        g_default_timer = &Timer2;
+        g_default_timer = ARDUINO_DEFAULT_TIMER;
     }
 
     g_default_timer->initialize(period_us);

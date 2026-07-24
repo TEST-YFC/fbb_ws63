@@ -17,36 +17,33 @@
 #define SPI_INVALID_CS_PIN 255
 #define SPI_TRANSFER_TIMEOUT_MS 100
 #define SPI_BUFFER_TRANSFER_TIMEOUT_MS 1000
-#define SPI_BASE_CLOCK_FREQ 32000000UL
+#define SPI_BASE_CLOCK_FREQ ARDUINO_SPI_BUS_CLK_HZ
 #define SPI_BYTE_SHIFT 8
 
 #if defined(CONFIG_SPI_SUPPORT_MASTER) && (CONFIG_SPI_SUPPORT_MASTER == 1)
-// SPI master pin assignment. Reuse the peripheral SPI sample's Kconfig values
-// when available (CONFIG_SAMPLE_SUPPORT_SPI_MASTER=y), otherwise fall back to
-// the same defaults the sample declares (DI=11, DO=9, CLK=7, CS=10, mode=3).
-#ifndef CONFIG_SPI_DI_MASTER_PIN
-#define CONFIG_SPI_DI_MASTER_PIN 11
-#endif
-#ifndef CONFIG_SPI_DO_MASTER_PIN
-#define CONFIG_SPI_DO_MASTER_PIN 9
-#endif
-#ifndef CONFIG_SPI_CLK_MASTER_PIN
-#define CONFIG_SPI_CLK_MASTER_PIN 7
-#endif
-#ifndef CONFIG_SPI_CS_MASTER_PIN
-#define CONFIG_SPI_CS_MASTER_PIN 10
-#endif
-#ifndef CONFIG_SPI_MASTER_PIN_MODE
-#define CONFIG_SPI_MASTER_PIN_MODE 3
-#endif
+// SPI master pin assignment (CONFIG_SPI_DI/DO/CLK/CS_MASTER_PIN,
+// CONFIG_SPI_MASTER_PIN_MODE) comes from the chip porting layer's
+// arduino_config.h (included via Arduino.h above).
 
 // Arduino SPI abstraction is single-master-single-slave; always select slave 0.
 // If multi-slave support is needed in the future, convert this to a Kconfig item.
 #define SPI_MASTER_SLAVE_NUM 1
 #endif
 
-// Helper: reverse bit order for LSBFIRST support
-// Since WS63 SPI hardware only supports MSB first, we need to reverse bits in software
+// LSBFIRST support strategy:
+//   - If the chip SPI hardware supports LSB/MSB selection, the chip porting
+//     layer defines ARDUINO_SPI_HW_LSB_FIRST; setBitOrder() then configures the
+//     hardware and the transfer functions skip software bit reversal.
+//   - Otherwise (the common case — most SPI IPs only do MSB) LSBFIRST is
+//     emulated by reversing the bit order of each byte in software.
+#ifdef ARDUINO_SPI_HW_LSB_FIRST
+#define SPI_NEED_SW_BITREV 0
+#else
+#define SPI_NEED_SW_BITREV 1
+#endif
+
+// Helper: reverse bit order for LSBFIRST emulation (used when !SPI_NEED_SW_BITREV
+// is false — i.e. hardware does not support bit-order selection).
 static inline uint8_t bit_reverse_uint8(uint8_t data)
 {
     // 0xAA = 10101010b, swap odd/even bits: (data & 10101010) >> 1 | (data & 01010101) << 1
@@ -127,8 +124,10 @@ void SPIClass::fillMasterAttr(spi_attr_t *attr) const
     attr->frame_size = HAL_SPI_FRAME_SIZE_8;
     attr->tmod = 0;
     attr->sste = 0;
-    // Note: WS63 SPI hardware does not support LSB/MSB first selection.
-    // LSBFIRST is handled in software via bit reversal in transfer functions.
+    // Bit order is not set here: most SPI IPs (incl. the current chips) have no
+    // LSB/MSB register field, so LSBFIRST is emulated in software (see top of
+    // file). A chip with hardware LSB support defines ARDUINO_SPI_HW_LSB_FIRST
+    // and setBitOrder() configures it then.
 }
 #endif
 
@@ -284,9 +283,8 @@ uint8_t SPIClass::transfer(uint8_t data)
         return 0; // Not initialized, return 0 to indicate error (not loopback)
     }
 
-    // Handle LSBFIRST: reverse bit order before sending and after receiving
-    // since WS63 SPI hardware only supports MSB first
-    if (_bit_order == LSBFIRST) {
+    // Emulate LSBFIRST via software bit reversal when the hardware is MSB-only.
+    if (SPI_NEED_SW_BITREV && _bit_order == LSBFIRST) {
         data = bit_reverse_uint8(data);
     }
 
@@ -300,8 +298,7 @@ uint8_t SPIClass::transfer(uint8_t data)
 
     errcode_t ret = uapi_spi_master_writeread(SPI_BUS_0, &xfer, SPI_TRANSFER_TIMEOUT_MS);
     if (ret == ERRCODE_SUCC) {
-        // Reverse received data if LSBFIRST
-        if (_bit_order == LSBFIRST) {
+        if (SPI_NEED_SW_BITREV && _bit_order == LSBFIRST) {
             rx_data = bit_reverse_uint8(rx_data);
         }
         return rx_data;
@@ -354,9 +351,11 @@ void SPIClass::transfer(void *buf, size_t count)
         return; // Not initialized, no-op
     }
 
-    // Handle LSBFIRST: reverse bit order for all bytes in buffer
-    // since WS63 SPI hardware only supports MSB first
-    if (_bit_order == LSBFIRST) {
+    // Emulate LSBFIRST via software bit reversal when the hardware is MSB-only.
+    // In-place: tx_buff == rx_buff, so the reversal of received bytes is a no-op
+    // (they come back already reversed relative to what was sent). When the
+    // hardware supports LSB (SPI_NEED_SW_BITREV == 0), skip this entirely.
+    if (SPI_NEED_SW_BITREV && _bit_order == LSBFIRST) {
         for (size_t i = 0; i < count; i++) {
             buffer[i] = bit_reverse_uint8(buffer[i]);
         }
@@ -371,8 +370,9 @@ void SPIClass::transfer(void *buf, size_t count)
 
     uapi_spi_master_writeread(SPI_BUS_0, &xfer, SPI_BUFFER_TRANSFER_TIMEOUT_MS);
 
-    // Note: For LSBFIRST, received data is already bit-reversed above (in-place)
-    // since tx_buff and rx_buff point to the same buffer
+    // For LSBFIRST with in-place transfer, received bytes land in the same
+    // buffer already bit-reversed (relative to the MSB the hardware clocked in),
+    // so no post-reversal is needed.
 #else
     // Stub: No-op for buffer transfer
     // Data in buffer remains unchanged (no loopback for buffer)
@@ -383,10 +383,19 @@ void SPIClass::transfer(void *buf, size_t count)
 // Set bit order
 void SPIClass::setBitOrder(uint8_t bitOrder)
 {
-    // Note: WS63 SPI hardware does not support LSB/MSB first selection.
-    // LSBFIRST is handled in software via bit reversal in transfer functions.
-    // No hardware reconfiguration needed - just store the value.
     _bit_order = bitOrder;
+#if defined(CONFIG_SPI_SUPPORT_MASTER) && (CONFIG_SPI_SUPPORT_MASTER == 1) && SPI_NEED_SW_BITREV == 0
+    // Hardware supports LSB/MSB selection (ARDUINO_SPI_HW_LSB_FIRST): apply it.
+    if (_initialized && !_in_transaction) {
+        spi_attr_t attr;
+        memset(&attr, 0, sizeof(attr));
+        uapi_spi_get_attr(SPI_BUS_0, &attr);
+        attr.spi_frame_format = (bitOrder == LSBFIRST) ? 1 : 0;  // 1=LSB, 0=MSB
+        uapi_spi_set_attr(SPI_BUS_0, &attr);
+    }
+#endif
+    // When SPI_NEED_SW_BITREV (hardware is MSB-only), no hardware reconfiguration
+    // is needed — LSBFIRST is emulated by bit reversal in the transfer functions.
 }
 
 // Set data mode
@@ -436,8 +445,9 @@ void SPIClass::setDataMode(uint8_t mode)
 // Set clock divider
 void SPIClass::setClockDivider(uint8_t div)
 {
-    // Calculate frequency based on divider
-    // ws63 SPI clock is 32MHz (from spi_porting.h: SPI_CLK_FREQ = 32000000)
+    // Calculate frequency based on divider.
+    // Base clock is the chip SSI source clock (ARDUINO_SPI_BUS_CLK_HZ, from the
+    // chip porting layer's arduino_config.h — value is chip-specific).
     uint32_t base_clock = SPI_BASE_CLOCK_FREQ;
     if (div == 0) {
         div = 1; // Prevent division by zero

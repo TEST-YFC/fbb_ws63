@@ -18,11 +18,6 @@
 #include "driver/security_unified/trng.h"
 #include <stdlib.h>
 
-#if (CHIP_WS63 == 1)
-#define SYS_CPU_FREQ_HZ (160 * 1000000UL)
-#else
-#define SYS_CPU_FREQ_HZ (GET_SYS_CLOCK())
-#endif
 #define BITS_PER_BYTE 8
 
 /* *
@@ -31,7 +26,7 @@
  */
 unsigned long millis()
 {
-    return LOS_Tick2MS(LOS_TickCountGet());
+    return (unsigned long)uapi_systick_get_ms();
 }
 
 /* *
@@ -40,7 +35,7 @@ unsigned long millis()
  */
 unsigned long micros()
 {
-    return uapi_systick_get_us();
+    return (unsigned long)uapi_systick_get_us();
 }
 
 /* *
@@ -53,7 +48,7 @@ void delay(unsigned long ms)
         return;
     }
 
-    LOS_TaskDelay(LOS_MS2Tick(ms));
+    uapi_systick_delay_ms(ms);
 }
 
 /* *
