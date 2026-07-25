@@ -13,11 +13,18 @@
 #include "bts_le_gap.h"
 #include "bts_gatt_stru.h"
 #include "bts_gatt_server.h"
+#include "aht20_bmp280.h"
 #include "ble_sensor_report_server.h"
 #include "ble_sensor_report_server_adv.h"
 
-#define BLE_SENSOR_REPORT_SERVER_LOG "[ble hello server]"
+#define BLE_SENSOR_REPORT_SERVER_LOG "[ble sensor report server]"
 #define BLE_SENSOR_REPORT_UUID_LEN 2
+#define BLE_SENSOR_REPORT_DEFAULT_INTERVAL_MS 1000
+#define BLE_SENSOR_REPORT_MIN_INTERVAL_MS 200
+#define BLE_SENSOR_REPORT_MAX_INTERVAL_MS 60000
+#define BLE_SENSOR_REPORT_BUFFER_LEN 80
+#define BLE_SENSOR_REPORT_DECIMAL_BASE 10
+#define BLE_SENSOR_REPORT_INTERVAL_PREFIX "interval="
 
 static uint8_t g_server_id;
 static uint16_t g_conn_id;
@@ -26,12 +33,14 @@ static uint16_t g_data_handle;
 static uint16_t g_notify_handle;
 static uint16_t g_notify_cccd_handle;
 static bool g_connected;
-static bool g_hello_notify_enabled;
+static volatile bool g_hello_notify_enabled;
 static bool g_stack_reset_done;
+static volatile uint32_t g_report_interval_ms = BLE_SENSOR_REPORT_DEFAULT_INTERVAL_MS;
+static uint32_t g_report_sequence;
 static uint8_t g_property_value[BLE_SENSOR_REPORT_PROPERTY_MAX_LEN] = "sensor_ready";
 static uint16_t g_property_value_len = sizeof("sensor_ready") - 1;
 static const uint8_t DEFAULT_VALUE[] = "sensor_ready";
-static const uint8_t HELLO_MESSAGE[] = "seq=1,temp=25.3,hum=61.2";
+static const uint8_t SENSOR_REPORT_INITIAL_VALUE[] = "sensor_pending";
 #define BLE_UUID_HIGH_BYTE_SHIFT 8
 #define BLE_CCCD_VALUE_LEN 2
 #define BLE_CCCD_NOTIFY_ENABLED 1
@@ -47,6 +56,32 @@ static errcode_t ble_sensor_report_send_value_notification(uint16_t handle,
                                                            const uint8_t *data,
                                                            uint16_t len,
                                                            const char *name);
+
+static bool ble_sensor_report_parse_interval(const uint8_t *value, uint16_t length, uint32_t *interval_ms)
+{
+    const char prefix[] = BLE_SENSOR_REPORT_INTERVAL_PREFIX;
+    uint32_t result = 0;
+    uint16_t index = sizeof(prefix) - 1;
+
+    if (value == NULL || interval_ms == NULL || length <= index || memcmp(value, prefix, index) != 0) {
+        return false;
+    }
+    for (; index < length; index++) {
+        if (value[index] < '0' || value[index] > '9') {
+            return false;
+        }
+        uint32_t digit = (uint32_t)(value[index] - '0');
+        if (result > (BLE_SENSOR_REPORT_MAX_INTERVAL_MS - digit) / BLE_SENSOR_REPORT_DECIMAL_BASE) {
+            return false;
+        }
+        result = result * BLE_SENSOR_REPORT_DECIMAL_BASE + digit;
+    }
+    if (result < BLE_SENSOR_REPORT_MIN_INTERVAL_MS) {
+        return false;
+    }
+    *interval_ms = result;
+    return true;
+}
 
 static void ble_sensor_report_uuid16(uint16_t value, bt_uuid_t *uuid)
 {
@@ -118,9 +153,6 @@ static void ble_sensor_report_handle_cccd_write(uint8_t server_id, uint16_t conn
 
     g_hello_notify_enabled = (cccd_value == BLE_CCCD_NOTIFY_ENABLED);
     osal_printk("%s sensor CCCD %s\r\n", BLE_SENSOR_REPORT_SERVER_LOG, g_hello_notify_enabled ? "enabled" : "disabled");
-    if (g_hello_notify_enabled) {
-        (void)ble_sensor_report_server_send_notification(HELLO_MESSAGE, sizeof(HELLO_MESSAGE) - 1);
-    }
 }
 
 static void ble_sensor_report_write_request_cb(uint8_t server_id,
@@ -147,6 +179,12 @@ static void ble_sensor_report_write_request_cb(uint8_t server_id,
             response_status = GATT_STATUS_UNLIKELY_ERROR;
         } else {
             g_property_value_len = request->length;
+            uint32_t report_interval_ms = 0;
+            if (ble_sensor_report_parse_interval(g_property_value, g_property_value_len, &report_interval_ms)) {
+                g_report_interval_ms = report_interval_ms;
+                osal_printk("%s report interval updated: %u ms\r\n", BLE_SENSOR_REPORT_SERVER_LOG,
+                            g_report_interval_ms);
+            }
         }
     }
 
@@ -200,8 +238,8 @@ static errcode_t ble_sensor_report_add_notify_characteristic(void)
     characteristic.chara_uuid = notify_uuid;
     characteristic.properties = GATT_CHARACTER_PROPERTY_BIT_NOTIFY;
     characteristic.permissions = GATT_ATTRIBUTE_PERMISSION_READ;
-    characteristic.value = (uint8_t *)HELLO_MESSAGE;
-    characteristic.value_len = sizeof(HELLO_MESSAGE) - 1;
+    characteristic.value = (uint8_t *)SENSOR_REPORT_INITIAL_VALUE;
+    characteristic.value_len = sizeof(SENSOR_REPORT_INITIAL_VALUE) - 1;
     errcode_t ret = gatts_add_characteristic_sync(g_server_id, g_service_handle, &characteristic, &notify_result);
     if (ret != ERRCODE_BT_SUCCESS) {
         return ret;
@@ -395,7 +433,13 @@ errcode_t ble_sensor_report_server_send_notification(const uint8_t *data, uint16
 
 errcode_t ble_sensor_report_server_init(void)
 {
-    errcode_t ret = ble_sensor_report_register_callbacks();
+    errcode_t ret = aht20_bmp280_init();
+    if (ret != ERRCODE_SUCC) {
+        osal_printk("%s sensor init failed: 0x%x\r\n", BLE_SENSOR_REPORT_SERVER_LOG, ret);
+        return ret;
+    }
+    osal_printk("%s sensor initialized: I2C1 SDA=GPIO15 SCL=GPIO16\r\n", BLE_SENSOR_REPORT_SERVER_LOG);
+    ret = ble_sensor_report_register_callbacks();
     if (ret != ERRCODE_BT_SUCCESS) {
         osal_printk("%s callback registration failed: 0x%x\r\n", BLE_SENSOR_REPORT_SERVER_LOG, ret);
         return ret;
@@ -407,4 +451,47 @@ errcode_t ble_sensor_report_server_init(void)
     }
     osal_printk("%s enabling BLE\r\n", BLE_SENSOR_REPORT_SERVER_LOG);
     return enable_ble();
+}
+
+void ble_sensor_report_server_report_loop(void)
+{
+    aht20_bmp280_data_t sensor_data = {0};
+    uint8_t report[BLE_SENSOR_REPORT_BUFFER_LEN] = {0};
+
+    while (true) {
+        errcode_t ret = aht20_bmp280_read(&sensor_data);
+        if (ret != ERRCODE_SUCC) {
+            osal_printk("%s sensor read failed: 0x%x\r\n", BLE_SENSOR_REPORT_SERVER_LOG, ret);
+            osal_msleep(g_report_interval_ms);
+            continue;
+        }
+
+        uint32_t temperature_abs = sensor_data.temperature_tenths_celsius < 0 ?
+            (uint32_t)(-sensor_data.temperature_tenths_celsius) :
+            (uint32_t)sensor_data.temperature_tenths_celsius;
+        uint32_t pressure_tenths_hpa = (sensor_data.pressure_pa + 5) / BLE_SENSOR_REPORT_DECIMAL_BASE;
+        g_report_sequence++;
+        if (g_report_sequence == 0) {
+            g_report_sequence++;
+        }
+        int report_len = snprintf_s((char *)report, sizeof(report), sizeof(report) - 1,
+                                    "seq=%u,temp=%s%u.%u,hum=%u.%u,press=%u.%u",
+                                    g_report_sequence, sensor_data.temperature_tenths_celsius < 0 ? "-" : "",
+                                    temperature_abs / BLE_SENSOR_REPORT_DECIMAL_BASE,
+                                    temperature_abs % BLE_SENSOR_REPORT_DECIMAL_BASE,
+                                    sensor_data.humidity_tenths_percent / BLE_SENSOR_REPORT_DECIMAL_BASE,
+                                    sensor_data.humidity_tenths_percent % BLE_SENSOR_REPORT_DECIMAL_BASE,
+                                    pressure_tenths_hpa / BLE_SENSOR_REPORT_DECIMAL_BASE,
+                                    pressure_tenths_hpa % BLE_SENSOR_REPORT_DECIMAL_BASE);
+        if (report_len < 0) {
+            osal_printk("%s report format failed\r\n", BLE_SENSOR_REPORT_SERVER_LOG);
+            osal_msleep(g_report_interval_ms);
+            continue;
+        }
+        osal_printk("%s sensor sample: %s\r\n", BLE_SENSOR_REPORT_SERVER_LOG, report);
+        if (g_hello_notify_enabled) {
+            (void)ble_sensor_report_server_send_notification(report, (uint16_t)report_len);
+        }
+        osal_msleep(g_report_interval_ms);
+    }
 }

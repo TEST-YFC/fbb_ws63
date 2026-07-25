@@ -16,6 +16,7 @@
 #define BLE_SENSOR_REPORT_PROPERTY_MAX_LEN 32
 
 errcode_t ble_sensor_report_server_init(void);
+void ble_sensor_report_server_report_loop(void);
 errcode_t ble_sensor_report_server_send_notification(const uint8_t *data, uint16_t len);
 
 #endif

@@ -32,11 +32,17 @@
 #define BLE_AD_SERVICE_DATA_STATE_OFFSET 4
 #define BLE_AD_UUID_LOW_OFFSET 2
 #define BLE_AD_UUID_HIGH_OFFSET 3
+#define BLE_SENSOR_REPORT_MAX_PAYLOAD_LEN 80
+#define BLE_SENSOR_REPORT_DECIMAL_BASE 10
+#define BLE_SENSOR_REPORT_MIN_TEMPERATURE_TENTHS_C -400
+#define BLE_SENSOR_REPORT_MAX_TEMPERATURE_TENTHS_C 850
+#define BLE_SENSOR_REPORT_MAX_HUMIDITY_TENTHS_PERCENT 1000
+#define BLE_SENSOR_REPORT_MIN_PRESSURE_TENTHS_HPA 3000
+#define BLE_SENSOR_REPORT_MAX_PRESSURE_TENTHS_HPA 11000
 
 static const uint8_t TARGET_NAME[] = "sensor_node";
 static const uint8_t DEFAULT_VALUE[] = "sensor_ready";
 static const uint8_t NEW_VALUE[] = "interval=1000";
-static const uint8_t EXPECTED_REPORT[] = "seq=1,temp=25.3,hum=61.2";
 static bt_uuid_t g_client_app_uuid = {BLE_SENSOR_REPORT_UUID_LEN, {0x33, 0x33}};
 static uint8_t g_client_id;
 static uint16_t g_conn_id;
@@ -59,6 +65,96 @@ static bool g_write_started;
 static bool g_hello_cccd_started;
 static bool g_stack_reset_done;
 static bool g_cache_sync_write_started;
+
+static bool ble_sensor_report_match_literal(const char **cursor, const char *literal)
+{
+    size_t length = strlen(literal);
+    if (strncmp(*cursor, literal, length) != 0) {
+        return false;
+    }
+    *cursor += length;
+    return true;
+}
+
+static bool ble_sensor_report_parse_unsigned(const char **cursor, uint32_t *value)
+{
+    uint32_t result = 0;
+    bool has_digit = false;
+
+    while (**cursor >= '0' && **cursor <= '9') {
+        uint32_t digit = (uint32_t)(**cursor - '0');
+        if (result > (UINT32_MAX - digit) / BLE_SENSOR_REPORT_DECIMAL_BASE) {
+            return false;
+        }
+        result = result * BLE_SENSOR_REPORT_DECIMAL_BASE + digit;
+        (*cursor)++;
+        has_digit = true;
+    }
+    if (!has_digit) {
+        return false;
+    }
+    *value = result;
+    return true;
+}
+
+static bool ble_sensor_report_parse_tenths(const char **cursor, bool allow_negative, int32_t *value)
+{
+    bool negative = false;
+    uint32_t integer;
+    uint32_t decimal;
+
+    if (allow_negative && **cursor == '-') {
+        negative = true;
+        (*cursor)++;
+    }
+    if (!ble_sensor_report_parse_unsigned(cursor, &integer) || **cursor != '.') {
+        return false;
+    }
+    (*cursor)++;
+    if (**cursor < '0' || **cursor > '9') {
+        return false;
+    }
+    decimal = (uint32_t)(**cursor - '0');
+    (*cursor)++;
+    if (integer > (uint32_t)INT32_MAX / BLE_SENSOR_REPORT_DECIMAL_BASE ||
+        (integer == (uint32_t)INT32_MAX / BLE_SENSOR_REPORT_DECIMAL_BASE &&
+         decimal > (uint32_t)INT32_MAX % BLE_SENSOR_REPORT_DECIMAL_BASE)) {
+        return false;
+    }
+    int32_t result = (int32_t)(integer * BLE_SENSOR_REPORT_DECIMAL_BASE + decimal);
+    *value = negative ? -result : result;
+    return true;
+}
+
+static bool ble_sensor_report_validate_report(const uint8_t *data, uint16_t length)
+{
+    char report[BLE_SENSOR_REPORT_MAX_PAYLOAD_LEN] = {0};
+    uint32_t sequence = 0;
+    int32_t temperature_tenths = 0;
+    int32_t humidity_tenths = 0;
+    int32_t pressure_tenths = 0;
+    const char *cursor = report;
+
+    if (data == NULL || length == 0 || length >= sizeof(report) ||
+        memcpy_s(report, sizeof(report), data, length) != EOK) {
+        return false;
+    }
+    if (!ble_sensor_report_match_literal(&cursor, "seq=") ||
+        !ble_sensor_report_parse_unsigned(&cursor, &sequence) ||
+        !ble_sensor_report_match_literal(&cursor, ",temp=") ||
+        !ble_sensor_report_parse_tenths(&cursor, true, &temperature_tenths) ||
+        !ble_sensor_report_match_literal(&cursor, ",hum=") ||
+        !ble_sensor_report_parse_tenths(&cursor, false, &humidity_tenths) ||
+        !ble_sensor_report_match_literal(&cursor, ",press=") ||
+        !ble_sensor_report_parse_tenths(&cursor, false, &pressure_tenths) || *cursor != '\0') {
+        return false;
+    }
+    return sequence > 0 && temperature_tenths >= BLE_SENSOR_REPORT_MIN_TEMPERATURE_TENTHS_C &&
+           temperature_tenths <= BLE_SENSOR_REPORT_MAX_TEMPERATURE_TENTHS_C &&
+           humidity_tenths >= 0 && humidity_tenths <= BLE_SENSOR_REPORT_MAX_HUMIDITY_TENTHS_PERCENT &&
+           pressure_tenths >= BLE_SENSOR_REPORT_MIN_PRESSURE_TENTHS_HPA &&
+           pressure_tenths <= BLE_SENSOR_REPORT_MAX_PRESSURE_TENTHS_HPA;
+}
 
 static void ble_sensor_report_uuid16(uint16_t value, bt_uuid_t *uuid)
 {
@@ -360,9 +456,10 @@ static void ble_sensor_report_notification_cb(uint8_t client_id,
         return;
     }
     osal_printk("%s sensor report received: %.*s\r\n", BLE_SENSOR_REPORT_CLIENT_LOG, data->data_len, data->data);
-    if ((data->data_len == sizeof(EXPECTED_REPORT) - 1) &&
-        (memcmp(data->data, EXPECTED_REPORT, sizeof(EXPECTED_REPORT) - 1) == 0)) {
+    if (ble_sensor_report_validate_report(data->data, data->data_len)) {
         osal_printk("%s report validation passed\r\n", BLE_SENSOR_REPORT_CLIENT_LOG);
+    } else {
+        osal_printk("%s report validation failed\r\n", BLE_SENSOR_REPORT_CLIENT_LOG);
     }
     if (!g_read_started) {
         g_read_started = true;

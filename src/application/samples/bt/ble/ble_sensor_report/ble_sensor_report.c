@@ -5,6 +5,7 @@
 
 #include "app_init.h"
 #include "soc_osal.h"
+#include "errcode.h"
 
 #if defined(CONFIG_SAMPLE_SUPPORT_BLE_SENSOR_REPORT_SERVER_SAMPLE)
 #include "ble_sensor_report_server.h"
@@ -19,7 +20,12 @@ static int ble_sensor_report_task(const char *arg)
 {
     (void)arg;
 #if defined(CONFIG_SAMPLE_SUPPORT_BLE_SENSOR_REPORT_SERVER_SAMPLE)
-    return (int)ble_sensor_report_server_init();
+    errcode_t ret = ble_sensor_report_server_init();
+    if (ret != ERRCODE_SUCC) {
+        return (int)ret;
+    }
+    ble_sensor_report_server_report_loop();
+    return 0;
 #elif defined(CONFIG_SAMPLE_SUPPORT_BLE_SENSOR_REPORT_CLIENT_SAMPLE)
     return (int)ble_sensor_report_client_init();
 #else
