@@ -1,6 +1,14 @@
-/*
+/**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026.
- * Description: BLE Hello GATT client.
+ *
+ * @if Eng
+ * @brief Implements the BLE sensor report data collector.
+ * @else
+ * @brief 实现 BLE 传感器上报数据采集端。
+ * @endif
+ *
+ * History: \n
+ * 2026-07-23, Create file. \n
  */
 
 #include <stdbool.h>
@@ -40,6 +48,7 @@
 #define BLE_SENSOR_REPORT_MIN_PRESSURE_TENTHS_HPA 3000
 #define BLE_SENSOR_REPORT_MAX_PRESSURE_TENTHS_HPA 11000
 
+/* Target identity, control values, and client state. / 目标标识、控制值与客户端状态。 */
 static const uint8_t TARGET_NAME[] = "sensor_node";
 static const uint8_t DEFAULT_VALUE[] = "sensor_ready";
 static const uint8_t NEW_VALUE[] = "interval=1000";
@@ -66,6 +75,13 @@ static bool g_hello_cccd_started;
 static bool g_stack_reset_done;
 static bool g_cache_sync_write_started;
 
+/**
+ * @if Eng
+ * @brief Matches and consumes one literal token from a report string.
+ * @else
+ * @brief 从报文字符串中匹配并消费一个固定标记。
+ * @endif
+ */
 static bool ble_sensor_report_match_literal(const char **cursor, const char *literal)
 {
     size_t length = strlen(literal);
@@ -76,6 +92,13 @@ static bool ble_sensor_report_match_literal(const char **cursor, const char *lit
     return true;
 }
 
+/**
+ * @if Eng
+ * @brief Parses an unsigned decimal integer with overflow protection.
+ * @else
+ * @brief 解析无符号十进制整数并检查溢出。
+ * @endif
+ */
 static bool ble_sensor_report_parse_unsigned(const char **cursor, uint32_t *value)
 {
     uint32_t result = 0;
@@ -97,6 +120,13 @@ static bool ble_sensor_report_parse_unsigned(const char **cursor, uint32_t *valu
     return true;
 }
 
+/**
+ * @if Eng
+ * @brief Parses a value containing exactly one decimal digit.
+ * @else
+ * @brief 解析恰好包含一位小数的数值。
+ * @endif
+ */
 static bool ble_sensor_report_parse_tenths(const char **cursor, bool allow_negative, int32_t *value)
 {
     bool negative = false;
@@ -126,6 +156,13 @@ static bool ble_sensor_report_parse_tenths(const char **cursor, bool allow_negat
     return true;
 }
 
+/**
+ * @if Eng
+ * @brief Validates the complete sensor report format and physical ranges.
+ * @else
+ * @brief 校验完整的传感器报文格式与物理量范围。
+ * @endif
+ */
 static bool ble_sensor_report_validate_report(const uint8_t *data, uint16_t length)
 {
     char report[BLE_SENSOR_REPORT_MAX_PAYLOAD_LEN] = {0};
@@ -156,6 +193,13 @@ static bool ble_sensor_report_validate_report(const uint8_t *data, uint16_t leng
            pressure_tenths <= BLE_SENSOR_REPORT_MAX_PRESSURE_TENTHS_HPA;
 }
 
+/**
+ * @if Eng
+ * @brief Converts a 16-bit value to the SDK Bluetooth UUID representation.
+ * @else
+ * @brief 将 16 位数值转换为 SDK 蓝牙 UUID 表示形式。
+ * @endif
+ */
 static void ble_sensor_report_uuid16(uint16_t value, bt_uuid_t *uuid)
 {
     uuid->uuid_len = BLE_SENSOR_REPORT_UUID_LEN;
@@ -163,12 +207,26 @@ static void ble_sensor_report_uuid16(uint16_t value, bt_uuid_t *uuid)
     uuid->uuid[1] = (uint8_t)value;
 }
 
+/**
+ * @if Eng
+ * @brief Checks whether an SDK Bluetooth UUID equals a 16-bit value.
+ * @else
+ * @brief 检查 SDK 蓝牙 UUID 是否等于指定的 16 位数值。
+ * @endif
+ */
 static bool ble_sensor_report_uuid_is(const bt_uuid_t *uuid, uint16_t value)
 {
     return uuid->uuid_len == BLE_SENSOR_REPORT_UUID_LEN &&
            uuid->uuid[0] == (uint8_t)(value >> BLE_UUID_HIGH_BYTE_SHIFT) && uuid->uuid[1] == (uint8_t)value;
 }
 
+/**
+ * @if Eng
+ * @brief Clears handles and flags associated with GATT discovery.
+ * @else
+ * @brief 清除 GATT 服务发现相关的句柄与状态标志。
+ * @endif
+ */
 static void ble_sensor_report_reset_discovery_state(void)
 {
     g_service_start_handle = 0;
@@ -186,6 +244,13 @@ static void ble_sensor_report_reset_discovery_state(void)
     g_cache_sync_write_started = false;
 }
 
+/**
+ * @if Eng
+ * @brief Parses advertising fields and identifies the target sensor node.
+ * @else
+ * @brief 解析广播字段并识别目标传感器节点。
+ * @endif
+ */
 static bool ble_sensor_report_parse_adv(const uint8_t *data, uint8_t data_len, bool *default_state)
 {
     uint16_t index = 0;
@@ -219,12 +284,26 @@ static bool ble_sensor_report_parse_adv(const uint8_t *data, uint8_t data_len, b
     return name_matched && state_found;
 }
 
+/**
+ * @if Eng
+ * @brief Starts scanning for the target sensor node.
+ * @else
+ * @brief 开始扫描目标传感器节点。
+ * @endif
+ */
 static errcode_t ble_sensor_report_start_scan(void)
 {
     osal_printk("%s start scanning\r\n", BLE_SENSOR_REPORT_CLIENT_LOG);
     return gap_ble_start_scan();
 }
 
+/**
+ * @if Eng
+ * @brief Starts scanning after scan parameters are configured.
+ * @else
+ * @brief 在扫描参数配置完成后启动扫描。
+ * @endif
+ */
 static void ble_sensor_report_set_scan_param_cb(errcode_t status)
 {
     if (status == ERRCODE_BT_SUCCESS) {
@@ -234,6 +313,13 @@ static void ble_sensor_report_set_scan_param_cb(errcode_t status)
     }
 }
 
+/**
+ * @if Eng
+ * @brief Connects when a matching sensor node advertisement is received.
+ * @else
+ * @brief 收到匹配的传感器节点广播后发起连接。
+ * @endif
+ */
 static void ble_sensor_report_scan_result_cb(gap_scan_result_data_t *result)
 {
     bool default_state = false;
@@ -256,6 +342,13 @@ static void ble_sensor_report_scan_result_cb(gap_scan_result_data_t *result)
     }
 }
 
+/**
+ * @if Eng
+ * @brief Starts discovery of the sensor report GATT service.
+ * @else
+ * @brief 启动传感器上报 GATT 服务发现。
+ * @endif
+ */
 static errcode_t ble_sensor_report_discover_service(uint16_t conn_id)
 {
     bt_uuid_t uuid = {0};
@@ -264,6 +357,13 @@ static errcode_t ble_sensor_report_discover_service(uint16_t conn_id)
     return gattc_discovery_service(g_client_id, conn_id, &uuid);
 }
 
+/**
+ * @if Eng
+ * @brief Starts MTU exchange for the active connection.
+ * @else
+ * @brief 为当前连接发起 MTU 交换。
+ * @endif
+ */
 static errcode_t ble_sensor_report_exchange_mtu(uint16_t conn_id)
 {
     errcode_t ret;
@@ -276,6 +376,13 @@ static errcode_t ble_sensor_report_exchange_mtu(uint16_t conn_id)
     return ret;
 }
 
+/**
+ * @if Eng
+ * @brief Handles connection changes, pairing, and scan recovery.
+ * @else
+ * @brief 处理连接变化、配对和扫描恢复。
+ * @endif
+ */
 static void ble_sensor_report_conn_state_cb(uint16_t conn_id,
                                             bd_addr_t *addr,
                                             gap_ble_conn_state_t conn_state,
@@ -311,6 +418,13 @@ static void ble_sensor_report_conn_state_cb(uint16_t conn_id,
     }
 }
 
+/**
+ * @if Eng
+ * @brief Continues with MTU exchange after pairing completes.
+ * @else
+ * @brief 配对完成后继续执行 MTU 交换。
+ * @endif
+ */
 static void ble_sensor_report_pair_result_cb(uint16_t conn_id, const bd_addr_t *addr, errcode_t status)
 {
     g_pairing_started = false;
@@ -323,6 +437,13 @@ static void ble_sensor_report_pair_result_cb(uint16_t conn_id, const bd_addr_t *
     (void)gap_ble_disconnect_remote_device(addr);
 }
 
+/**
+ * @if Eng
+ * @brief Starts service discovery after MTU exchange completes.
+ * @else
+ * @brief MTU 交换完成后启动服务发现。
+ * @endif
+ */
 static void ble_sensor_report_mtu_changed_cb(uint8_t client_id, uint16_t conn_id, uint16_t mtu_size, errcode_t status)
 {
     (void)client_id;
@@ -334,6 +455,13 @@ static void ble_sensor_report_mtu_changed_cb(uint8_t client_id, uint16_t conn_id
     }
 }
 
+/**
+ * @if Eng
+ * @brief Saves service handles and starts characteristic discovery.
+ * @else
+ * @brief 保存服务句柄并启动特征发现。
+ * @endif
+ */
 static void ble_sensor_report_discovery_service_cb(uint8_t client_id,
                                                    uint16_t conn_id,
                                                    gattc_discovery_service_result_t *service,
@@ -353,6 +481,13 @@ static void ble_sensor_report_discovery_service_cb(uint8_t client_id,
     (void)gattc_discovery_character(g_client_id, conn_id, &param);
 }
 
+/**
+ * @if Eng
+ * @brief Records discovered data and notification characteristic handles.
+ * @else
+ * @brief 记录发现的数据特征与通知特征句柄。
+ * @endif
+ */
 static void ble_sensor_report_discovery_character_cb(uint8_t client_id,
                                                      uint16_t conn_id,
                                                      gattc_discovery_character_result_t *character,
@@ -375,6 +510,13 @@ static void ble_sensor_report_discovery_character_cb(uint8_t client_id,
     }
 }
 
+/**
+ * @if Eng
+ * @brief Starts descriptor discovery after all characteristics are found.
+ * @else
+ * @brief 特征发现完成后启动描述符发现。
+ * @endif
+ */
 static void ble_sensor_report_discovery_character_complete_cb(uint8_t client_id,
                                                               uint16_t conn_id,
                                                               gattc_discovery_character_param_t *param,
@@ -389,6 +531,13 @@ static void ble_sensor_report_discovery_character_complete_cb(uint8_t client_id,
     (void)gattc_discovery_descriptor(g_client_id, conn_id, g_notify_declare_handle);
 }
 
+/**
+ * @if Eng
+ * @brief Records the notification CCCD handle.
+ * @else
+ * @brief 记录通知 CCCD 句柄。
+ * @endif
+ */
 static void ble_sensor_report_discovery_descriptor_cb(uint8_t client_id,
                                                       uint16_t conn_id,
                                                       gattc_discovery_descriptor_result_t *descriptor,
@@ -402,6 +551,13 @@ static void ble_sensor_report_discovery_descriptor_cb(uint8_t client_id,
     }
 }
 
+/**
+ * @if Eng
+ * @brief Writes the notification enable value to a CCCD.
+ * @else
+ * @brief 向 CCCD 写入通知使能值。
+ * @endif
+ */
 static errcode_t ble_sensor_report_enable_cccd(uint16_t conn_id, uint16_t handle, const char *name)
 {
     uint8_t cccd_enable[2] = {1, 0};
@@ -413,6 +569,13 @@ static errcode_t ble_sensor_report_enable_cccd(uint16_t conn_id, uint16_t handle
     return gattc_write_req(g_client_id, conn_id, &write_value);
 }
 
+/**
+ * @if Eng
+ * @brief Synchronizes control state before enabling notifications.
+ * @else
+ * @brief 在使能通知前同步控制特征状态。
+ * @endif
+ */
 static void ble_sensor_report_discovery_descriptor_complete_cb(uint8_t client_id,
                                                                uint16_t conn_id,
                                                                uint16_t characteristic_handle,
@@ -444,6 +607,13 @@ static void ble_sensor_report_discovery_descriptor_complete_cb(uint8_t client_id
     (void)ble_sensor_report_enable_cccd(conn_id, g_notify_cccd_handle, "hello");
 }
 
+/**
+ * @if Eng
+ * @brief Parses and validates a received sensor report notification.
+ * @else
+ * @brief 解析并校验收到的传感器上报通知。
+ * @endif
+ */
 static void ble_sensor_report_notification_cb(uint8_t client_id,
                                               uint16_t conn_id,
                                               gattc_handle_value_t *data,
@@ -472,6 +642,13 @@ static void ble_sensor_report_notification_cb(uint8_t client_id,
     }
 }
 
+/**
+ * @if Eng
+ * @brief Processes the control value and writes the desired report interval.
+ * @else
+ * @brief 处理控制特征读取结果并写入期望的上报周期。
+ * @endif
+ */
 static void ble_sensor_report_read_cb(uint8_t client_id,
                                       uint16_t conn_id,
                                       gattc_handle_value_t *read_result,
@@ -495,6 +672,13 @@ static void ble_sensor_report_read_cb(uint8_t client_id,
     (void)gattc_write_req(g_client_id, conn_id, &write_value);
 }
 
+/**
+ * @if Eng
+ * @brief Enables notifications after control state synchronization completes.
+ * @else
+ * @brief 控制状态同步完成后使能通知。
+ * @endif
+ */
 static void ble_sensor_report_cache_sync_write_complete(gatt_status_t status)
 {
     g_cache_sync_write_started = false;
@@ -511,6 +695,13 @@ static void ble_sensor_report_cache_sync_write_complete(gatt_status_t status)
     }
 }
 
+/**
+ * @if Eng
+ * @brief Dispatches completion of control and CCCD write requests.
+ * @else
+ * @brief 分发控制特征与 CCCD 写请求的完成事件。
+ * @endif
+ */
 static void ble_sensor_report_write_cb(uint8_t client_id, uint16_t conn_id, uint16_t handle, gatt_status_t status)
 {
     (void)client_id;
@@ -528,6 +719,13 @@ static void ble_sensor_report_write_cb(uint8_t client_id, uint16_t conn_id, uint
     }
 }
 
+/**
+ * @if Eng
+ * @brief Configures security, registers the GATT client, and sets scan parameters.
+ * @else
+ * @brief 配置安全参数、注册 GATT 客户端并设置扫描参数。
+ * @endif
+ */
 static void ble_sensor_report_enable_cb(errcode_t status)
 {
     gap_ble_sec_params_t security = {0};
@@ -569,6 +767,13 @@ static void ble_sensor_report_enable_cb(errcode_t status)
     osal_printk("%s init ok, scan param ret=0x%x\r\n", BLE_SENSOR_REPORT_CLIENT_LOG, ret);
 }
 
+/**
+ * @if Eng
+ * @brief Re-enables BLE after clearing retained GATT state.
+ * @else
+ * @brief 清理保留的 GATT 状态后重新使能 BLE。
+ * @endif
+ */
 static void ble_sensor_report_disable_cb(errcode_t status)
 {
     errcode_t ret;
@@ -583,6 +788,13 @@ static void ble_sensor_report_disable_cb(errcode_t status)
     }
 }
 
+/**
+ * @if Eng
+ * @brief Registers GAP and GATT client callbacks used by this sample.
+ * @else
+ * @brief 注册本案例使用的 GAP 和 GATT 客户端回调。
+ * @endif
+ */
 static errcode_t ble_sensor_report_register_callbacks(void)
 {
     gap_ble_callbacks_t gap_callbacks = {0};
@@ -612,6 +824,13 @@ static errcode_t ble_sensor_report_register_callbacks(void)
     return gattc_register_callbacks(&gatt_callbacks);
 }
 
+/**
+ * @if Eng
+ * @brief Initializes scanning, connection, and GATT client callbacks.
+ * @else
+ * @brief 初始化扫描、连接和 GATT 客户端回调。
+ * @endif
+ */
 errcode_t ble_sensor_report_client_init(void)
 {
     errcode_t ret;

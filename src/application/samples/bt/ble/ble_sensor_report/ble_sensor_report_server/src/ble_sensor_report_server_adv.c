@@ -1,6 +1,14 @@
-/*
+/**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026.
- * Description: BLE Hello advertising configuration.
+ *
+ * @if Eng
+ * @brief Implements advertising data and parameters for the BLE sensor node.
+ * @else
+ * @brief 实现 BLE 传感器节点的广播数据与广播参数配置。
+ * @endif
+ *
+ * History: \n
+ * 2026-07-23, Create file. \n
  */
 
 #include <stdint.h>
@@ -11,6 +19,7 @@
 #include "ble_sensor_report_server.h"
 #include "ble_sensor_report_server_adv.h"
 
+/* Advertising parameters. / 广播参数。 */
 #define BLE_SENSOR_REPORT_ADV_INTERVAL 0x30
 #define BLE_SENSOR_REPORT_ADV_CHANNEL_MAP 0x07
 #define BLE_SENSOR_REPORT_ADV_TYPE_CONN_UNDIR 0x00
@@ -30,14 +39,29 @@
 #define BLE_AD_ELEMENT_HEADER_LEN 2
 #define BLE_AD_FIXED_PAYLOAD_LEN 5
 
+/* Advertising identity and retained state. / 广播标识与保留状态。 */
 static const uint8_t BLE_SENSOR_REPORT_NAME[] = "sensor_node";
 static bool g_ble_sensor_report_default_state = true;
 
+/**
+ * @if Eng
+ * @brief Updates the device state carried in service data.
+ * @else
+ * @brief 更新服务数据中携带的设备状态。
+ * @endif
+ */
 void ble_sensor_report_server_set_adv_default_state(bool is_default)
 {
     g_ble_sensor_report_default_state = is_default;
 }
 
+/**
+ * @if Eng
+ * @brief Builds flags, service UUID, device name, and service data fields.
+ * @else
+ * @brief 构造标志、服务 UUID、设备名称和服务数据字段。
+ * @endif
+ */
 static uint16_t ble_sensor_report_build_adv_data(uint8_t *data, uint16_t capacity)
 {
     uint16_t index = 0;
@@ -73,6 +97,13 @@ static uint16_t ble_sensor_report_build_adv_data(uint8_t *data, uint16_t capacit
     return index;
 }
 
+/**
+ * @if Eng
+ * @brief Configures and starts sensor node advertising.
+ * @else
+ * @brief 配置并启动传感器节点广播。
+ * @endif
+ */
 errcode_t ble_sensor_report_server_start_adv(void)
 {
     uint8_t adv_data[31] = {0};

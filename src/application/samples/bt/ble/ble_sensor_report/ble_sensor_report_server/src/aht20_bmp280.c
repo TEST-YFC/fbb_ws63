@@ -1,6 +1,14 @@
-/*
+/**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026.
- * Description: AHT20 and BMP280 sensor module driver.
+ *
+ * @if Eng
+ * @brief Implements I2C acquisition and compensation for the AHT20 and BMP280 sensors.
+ * @else
+ * @brief 实现 AHT20 和 BMP280 传感器的 I2C 采集与补偿换算。
+ * @endif
+ *
+ * History: \n
+ * 2026-07-25, Create file. \n
  */
 
 #include <stdbool.h>
@@ -13,6 +21,7 @@
 
 #define AHT20_BMP280_LOG "[aht20+bmp280]"
 
+/* Shared I2C bus configuration. / 共用 I2C 总线配置。 */
 #define SENSOR_I2C_BUS I2C_BUS_1
 #define SENSOR_I2C_BAUDRATE 100000
 #define SENSOR_I2C_HS_CODE 0
@@ -20,6 +29,7 @@
 #define SENSOR_I2C_SDA_PIN GPIO_15
 #define SENSOR_I2C_SCL_PIN GPIO_16
 
+/* AHT20 commands and conversion constants. / AHT20 命令与换算常量。 */
 #define AHT20_I2C_ADDR 0x38
 #define AHT20_STATUS_COMMAND 0x71
 #define AHT20_TRIGGER_COMMAND 0xAC
@@ -42,6 +52,7 @@
 #define AHT20_TEMPERATURE_TENTHS_SCALE 2000
 #define AHT20_TEMPERATURE_TENTHS_OFFSET 500
 
+/* BMP280 registers and compensation constants. / BMP280 寄存器与补偿常量。 */
 #define BMP280_I2C_ADDR_LOW 0x76
 #define BMP280_I2C_ADDR_HIGH 0x77
 #define BMP280_CHIP_ID_REG 0xD0
@@ -62,6 +73,13 @@
 #define BMP280_PRESSURE_ADC_FULL_SCALE 1048576
 #define BMP280_PRESSURE_CALC_MULTIPLIER 3125
 
+/**
+ * @if Eng
+ * @brief Stores factory calibration parameters read from the BMP280.
+ * @else
+ * @brief 保存从 BMP280 读取的出厂校准参数。
+ * @endif
+ */
 typedef struct {
     uint16_t dig_t1;
     int16_t dig_t2;
@@ -77,10 +95,18 @@ typedef struct {
     int16_t dig_p9;
 } bmp280_calibration_t;
 
+/* BMP280 runtime state. / BMP280 运行状态。 */
 static bmp280_calibration_t g_bmp280_calibration;
 static uint16_t g_bmp280_addr;
 static int32_t g_bmp280_t_fine;
 
+/**
+ * @if Eng
+ * @brief Writes a byte sequence to one sensor on the shared I2C bus.
+ * @else
+ * @brief 向共用 I2C 总线上的指定传感器写入字节序列。
+ * @endif
+ */
 static errcode_t sensor_i2c_write(uint16_t addr, uint8_t *buffer, uint32_t length)
 {
     i2c_data_t data = {0};
@@ -89,6 +115,13 @@ static errcode_t sensor_i2c_write(uint16_t addr, uint8_t *buffer, uint32_t lengt
     return uapi_i2c_master_write(SENSOR_I2C_BUS, addr, &data);
 }
 
+/**
+ * @if Eng
+ * @brief Reads a byte sequence from one sensor on the shared I2C bus.
+ * @else
+ * @brief 从共用 I2C 总线上的指定传感器读取字节序列。
+ * @endif
+ */
 static errcode_t sensor_i2c_read(uint16_t addr, uint8_t *buffer, uint32_t length)
 {
     i2c_data_t data = {0};
@@ -97,6 +130,13 @@ static errcode_t sensor_i2c_read(uint16_t addr, uint8_t *buffer, uint32_t length
     return uapi_i2c_master_read(SENSOR_I2C_BUS, addr, &data);
 }
 
+/**
+ * @if Eng
+ * @brief Writes a command or register address and reads the response.
+ * @else
+ * @brief 写入命令或寄存器地址后读取响应数据。
+ * @endif
+ */
 static errcode_t sensor_i2c_read_command(uint16_t addr,
                                          uint8_t command,
                                          uint8_t *buffer,
@@ -110,22 +150,50 @@ static errcode_t sensor_i2c_read_command(uint16_t addr,
     return uapi_i2c_master_writeread(SENSOR_I2C_BUS, addr, &data);
 }
 
+/**
+ * @if Eng
+ * @brief Writes one value to a BMP280 register.
+ * @else
+ * @brief 向 BMP280 的指定寄存器写入一个数值。
+ * @endif
+ */
 static errcode_t bmp280_write_register(uint8_t reg, uint8_t value)
 {
     uint8_t command[] = {reg, value};
     return sensor_i2c_write(g_bmp280_addr, command, sizeof(command));
 }
 
+/**
+ * @if Eng
+ * @brief Decodes an unsigned 16-bit little-endian value.
+ * @else
+ * @brief 解析无符号 16 位小端数值。
+ * @endif
+ */
 static uint16_t bmp280_read_u16_le(const uint8_t *data)
 {
     return (uint16_t)data[0] | ((uint16_t)data[1] << 8);
 }
 
+/**
+ * @if Eng
+ * @brief Decodes a signed 16-bit little-endian value.
+ * @else
+ * @brief 解析有符号 16 位小端数值。
+ * @endif
+ */
 static int16_t bmp280_read_s16_le(const uint8_t *data)
 {
     return (int16_t)bmp280_read_u16_le(data);
 }
 
+/**
+ * @if Eng
+ * @brief Loads BMP280 temperature and pressure calibration parameters.
+ * @else
+ * @brief 加载 BMP280 温度和气压校准参数。
+ * @endif
+ */
 static void bmp280_load_calibration(const uint8_t *data)
 {
     g_bmp280_calibration.dig_t1 = bmp280_read_u16_le(&data[0]);
@@ -142,6 +210,13 @@ static void bmp280_load_calibration(const uint8_t *data)
     g_bmp280_calibration.dig_p9 = bmp280_read_s16_le(&data[22]);
 }
 
+/**
+ * @if Eng
+ * @brief Verifies that the AHT20 is calibrated and ready for measurement.
+ * @else
+ * @brief 检查 AHT20 已标定并可以执行测量。
+ * @endif
+ */
 static errcode_t aht20_init(void)
 {
     uint8_t status = 0;
@@ -159,6 +234,13 @@ static errcode_t aht20_init(void)
     return ERRCODE_SUCC;
 }
 
+/**
+ * @if Eng
+ * @brief Probes, validates, and configures the BMP280.
+ * @else
+ * @brief 探测、校验并配置 BMP280。
+ * @endif
+ */
 static errcode_t bmp280_init(void)
 {
     uint8_t chip_id = 0;
@@ -199,6 +281,13 @@ static errcode_t bmp280_init(void)
     return ERRCODE_SUCC;
 }
 
+/**
+ * @if Eng
+ * @brief Calculates the CRC-8 value defined by the AHT20 protocol.
+ * @else
+ * @brief 计算 AHT20 协议规定的 CRC-8 校验值。
+ * @endif
+ */
 static uint8_t aht20_crc8(const uint8_t *data, uint32_t length)
 {
     uint8_t crc = AHT20_CRC_INIT;
@@ -212,6 +301,13 @@ static uint8_t aht20_crc8(const uint8_t *data, uint32_t length)
     return crc;
 }
 
+/**
+ * @if Eng
+ * @brief Triggers an AHT20 measurement and converts temperature and humidity.
+ * @else
+ * @brief 触发 AHT20 测量并换算温度和湿度。
+ * @endif
+ */
 static errcode_t aht20_read(int32_t *temperature_tenths, uint32_t *humidity_tenths)
 {
     uint8_t command[] = {AHT20_TRIGGER_COMMAND, AHT20_TRIGGER_PARAM_1, AHT20_TRIGGER_PARAM_2};
@@ -245,6 +341,13 @@ static errcode_t aht20_read(int32_t *temperature_tenths, uint32_t *humidity_tent
     return ERRCODE_SUCC;
 }
 
+/**
+ * @if Eng
+ * @brief Compensates the BMP280 raw temperature and updates t_fine.
+ * @else
+ * @brief 补偿 BMP280 原始温度并更新 t_fine。
+ * @endif
+ */
 static int32_t bmp280_compensate_temperature(int32_t adc_temperature)
 {
     int32_t var1 = ((((adc_temperature >> 3) - ((int32_t)g_bmp280_calibration.dig_t1 << 1))) *
@@ -256,6 +359,13 @@ static int32_t bmp280_compensate_temperature(int32_t adc_temperature)
     return (g_bmp280_t_fine * 5 + 128) >> 8;
 }
 
+/**
+ * @if Eng
+ * @brief Compensates BMP280 raw pressure using the 64-bit fixed-point formula.
+ * @else
+ * @brief 使用 64 位定点公式补偿 BMP280 原始气压。
+ * @endif
+ */
 static uint32_t bmp280_compensate_pressure(int32_t adc_pressure)
 {
     int64_t var1 = (int64_t)g_bmp280_t_fine - BMP280_PRESSURE_CALC_OFFSET;
@@ -278,6 +388,13 @@ static uint32_t bmp280_compensate_pressure(int32_t adc_pressure)
     return (uint32_t)pressure;
 }
 
+/**
+ * @if Eng
+ * @brief Reads and compensates one BMP280 pressure sample.
+ * @else
+ * @brief 读取并补偿一组 BMP280 气压数据。
+ * @endif
+ */
 static errcode_t bmp280_read(uint32_t *pressure_pa)
 {
     uint8_t response[BMP280_DATA_LEN] = {0};
@@ -303,6 +420,13 @@ static errcode_t bmp280_read(uint32_t *pressure_pa)
     return ERRCODE_SUCC;
 }
 
+/**
+ * @if Eng
+ * @brief Initializes I2C1 and the AHT20 and BMP280 sensors.
+ * @else
+ * @brief 初始化 I2C1、AHT20 和 BMP280 传感器。
+ * @endif
+ */
 errcode_t aht20_bmp280_init(void)
 {
     errcode_t ret = uapi_pin_set_mode(SENSOR_I2C_SCL_PIN, SENSOR_I2C_PIN_MODE);
@@ -325,6 +449,13 @@ errcode_t aht20_bmp280_init(void)
     return bmp280_init();
 }
 
+/**
+ * @if Eng
+ * @brief Reads and converts one environmental sensor sample.
+ * @else
+ * @brief 读取并换算一组环境传感器数据。
+ * @endif
+ */
 errcode_t aht20_bmp280_read(aht20_bmp280_data_t *sensor_data)
 {
     errcode_t ret;

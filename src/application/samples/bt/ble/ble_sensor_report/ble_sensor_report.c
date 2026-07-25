@@ -1,6 +1,14 @@
-/*
+/**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026.
- * Description: BLE Hello sample entry.
+ *
+ * @if Eng
+ * @brief Provides the application entry for the BLE sensor report sample.
+ * @else
+ * @brief 提供 BLE 传感器上报案例的应用入口。
+ * @endif
+ *
+ * History: \n
+ * 2026-07-23, Create file. \n
  */
 
 #include "app_init.h"
@@ -16,6 +24,13 @@
 #define BLE_SENSOR_REPORT_TASK_PRIO 26
 #define BLE_SENSOR_REPORT_TASK_STACK_SIZE 0x2000
 
+/**
+ * @if Eng
+ * @brief Runs the selected sensor or data collector role.
+ * @else
+ * @brief 运行选中的传感器端或数据采集端角色。
+ * @endif
+ */
 static int ble_sensor_report_task(const char *arg)
 {
     (void)arg;
@@ -33,6 +48,13 @@ static int ble_sensor_report_task(const char *arg)
 #endif
 }
 
+/**
+ * @if Eng
+ * @brief Creates and starts the BLE sensor report task.
+ * @else
+ * @brief 创建并启动 BLE 传感器上报任务。
+ * @endif
+ */
 static void ble_sensor_report_entry(void)
 {
     osal_task *task_handle = NULL;

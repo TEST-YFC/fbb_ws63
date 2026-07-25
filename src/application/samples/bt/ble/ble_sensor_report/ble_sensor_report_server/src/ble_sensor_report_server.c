@@ -1,6 +1,14 @@
-/*
+/**
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026.
- * Description: BLE Hello GATT server.
+ *
+ * @if Eng
+ * @brief Implements the BLE sensor report GATT server and reporting loop.
+ * @else
+ * @brief 实现 BLE 传感器上报 GATT 服务端与上报循环。
+ * @endif
+ *
+ * History: \n
+ * 2026-07-23, Create file. \n
  */
 
 #include <stdbool.h>
@@ -26,6 +34,7 @@
 #define BLE_SENSOR_REPORT_DECIMAL_BASE 10
 #define BLE_SENSOR_REPORT_INTERVAL_PREFIX "interval="
 
+/* GATT server and reporting state. / GATT 服务端与上报状态。 */
 static uint8_t g_server_id;
 static uint16_t g_conn_id;
 static uint16_t g_service_handle;
@@ -45,6 +54,13 @@ static const uint8_t SENSOR_REPORT_INITIAL_VALUE[] = "sensor_pending";
 #define BLE_CCCD_VALUE_LEN 2
 #define BLE_CCCD_NOTIFY_ENABLED 1
 
+/**
+ * @if Eng
+ * @brief Describes the payload used to send one GATT response.
+ * @else
+ * @brief 描述发送一条 GATT 响应所需的数据。
+ * @endif
+ */
 typedef struct {
     uint16_t request_id;
     uint8_t status;
@@ -52,11 +68,25 @@ typedef struct {
     uint16_t value_len;
 } ble_sensor_report_response_t;
 
+/**
+ * @if Eng
+ * @brief Declares the internal helper used to send one notification value.
+ * @else
+ * @brief 声明用于发送通知值的内部辅助接口。
+ * @endif
+ */
 static errcode_t ble_sensor_report_send_value_notification(uint16_t handle,
                                                            const uint8_t *data,
                                                            uint16_t len,
                                                            const char *name);
 
+/**
+ * @if Eng
+ * @brief Parses and validates an interval command received from the collector.
+ * @else
+ * @brief 解析并校验数据采集端写入的采样周期命令。
+ * @endif
+ */
 static bool ble_sensor_report_parse_interval(const uint8_t *value, uint16_t length, uint32_t *interval_ms)
 {
     const char prefix[] = BLE_SENSOR_REPORT_INTERVAL_PREFIX;
@@ -83,6 +113,13 @@ static bool ble_sensor_report_parse_interval(const uint8_t *value, uint16_t leng
     return true;
 }
 
+/**
+ * @if Eng
+ * @brief Converts a 16-bit value to the SDK Bluetooth UUID representation.
+ * @else
+ * @brief 将 16 位数值转换为 SDK 蓝牙 UUID 表示形式。
+ * @endif
+ */
 static void ble_sensor_report_uuid16(uint16_t value, bt_uuid_t *uuid)
 {
     uuid->uuid_len = BLE_SENSOR_REPORT_UUID_LEN;
@@ -90,6 +127,13 @@ static void ble_sensor_report_uuid16(uint16_t value, bt_uuid_t *uuid)
     uuid->uuid[1] = (uint8_t)value;
 }
 
+/**
+ * @if Eng
+ * @brief Sends a GATT response for a read or write request.
+ * @else
+ * @brief 为 GATT 读写请求发送响应。
+ * @endif
+ */
 static errcode_t ble_sensor_report_send_response(uint8_t server_id,
                                                  uint16_t conn_id,
                                                  const ble_sensor_report_response_t *response_data)
@@ -103,6 +147,13 @@ static errcode_t ble_sensor_report_send_response(uint8_t server_id,
     return gatts_send_response(server_id, conn_id, &response);
 }
 
+/**
+ * @if Eng
+ * @brief Handles reads of the sensor control characteristic.
+ * @else
+ * @brief 处理传感器控制特征的读取请求。
+ * @endif
+ */
 static void ble_sensor_report_read_request_cb(uint8_t server_id,
                                               uint16_t conn_id,
                                               gatts_req_read_cb_t *request,
@@ -128,6 +179,13 @@ static void ble_sensor_report_read_request_cb(uint8_t server_id,
     }
 }
 
+/**
+ * @if Eng
+ * @brief Validates a CCCD write and updates the notification state.
+ * @else
+ * @brief 校验 CCCD 写请求并更新通知使能状态。
+ * @endif
+ */
 static void ble_sensor_report_handle_cccd_write(uint8_t server_id, uint16_t conn_id, gatts_req_write_cb_t *request)
 {
     uint16_t cccd_value = 0;
@@ -155,6 +213,13 @@ static void ble_sensor_report_handle_cccd_write(uint8_t server_id, uint16_t conn
     osal_printk("%s sensor CCCD %s\r\n", BLE_SENSOR_REPORT_SERVER_LOG, g_hello_notify_enabled ? "enabled" : "disabled");
 }
 
+/**
+ * @if Eng
+ * @brief Handles control characteristic and CCCD write requests.
+ * @else
+ * @brief 处理控制特征和 CCCD 的写请求。
+ * @endif
+ */
 static void ble_sensor_report_write_request_cb(uint8_t server_id,
                                                uint16_t conn_id,
                                                gatts_req_write_cb_t *request,
@@ -204,6 +269,13 @@ static void ble_sensor_report_write_request_cb(uint8_t server_id,
     }
 }
 
+/**
+ * @if Eng
+ * @brief Adds the readable and writable control characteristic.
+ * @else
+ * @brief 添加支持读写的控制特征。
+ * @endif
+ */
 static errcode_t ble_sensor_report_add_data_characteristic(void)
 {
     bt_uuid_t data_uuid = {0};
@@ -225,6 +297,13 @@ static errcode_t ble_sensor_report_add_data_characteristic(void)
     return ERRCODE_BT_SUCCESS;
 }
 
+/**
+ * @if Eng
+ * @brief Adds the sensor notification characteristic and its CCCD.
+ * @else
+ * @brief 添加传感器通知特征及其 CCCD。
+ * @endif
+ */
 static errcode_t ble_sensor_report_add_notify_characteristic(void)
 {
     bt_uuid_t notify_uuid = {0};
@@ -258,6 +337,13 @@ static errcode_t ble_sensor_report_add_notify_characteristic(void)
     return ERRCODE_BT_SUCCESS;
 }
 
+/**
+ * @if Eng
+ * @brief Registers and starts the sensor report GATT service.
+ * @else
+ * @brief 注册并启动传感器上报 GATT 服务。
+ * @endif
+ */
 static errcode_t ble_sensor_report_add_gatt_service(void)
 {
     bt_uuid_t app_uuid = {0};
@@ -287,6 +373,13 @@ static errcode_t ble_sensor_report_add_gatt_service(void)
     return gatts_start_service(g_server_id, g_service_handle);
 }
 
+/**
+ * @if Eng
+ * @brief Starts advertising after the GATT service becomes available.
+ * @else
+ * @brief 在 GATT 服务就绪后启动广播。
+ * @endif
+ */
 static void ble_sensor_report_service_start_cb(uint8_t server_id, uint16_t handle, errcode_t status)
 {
     if (server_id != g_server_id || handle != g_service_handle) {
@@ -303,6 +396,13 @@ static void ble_sensor_report_service_start_cb(uint8_t server_id, uint16_t handl
     }
 }
 
+/**
+ * @if Eng
+ * @brief Tracks connection state and restarts advertising after disconnection.
+ * @else
+ * @brief 跟踪连接状态并在断开后重新启动广播。
+ * @endif
+ */
 static void ble_sensor_report_conn_state_cb(uint16_t conn_id,
                                             bd_addr_t *addr,
                                             gap_ble_conn_state_t conn_state,
@@ -324,6 +424,13 @@ static void ble_sensor_report_conn_state_cb(uint16_t conn_id,
     }
 }
 
+/**
+ * @if Eng
+ * @brief Handles pairing completion and removes stale pairing information on failure.
+ * @else
+ * @brief 处理配对完成事件，并在失败时删除陈旧配对信息。
+ * @endif
+ */
 static void ble_sensor_report_pair_result_cb(uint16_t conn_id, const bd_addr_t *addr, errcode_t status)
 {
     osal_printk("%s pair complete, conn_id=0x%04x, status=0x%x\r\n", BLE_SENSOR_REPORT_SERVER_LOG, conn_id, status);
@@ -332,6 +439,13 @@ static void ble_sensor_report_pair_result_cb(uint16_t conn_id, const bd_addr_t *
     }
 }
 
+/**
+ * @if Eng
+ * @brief Configures security and creates the GATT service after BLE is enabled.
+ * @else
+ * @brief 在 BLE 使能后配置安全参数并创建 GATT 服务。
+ * @endif
+ */
 static void ble_sensor_report_enable_cb(errcode_t status)
 {
     gap_ble_sec_params_t security = {0};
@@ -366,6 +480,13 @@ static void ble_sensor_report_enable_cb(errcode_t status)
                 ret);
 }
 
+/**
+ * @if Eng
+ * @brief Re-enables BLE after clearing retained GATT state.
+ * @else
+ * @brief 清理保留的 GATT 状态后重新使能 BLE。
+ * @endif
+ */
 static void ble_sensor_report_disable_cb(errcode_t status)
 {
     errcode_t ret;
@@ -380,6 +501,13 @@ static void ble_sensor_report_disable_cb(errcode_t status)
     }
 }
 
+/**
+ * @if Eng
+ * @brief Registers GAP and GATT server callbacks used by this sample.
+ * @else
+ * @brief 注册本案例使用的 GAP 和 GATT 服务端回调。
+ * @endif
+ */
 static errcode_t ble_sensor_report_register_callbacks(void)
 {
     gap_ble_callbacks_t gap_callbacks = {0};
@@ -401,6 +529,13 @@ static errcode_t ble_sensor_report_register_callbacks(void)
     return gatts_register_callbacks(&gatt_callbacks);
 }
 
+/**
+ * @if Eng
+ * @brief Sends a notification using the specified characteristic handle.
+ * @else
+ * @brief 使用指定特征句柄发送通知。
+ * @endif
+ */
 static errcode_t ble_sensor_report_send_value_notification(uint16_t handle,
                                                            const uint8_t *data,
                                                            uint16_t len,
@@ -423,6 +558,13 @@ static errcode_t ble_sensor_report_send_value_notification(uint16_t handle,
     return ret;
 }
 
+/**
+ * @if Eng
+ * @brief Sends one sensor report notification to the connected collector.
+ * @else
+ * @brief 向已连接的数据采集端发送一条传感器通知。
+ * @endif
+ */
 errcode_t ble_sensor_report_server_send_notification(const uint8_t *data, uint16_t len)
 {
     if (!g_hello_notify_enabled) {
@@ -431,6 +573,13 @@ errcode_t ble_sensor_report_server_send_notification(const uint8_t *data, uint16
     return ble_sensor_report_send_value_notification(g_notify_handle, data, len, "notification");
 }
 
+/**
+ * @if Eng
+ * @brief Initializes the sensor, GATT server, and BLE stack.
+ * @else
+ * @brief 初始化传感器、GATT 服务端和 BLE 协议栈。
+ * @endif
+ */
 errcode_t ble_sensor_report_server_init(void)
 {
     errcode_t ret = aht20_bmp280_init();
@@ -453,6 +602,13 @@ errcode_t ble_sensor_report_server_init(void)
     return enable_ble();
 }
 
+/**
+ * @if Eng
+ * @brief Periodically samples the sensors and reports available data.
+ * @else
+ * @brief 周期采集传感器并上报可用数据。
+ * @endif
+ */
 void ble_sensor_report_server_report_loop(void)
 {
     aht20_bmp280_data_t sensor_data = {0};
