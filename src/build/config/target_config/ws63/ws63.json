@@ -125,7 +125,11 @@
 			"application/samples/peripheral",
 			"application/samples/bt/ble",
 			"application/samples/bt/sle",
-			"application/samples/bt/sle_chba"
+			"application/samples/wifi",
+			"application/samples/radar",
+			"application/samples/os/memory",
+			"application/samples/os/interrupt",
+			"application/samples/os/task"
 		]
 	},
 	"need_sdk": true,

@@ -198,6 +198,21 @@ class TestMainFlow(unittest.TestCase):
         gate.has_src_changes = False
         gate.global_combined = ''
 
+    def test_agent_facts_are_validated_before_diff_analysis(self):
+        calls = []
+        with patch.object(
+            gate, 'run_agent_facts_tests',
+            side_effect=lambda: calls.append('agent-facts')
+        ):
+            with patch.object(
+                gate, 'compare_with_remote_master',
+                side_effect=lambda: calls.append('diff') or None
+            ):
+                with self.assertRaises(SystemExit):
+                    gate.main()
+
+        self.assertEqual(calls, ['agent-facts', 'diff'])
+
     def test_only_src_calls_compile_directly(self):
         """仅src修改 → 读取ci/build_config.json编译SDK，不调extract_exact_match"""
         gate.has_src_changes = True

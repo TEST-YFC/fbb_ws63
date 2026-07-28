@@ -339,6 +339,28 @@ def run_ci_gate_tests() -> None:
     _ok("门禁测试用例全部通过")
 
 
+def run_agent_facts_tests() -> None:
+    """Validate the existing SDK facts consumed by agent tooling."""
+    test_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'test_agent_facts.py',
+    )
+    _info("Agent facts 测试脚本", test_path)
+
+    result = subprocess.run(
+        [sys.executable, test_path],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        _fail("Agent facts 校验未通过!")
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
+        sys.exit(result.returncode)
+    _ok("Agent facts 校验通过")
+
+
 def insert_content_before_line(file_path: str, target_line: str, content_to_insert: str) -> None:
     """在文件的 target_line 之前插入 content_to_insert；找不到则追加到末尾"""
     found_target_line = False
@@ -689,6 +711,10 @@ def main() -> None:
       3. 有 vendor/ 变更（不论是否有 src 变更）→ 匹配 build_config，逐个编译 sample
     """
     global global_combined
+
+    # -------- 阶段0: 校验 agent 消费的 SDK 事实 --------
+    _phase("阶段0: 校验 Agent facts")
+    run_agent_facts_tests()
 
     # -------- 阶段1: 分析变更 --------
     _phase("阶段1: 分析变更")
