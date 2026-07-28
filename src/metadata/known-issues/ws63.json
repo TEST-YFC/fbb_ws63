@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "device": "ws63",
+  "issues": [
+    {
+      "id": "windows-out-of-tree-command-line-limit",
+      "summary": "Windows out-of-tree builds can exceed the CreateProcess command-line limit when the SDK path is expanded through a junction or symbolic link.",
+      "applies_to": {
+        "host_os": [
+          "windows"
+        ],
+        "build_mode": [
+          "out-of-tree"
+        ]
+      },
+      "symptoms": [
+        "The compiler process cannot be created when a generated command line approaches 32 KB."
+      ],
+      "remediation": [
+        "Use the SDK path supplied through FBB_SDK_DIR and keep that path short.",
+        "Use the current SDK build utilities, which preserve the non-resolved SDK path for out-of-tree builds."
+      ],
+      "sources": [
+        "build/script/utils/build_utils.py"
+      ]
+    }
+  ]
+}

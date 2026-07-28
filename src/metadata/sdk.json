@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "id": "fbb_ws63",
+  "framework": "fbb",
+  "default_device": "ws63",
+  "requires": {
+    "hs_fbb_cli": ">=1.1.0",
+    "toolchains": [
+      {
+        "id": "hcc",
+        "version": "7.3.0-20240618"
+      }
+    ]
+  },
+  "devices": [
+    "ws63"
+  ],
+  "operations": [
+    "build",
+    "flash",
+    "monitor",
+    "debug"
+  ]
+}

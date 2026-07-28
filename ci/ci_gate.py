@@ -6,6 +6,7 @@
 """
 CI 门禁脚本, 根据变更来源决定编译范围:
 
+    所有变更                         → 先校验 SDK target metadata
     仅 vendor/ 下构建相关文件变更 → 逐一编译受影响的 sample
     仅 src/    下构建相关文件变更 → 全量编译 SDK
     两者同时变更                  → 逐一编译受影响的 sample
@@ -337,6 +338,28 @@ def run_ci_gate_tests() -> None:
             print(result.stderr)
         sys.exit(result.returncode)
     _ok("门禁测试用例全部通过")
+
+
+def run_target_metadata_tests() -> None:
+    """校验 SDK target metadata 与源码保持一致"""
+    test_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'test_target_metadata.py'
+    )
+    _info("Target metadata 测试脚本", test_path)
+
+    result = subprocess.run(
+        [sys.executable, test_path],
+        capture_output=True,
+        text=True
+    )
+    if result.returncode != 0:
+        _fail("Target metadata 校验未通过!")
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
+        sys.exit(result.returncode)
+    _ok("Target metadata 校验通过")
 
 
 def insert_content_before_line(file_path: str, target_line: str, content_to_insert: str) -> None:
@@ -689,6 +712,10 @@ def main() -> None:
       3. 有 vendor/ 变更（不论是否有 src 变更）→ 匹配 build_config，逐个编译 sample
     """
     global global_combined
+
+    # -------- 阶段0: 校验 SDK 事实元数据 --------
+    _phase("阶段0: 校验 Target metadata")
+    run_target_metadata_tests()
 
     # -------- 阶段1: 分析变更 --------
     _phase("阶段1: 分析变更")

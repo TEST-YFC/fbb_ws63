@@ -1,0 +1,276 @@
+{
+  "schema_version": "1.0",
+  "device": "ws63",
+  "samples": [
+    {
+      "id": "bt/ble/ble_hello/ble_hello_client",
+      "path": "application/samples/bt/ble/ble_hello/ble_hello_client",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/ble/ble_hello/ble_hello_server",
+      "path": "application/samples/bt/ble/ble_hello/ble_hello_server",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/ble/ble_hid_btn",
+      "path": "application/samples/bt/ble/ble_hid_btn",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/ble/ble_speed_client",
+      "path": "application/samples/bt/ble/ble_speed_client",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/ble/ble_speed_server",
+      "path": "application/samples/bt/ble/ble_speed_server",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/ble/ble_wifi_cfg_client",
+      "path": "application/samples/bt/ble/ble_wifi_cfg_client",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/ble/ble_wifi_cfg_server",
+      "path": "application/samples/bt/ble/ble_wifi_cfg_server",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_conn_param_tuning/sle_conn_param_tuning_client",
+      "path": "application/samples/bt/sle/sle_conn_param_tuning/sle_conn_param_tuning_client",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_conn_param_tuning/sle_conn_param_tuning_server",
+      "path": "application/samples/bt/sle/sle_conn_param_tuning/sle_conn_param_tuning_server",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_hello/sle_hello_client",
+      "path": "application/samples/bt/sle/sle_hello/sle_hello_client",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_hello/sle_hello_server",
+      "path": "application/samples/bt/sle/sle_hello/sle_hello_server",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_phy_mcs_switch/sle_phy_mcs_switch_client",
+      "path": "application/samples/bt/sle/sle_phy_mcs_switch/sle_phy_mcs_switch_client",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_phy_mcs_switch/sle_phy_mcs_switch_server",
+      "path": "application/samples/bt/sle/sle_phy_mcs_switch/sle_phy_mcs_switch_server",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_rssi_ranging/sle_rssi_ranging_client",
+      "path": "application/samples/bt/sle/sle_rssi_ranging/sle_rssi_ranging_client",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_rssi_ranging/sle_rssi_ranging_server",
+      "path": "application/samples/bt/sle/sle_rssi_ranging/sle_rssi_ranging_server",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_sensor_report/sle_sensor_report_client",
+      "path": "application/samples/bt/sle/sle_sensor_report/sle_sensor_report_client",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_sensor_report/sle_sensor_report_server",
+      "path": "application/samples/bt/sle/sle_sensor_report/sle_sensor_report_server",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_speed_client",
+      "path": "application/samples/bt/sle/sle_speed_client",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_speed_server",
+      "path": "application/samples/bt/sle/sle_speed_server",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_uart/sle_uart_client",
+      "path": "application/samples/bt/sle/sle_uart/sle_uart_client",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle/sle_uart/sle_uart_server",
+      "path": "application/samples/bt/sle/sle_uart/sle_uart_server",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "bt/sle_chba",
+      "path": "application/samples/bt/sle_chba",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "os/interrupt/osal_interrupt",
+      "path": "application/samples/os/interrupt/osal_interrupt",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "os/memory/osal_kmalloc",
+      "path": "application/samples/os/memory/osal_kmalloc",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "os/task/osal_task_concurrency",
+      "path": "application/samples/os/task/osal_task_concurrency",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/adc",
+      "path": "application/samples/peripheral/adc",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/blinky",
+      "path": "application/samples/peripheral/blinky",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/dma",
+      "path": "application/samples/peripheral/dma",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/helloworld",
+      "path": "application/samples/peripheral/helloworld",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/helloworld_oled",
+      "path": "application/samples/peripheral/helloworld_oled",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/i2c",
+      "path": "application/samples/peripheral/i2c",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/i2s_dma_lli",
+      "path": "application/samples/peripheral/i2s_dma_lli",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/pinctrl",
+      "path": "application/samples/peripheral/pinctrl",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/pwm",
+      "path": "application/samples/peripheral/pwm",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/sfc",
+      "path": "application/samples/peripheral/sfc",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/sfc_perf",
+      "path": "application/samples/peripheral/sfc_perf",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/spi",
+      "path": "application/samples/peripheral/spi",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/systick",
+      "path": "application/samples/peripheral/systick",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/tcxo",
+      "path": "application/samples/peripheral/tcxo",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/timer",
+      "path": "application/samples/peripheral/timer",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/uart",
+      "path": "application/samples/peripheral/uart",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "peripheral/watchdog",
+      "path": "application/samples/peripheral/watchdog",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "radar/slp_sample",
+      "path": "application/samples/radar/slp_sample",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "radar/slp_wireless_sample",
+      "path": "application/samples/radar/slp_wireless_sample",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "radar/softap_sample",
+      "path": "application/samples/radar/softap_sample",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "radar/sta_sample",
+      "path": "application/samples/radar/sta_sample",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "radar/wireless_sample",
+      "path": "application/samples/radar/wireless_sample",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "wifi/alilink_sample",
+      "path": "application/samples/wifi/alilink_sample",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "wifi/ble_wifi_cfg_sample",
+      "path": "application/samples/wifi/ble_wifi_cfg_sample",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "wifi/hilink_indie_upgrade",
+      "path": "application/samples/wifi/hilink_indie_upgrade",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "wifi/mqtt_sample",
+      "path": "application/samples/wifi/mqtt_sample",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "wifi/ohos_connect",
+      "path": "application/samples/wifi/ohos_connect",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "wifi/softap_sample",
+      "path": "application/samples/wifi/softap_sample",
+      "build_target": "ws63-liteos-app"
+    },
+    {
+      "id": "wifi/sta_sample",
+      "path": "application/samples/wifi/sta_sample",
+      "build_target": "ws63-liteos-app"
+    }
+  ]
+}

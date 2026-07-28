@@ -1,0 +1,89 @@
+{
+  "schema_version": "1.0",
+  "id": "ws63",
+  "vendor": "HiSilicon",
+  "family": "WS63",
+  "architecture": {
+    "isa": "riscv",
+    "xlen": 32,
+    "extensions": [
+      "i",
+      "m",
+      "f",
+      "c"
+    ],
+    "abi": "ilp32f"
+  },
+  "artifacts": {
+    "svd": "metadata/svd/ws63.svd",
+    "samples": "metadata/samples/ws63.json",
+    "known_issues": "metadata/known-issues/ws63.json"
+  },
+  "build": {
+    "default_target": "ws63-liteos-app",
+    "targets": [
+      {
+        "id": "ws63-liteos-app",
+        "os": "liteos",
+        "artifacts": {
+          "firmware": "output/ws63/fwpkg/ws63-liteos-app/ws63-liteos-app_all.fwpkg",
+          "elf": "output/ws63/acore/ws63-liteos-app/ws63-liteos-app.elf",
+          "map": "output/ws63/acore/ws63-liteos-app/ws63-liteos-app.map"
+        }
+      },
+      {
+        "id": "ws63-liteos-matter",
+        "os": "liteos"
+      },
+      {
+        "id": "ws63-flashboot",
+        "os": "non-os"
+      },
+      {
+        "id": "ws63-loaderboot",
+        "os": "non-os"
+      },
+      {
+        "id": "ws63-liteos-xts",
+        "os": "liteos"
+      },
+      {
+        "id": "ws63-liteos-spi-host",
+        "os": "liteos"
+      },
+      {
+        "id": "ws63-liteos-spi-device",
+        "os": "liteos"
+      }
+    ]
+  },
+  "capabilities": {
+    "build": {
+      "supported": true
+    },
+    "flash": {
+      "supported": true,
+      "protocols": [
+        "serial",
+        "swd"
+      ]
+    },
+    "monitor": {
+      "supported": true,
+      "transports": [
+        "serial"
+      ],
+      "default_baud": 115200
+    },
+    "debug": {
+      "supported": true,
+      "clients": [
+        "gdb"
+      ],
+      "servers": [
+        "jlink",
+        "openocd"
+      ]
+    }
+  }
+}

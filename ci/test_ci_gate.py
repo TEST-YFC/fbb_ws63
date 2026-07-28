@@ -7,7 +7,7 @@ ci_gate.py 测试用例
 """
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 import sys
 import os
 
@@ -201,12 +201,13 @@ class TestMainFlow(unittest.TestCase):
     def test_only_src_calls_compile_directly(self):
         """仅src修改 → 读取ci/build_config.json编译SDK，不调extract_exact_match"""
         gate.has_src_changes = True
-        with patch.object(gate, 'compare_with_remote_master', return_value=set()):
-            with patch.object(gate, '_load_src_build_info', return_value=[SRC_MOCK_ENTRY]):
-                with patch.object(gate, 'compile_sdk_and_save_log') as mock_compile:
-                    with patch.object(gate, 'extract_exact_match') as mock_extract:
-                        with patch.object(gate, 'process_build_info_files'):
-                            gate.main()
+        with patch.object(gate, 'run_target_metadata_tests'):
+            with patch.object(gate, 'compare_with_remote_master', return_value=set()):
+                with patch.object(gate, '_load_src_build_info', return_value=[SRC_MOCK_ENTRY]):
+                    with patch.object(gate, 'compile_sdk_and_save_log') as mock_compile:
+                        with patch.object(gate, 'extract_exact_match') as mock_extract:
+                            with patch.object(gate, 'process_build_info_files'):
+                                gate.main()
 
         mock_compile.assert_called_once_with('ws63-liteos-app')
         mock_extract.assert_not_called()
@@ -216,13 +217,14 @@ class TestMainFlow(unittest.TestCase):
         """仅vendor修改 → extract + prepare/compile/cleanup循环"""
         gate.has_src_changes = False
         matched = [MOCK_ENTRIES[0]]
-        with patch.object(gate, 'compare_with_remote_master', return_value={'some+folder'}):
-            with patch.object(gate, 'process_build_info_files', return_value=MOCK_ENTRIES):
-                with patch.object(gate, 'extract_exact_match', return_value=matched) as mock_extract:
-                    with patch.object(gate, 'sample_build_prepare_one') as mock_prepare:
-                        with patch.object(gate, 'compile_sdk_and_save_log') as mock_compile:
-                            with patch.object(gate, 'sample_build_cleanup_one') as mock_cleanup:
-                                gate.main()
+        with patch.object(gate, 'run_target_metadata_tests'):
+            with patch.object(gate, 'compare_with_remote_master', return_value={'some+folder'}):
+                with patch.object(gate, 'process_build_info_files', return_value=MOCK_ENTRIES):
+                    with patch.object(gate, 'extract_exact_match', return_value=matched) as mock_extract:
+                        with patch.object(gate, 'sample_build_prepare_one') as mock_prepare:
+                            with patch.object(gate, 'compile_sdk_and_save_log') as mock_compile:
+                                with patch.object(gate, 'sample_build_cleanup_one') as mock_cleanup:
+                                    gate.main()
 
         mock_extract.assert_called_once()
         mock_prepare.assert_called_once_with(matched[0])
@@ -233,18 +235,39 @@ class TestMainFlow(unittest.TestCase):
         """src+vendor同时修改 → 走vendor路径（check_list非空）"""
         gate.has_src_changes = True
         matched = [MOCK_ENTRIES[0], MOCK_ENTRIES[1]]
-        with patch.object(gate, 'compare_with_remote_master',
-                          return_value={'HiHope_NearLink_DK_WS63E_V03+demo+led'}):
-            with patch.object(gate, 'process_build_info_files', return_value=MOCK_ENTRIES):
-                with patch.object(gate, 'extract_exact_match', return_value=matched):
-                    with patch.object(gate, 'sample_build_prepare_one') as mock_prepare:
-                        with patch.object(gate, 'compile_sdk_and_save_log') as mock_compile:
-                            with patch.object(gate, 'sample_build_cleanup_one') as mock_cleanup:
-                                gate.main()
+        with patch.object(gate, 'run_target_metadata_tests'):
+            with patch.object(gate, 'compare_with_remote_master',
+                              return_value={'HiHope_NearLink_DK_WS63E_V03+demo+led'}):
+                with patch.object(gate, 'process_build_info_files', return_value=MOCK_ENTRIES):
+                    with patch.object(gate, 'extract_exact_match', return_value=matched):
+                        with patch.object(gate, 'sample_build_prepare_one') as mock_prepare:
+                            with patch.object(gate, 'compile_sdk_and_save_log') as mock_compile:
+                                with patch.object(gate, 'sample_build_cleanup_one') as mock_cleanup:
+                                    gate.main()
 
         self.assertEqual(mock_prepare.call_count, 2)
         self.assertEqual(mock_compile.call_count, 2)
         self.assertEqual(mock_cleanup.call_count, 2)
+
+    def test_main_validates_target_metadata_before_diff(self):
+        with patch.object(gate, 'run_target_metadata_tests') as metadata:
+            with patch.object(
+                gate, 'compare_with_remote_master', return_value=None
+            ):
+                with self.assertRaises(SystemExit):
+                    gate.main()
+
+        metadata.assert_called_once_with()
+
+
+class TestTargetMetadataGate(unittest.TestCase):
+    def test_target_metadata_failure_blocks_ci(self):
+        result = Mock(returncode=1, stdout="failed", stderr="metadata drift")
+        with patch.object(gate.subprocess, 'run', return_value=result):
+            with self.assertRaises(SystemExit) as error:
+                gate.run_target_metadata_tests()
+
+        self.assertEqual(error.exception.code, 1)
 
 
 class TestBuildDefsHelpers(unittest.TestCase):

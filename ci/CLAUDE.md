@@ -14,6 +14,9 @@
 
 `main()` 根据返回决定具体行为:
 
+0. **所有场景** — 先运行 `python ci/test_target_metadata.py`, 校验 SDK
+   Profile、Device Profile、sample 索引、已知问题和 SVD 与源码一致。
+
 1. **返回 None** — 无构建相关文件变更 (仅变更了文档/图片/git配置等黑名单文件), 直接跳过。
 
 2. **返回空 set 且 has_src_changes == True** — 仅 src/ 变更 (或 ci_gate.py 自身变更), 直接全量编译整个 SDK:
@@ -29,7 +32,8 @@
 
 ## ci_gate.py 自身变更的特殊处理
 
-当 `ci/ci_gate.py` 被修改时, 先运行自身测试用例再编译:
+当 `ci/ci_gate.py` 被修改时, 在 target metadata 校验之外, 还会先运行
+自身测试用例再编译:
 
 ```
 python ci/test_ci_gate.py
@@ -46,7 +50,7 @@ python ci/test_ci_gate.py
 
 ## 运行方式
 
-- 本地测试: `python ci/test_ci_gate.py`
+- 本地测试: `python3 ci/test_target_metadata.py && python3 ci/test_ci_gate.py`
 - CI 执行:   `python ci/ci_gate.py`
 
 ## 数据流
