@@ -16,6 +16,22 @@
 #   project(${CHIP}_CFBB C ASM CXX)
 #   cfbb_build_epilogue()
 
+# SDK modules use this generic hook to contribute an optional target to the
+# current image. The module remains responsible for activation, validation,
+# sources, headers and platform dependencies.
+function(fbb_register_image_extension target_name)
+    if(NOT TARGET "${target_name}")
+        message(FATAL_ERROR
+            "Image extension target does not exist: ${target_name}")
+    endif()
+    get_property(_fbb_image_extensions GLOBAL
+        PROPERTY FBB_IMAGE_EXTENSION_TARGETS)
+    list(APPEND _fbb_image_extensions "${target_name}")
+    list(REMOVE_DUPLICATES _fbb_image_extensions)
+    set_property(GLOBAL PROPERTY FBB_IMAGE_EXTENSION_TARGETS
+        "${_fbb_image_extensions}")
+endfunction()
+
 # --------------------------------------------------------------------
 # Prologue - runs before project(); sets up compile env, platform name,
 # kconfig helpers, and includes the foundational cmake modules.
@@ -123,16 +139,30 @@ macro(cfbb_build_epilogue)
         endif()
     endforeach()
 
-    # Out-of-tree: the user's project lives outside the SDK tree. Load its
-    # main/ component and any components/ subdirs, and register the main
-    # component name in RAM_COMPONENT so build_component() actually emits it.
+    if("$ENV{FBB_PROJECT_TARGET}" STREQUAL "" OR "$ENV{FBB_PROJECT_TARGET}" STREQUAL "${BIN_NAME}")
+    if(NOT "$ENV{FBB_COMPONENTS_CMAKE}" STREQUAL "")
+        if(NOT EXISTS "$ENV{FBB_COMPONENTS_CMAKE}")
+            message(FATAL_ERROR
+                "FBB_COMPONENTS_CMAKE was provided but does not exist: "
+                "$ENV{FBB_COMPONENTS_CMAKE}")
+        endif()
+        file(TO_CMAKE_PATH "$ENV{FBB_PROJECT_DIR}" FBB_PROJECT_DIR)
+        include("$ENV{FBB_COMPONENTS_CMAKE}")
+    endif()
+
+    # Out-of-tree projects additionally register their own main target. The
+    # directory scan remains a v1-only fallback when no exact plan exists.
     if(FBB_OUT_OF_TREE)
+        if("$ENV{FBB_COMPONENTS_CMAKE}" STREQUAL "")
+            set(_FBB_LEGACY_COMPONENT_SCAN TRUE)
+        endif()
         if(EXISTS "${CMAKE_SOURCE_DIR}/main/CMakeLists.txt")
             list(APPEND RAM_COMPONENT "${FBB_PROJECT_COMPONENT_NAME}")
             add_subdirectory("${CMAKE_SOURCE_DIR}/main"
                              "${CMAKE_BINARY_DIR}/_fbb_project_main")
         endif()
-        if(EXISTS "${CMAKE_SOURCE_DIR}/components")
+        if(_FBB_LEGACY_COMPONENT_SCAN)
+            # v1 compatibility only: legacy projects had no Lockfile plan.
             file(GLOB _proj_comps RELATIVE "${CMAKE_SOURCE_DIR}/components"
                  "${CMAKE_SOURCE_DIR}/components/*")
             foreach(_pc ${_proj_comps})
@@ -143,9 +173,22 @@ macro(cfbb_build_epilogue)
                 endif()
             endforeach()
         endif()
-        # Refresh the linker's notion of all components after appending project's.
-        set(TARGET_COMPONENT "${RAM_COMPONENT}" "${ROM_COMPONENT}")
     endif()
+    if(FBB_EXTERNAL_COMPONENT_TARGETS)
+        # Keep external static libraries after the target that references them;
+        # their public interfaces were registered from the exact plan.
+        target_link_libraries(
+            ${TARGET_NAME} PRIVATE ${FBB_EXTERNAL_COMPONENT_TARGETS})
+    endif()
+    get_property(_fbb_image_extensions GLOBAL
+        PROPERTY FBB_IMAGE_EXTENSION_TARGETS)
+    if(_fbb_image_extensions)
+        target_link_libraries(
+            ${TARGET_NAME} PRIVATE ${_fbb_image_extensions})
+    endif()
+    endif() # FBB project image
+    # Refresh the linker's notion of all components after project additions.
+    set(TARGET_COMPONENT "${RAM_COMPONENT}" "${ROM_COMPONENT}")
 
     include("${CMAKE_DIR}/open_source.cmake")
     include("${CMAKE_DIR}/middleware/hwsec_c.cmake")
