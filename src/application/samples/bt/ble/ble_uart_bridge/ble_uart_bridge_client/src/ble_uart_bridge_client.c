@@ -71,6 +71,7 @@ static bool g_write_started;
 static bool g_hello_cccd_started;
 static bool g_stack_reset_done;
 static bool g_cache_sync_write_started;
+static bool g_uart_write_pending;
 
 /**
  * @if Eng
@@ -110,6 +111,7 @@ static void ble_uart_bridge_reset_discovery_state(void)
     g_write_started = false;
     g_hello_cccd_started = false;
     g_cache_sync_write_started = false;
+    g_uart_write_pending = false;
 }
 
 /**
@@ -285,6 +287,11 @@ static void ble_uart_bridge_conn_state_cb(uint16_t conn_id,
             osal_printk("%s pairing requested, ret=0x%x\r\n", BLE_UART_BRIDGE_CLIENT_LOG, ret);
         }
     } else if (conn_state == GAP_BLE_STATE_DISCONNECTED) {
+        if (g_uart_write_pending) {
+            /* Preserve queued UART bytes when the confirmed write loses its connection. / 确认写入断连时保留队列数据。 */
+            g_uart_write_pending = false;
+            ble_uart_bridge_ble_send_complete(ERRCODE_BT_FAIL);
+        }
         if (g_pairing_started) {
             /* A link lost during pairing may leave an unusable bond; remove it before retrying. / 配对中断可能残留无效绑定。 */
             osal_printk("%s remove stale pair after pairing disconnect, ret=0x%x\r\n", BLE_UART_BRIDGE_CLIENT_LOG,
@@ -634,7 +641,6 @@ static void ble_uart_bridge_cache_sync_write_complete(gatt_status_t status)
 static void ble_uart_bridge_write_cb(uint8_t client_id, uint16_t conn_id, uint16_t handle, gatt_status_t status)
 {
     (void)client_id;
-    (void)conn_id;
     if (handle == g_notify_cccd_handle) {
         /* CCCD writes and data writes share one completion callback; dispatch by handle. / CCCD 与数据写共用回调，按句柄分流。 */
         osal_printk("%s hello CCCD write %s\r\n", BLE_UART_BRIDGE_CLIENT_LOG,
@@ -642,6 +648,13 @@ static void ble_uart_bridge_write_cb(uint8_t client_id, uint16_t conn_id, uint16
     } else if (handle == g_data_handle) {
         if (g_cache_sync_write_started) {
             ble_uart_bridge_cache_sync_write_complete(status);
+            return;
+        }
+        if (g_uart_write_pending && conn_id == g_conn_id) {
+            /* Release the next queued fragment only after the peer confirms this write. / 对端确认当前写入后才释放下一段队列数据。 */
+            g_uart_write_pending = false;
+            ble_uart_bridge_ble_send_complete(status == GATT_STATUS_SUCCESS ?
+                                              ERRCODE_BT_SUCCESS : ERRCODE_BT_FAIL);
             return;
         }
         osal_printk("%s write cfm: %s\r\n", BLE_UART_BRIDGE_CLIENT_LOG,
@@ -789,9 +802,9 @@ errcode_t ble_uart_bridge_client_init(void)
 
 /**
  * @if Eng
- * @brief Sends one queued UART fragment through a GATT write command.
+ * @brief Sends one queued UART fragment through a confirmed GATT write request.
  * @else
- * @brief 通过 GATT 写命令发送一段已排队的 UART 数据。
+ * @brief 通过有确认的 GATT 写请求发送一段已排队的 UART 数据。
  * @endif
  */
 errcode_t ble_uart_bridge_client_send_write(const uint8_t *data, uint16_t length)
@@ -799,18 +812,22 @@ errcode_t ble_uart_bridge_client_send_write(const uint8_t *data, uint16_t length
     gattc_handle_value_t write_value = {0};
     errcode_t ret;
 
-    if (!g_connected || g_data_handle == 0 || data == NULL || length == 0 ||
+    if (!g_connected || g_data_handle == 0 || g_uart_write_pending || data == NULL || length == 0 ||
         length > BLE_UART_BRIDGE_BLE_PAYLOAD_MAX_LEN) {
         return ERRCODE_BT_FAIL;
     }
-    /* Write Command avoids one ATT response per UART fragment and improves streaming throughput. / 写命令免去逐包 ATT 响应。 */
+    /*
+     * Mark the request before submission because the SDK may report completion immediately.
+     * 提交前先标记请求，兼容 SDK 立即上报完成事件的情况。
+     */
+    g_uart_write_pending = true;
     write_value.handle = g_data_handle;
     write_value.data = (uint8_t *)data;
     write_value.data_len = length;
-    ret = gattc_write_cmd(g_client_id, g_conn_id, &write_value);
-    if (ret == ERRCODE_BT_SUCCESS) {
-        /* Write Command has no remote completion event; local acceptance releases the next fragment. / 写命令无远端完成事件。 */
-        ble_uart_bridge_ble_send_complete(ERRCODE_BT_SUCCESS);
+    ret = gattc_write_req(g_client_id, g_conn_id, &write_value);
+    if (ret != ERRCODE_BT_SUCCESS) {
+        /* A rejected request has no completion callback; let the worker retry the same bytes. / 请求被拒绝时不会回调，保留原数据重试。 */
+        g_uart_write_pending = false;
     }
     return ret;
 }

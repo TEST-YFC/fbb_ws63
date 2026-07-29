@@ -28,9 +28,9 @@ errcode_t ble_uart_bridge_client_init(void);
 
 /**
  * @if Eng
- * @brief Sends one queued UART fragment through a GATT write command.
+ * @brief Sends one queued UART fragment through a confirmed GATT write request.
  * @else
- * @brief 通过 GATT 写命令发送一段已排队的 UART 数据。
+ * @brief 通过有确认的 GATT 写请求发送一段已排队的 UART 数据。
  * @endif
  */
 errcode_t ble_uart_bridge_client_send_write(const uint8_t *data, uint16_t length);

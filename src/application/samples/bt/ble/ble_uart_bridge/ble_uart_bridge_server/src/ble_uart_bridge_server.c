@@ -45,6 +45,8 @@ static const bd_addr_t g_ble_uart_bridge_addr = {
 };
 static uint8_t g_property_value[BLE_UART_BRIDGE_PROPERTY_MAX_LEN] = "uart_ready";
 static uint16_t g_property_value_len = sizeof("uart_ready") - 1;
+/* The SDK response path requires a nonzero copy span even when an ATT Write Response has no value. / SDK 写响应无值时仍要求非零复制长度。 */
+static uint8_t g_empty_response_value;
 static const uint8_t DEFAULT_VALUE[] = "uart_ready";
 static const uint8_t HELLO_MESSAGE[] = "uart_from_peripheral";
 #define BLE_UUID_HIGH_BYTE_SHIFT 8
@@ -110,6 +112,11 @@ static errcode_t ble_uart_bridge_send_response(uint8_t server_id,
     response.offset = 0;
     response.value = response_data->value;
     response.value_len = response_data->value_len;
+    if (response.value_len == 0) {
+        /* The SDK copies before request dispatch and rejects zero-sized memcpy_s. / SDK 分发请求前先复制，拒绝零长度 memcpy_s。 */
+        response.value = &g_empty_response_value;
+        response.value_len = sizeof(g_empty_response_value);
+    }
     return gatts_send_response(server_id, conn_id, &response);
 }
 
@@ -204,7 +211,14 @@ static void ble_uart_bridge_write_request_cb(uint8_t server_id,
                                              errcode_t status)
 {
     uint8_t response_status = GATT_STATUS_SUCCESS;
-    (void)status;
+    errcode_t response_ret;
+
+    if (status != ERRCODE_BT_SUCCESS) {
+        /* Preserve the ATT request metadata when the stack reports a callback error. / 协议栈回调异常时保留 ATT 请求元数据。 */
+        osal_printk("%s write callback failed: ret=0x%x, request_id=%u, need_rsp=%u, authorize=%u, prepare=%u\r\n",
+                    BLE_UART_BRIDGE_SERVER_LOG, status, request->request_id, request->need_rsp,
+                    request->need_authorize, request->is_prep);
+    }
 
     osal_printk("%s write request received, handle=0x%04x, len=%u\r\n", BLE_UART_BRIDGE_SERVER_LOG, request->handle,
                 request->length);
@@ -233,7 +247,13 @@ static void ble_uart_bridge_write_request_cb(uint8_t server_id,
     if (request->need_rsp) {
         /* Write Commands skip this response, while Write Requests receive the mapped status. / 写命令无响应，写请求返回映射状态。 */
         ble_uart_bridge_response_t response = {request->request_id, response_status, NULL, 0};
-        (void)ble_uart_bridge_send_response(server_id, conn_id, &response);
+        response_ret = ble_uart_bridge_send_response(server_id, conn_id, &response);
+        if (response_ret != ERRCODE_BT_SUCCESS) {
+            /* A failed ATT response stalls the client's single-flight Write Request queue. / ATT 应答失败会阻塞客户端的单请求发送队列。 */
+            osal_printk("%s write response failed: ret=0x%x, request_id=%u, offset=%u, authorize=%u, prepare=%u\r\n",
+                        BLE_UART_BRIDGE_SERVER_LOG, response_ret, request->request_id, request->offset,
+                        request->need_authorize, request->is_prep);
+        }
     }
     if (response_status == GATT_STATUS_SUCCESS) {
         /* Mirror the cached-value state into future advertisements for reconnect recovery. / 将缓存状态同步到后续广播以支持重连恢复。 */

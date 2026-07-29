@@ -21,18 +21,18 @@
 
 /**
  * @if Eng
- * @brief Queues data received from BLE for deferred UART transmission.
+ * @brief Queues one BLE payload for bounded task-context UART1 transmission.
  * @else
- * @brief 将 BLE 接收数据放入队列，等待后续发送到 UART。
+ * @brief 通过公共透传接口将一包 BLE 数据加入有界队列，等待任务上下文写入 UART1。
  * @endif
  */
 errcode_t ble_uart_bridge_uart_enqueue(const uint8_t *data, uint16_t length);
 
 /**
  * @if Eng
- * @brief Reports completion of the current UART-to-BLE fragment.
+ * @brief Reports completion of the current queued UART-to-BLE fragment.
  * @else
- * @brief 上报当前 UART 到 BLE 数据分片的完成结果。
+ * @brief 上报当前已排队 UART 到 BLE 数据分片的完成结果。
  * @endif
  */
 void ble_uart_bridge_ble_send_complete(errcode_t status);

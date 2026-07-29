@@ -2,9 +2,9 @@
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2026.
  *
  * @if Eng
- * @brief Implements the BLE UART bridge entry, buffering, and transfer worker.
+ * @brief Implements the BLE UART bridge entry, bounded buffering, and transfer worker.
  * @else
- * @brief 实现 BLE UART 透传入口、缓冲队列和传输任务。
+ * @brief 实现 BLE UART 透传入口、有界缓冲和传输任务。
  * @endif
  *
  * History: \n
@@ -36,268 +36,334 @@
 #define BLE_UART_BRIDGE_UART_RX_MODE PIN_MODE_1
 #define BLE_UART_BRIDGE_UART_BAUDRATE 115200
 
-/* Queue capacity, transfer granularity, and scheduling interval. / 队列容量、传输粒度与调度周期。 */
-#define BLE_UART_BRIDGE_UART_RING_SIZE 4096
+/*
+ * Each 1024-byte ring keeps one slot empty, so each direction can queue at most 1023 bytes.
+ * 每个 1024 字节环形队列固定保留一个空槽，因此每个方向最多排队 1023 字节。
+ */
 #define BLE_UART_BRIDGE_UART_DRIVER_BUFFER_SIZE BLE_UART_BRIDGE_BLE_PAYLOAD_MAX_LEN
-#define BLE_UART_BRIDGE_UART_TX_CHUNK_SIZE 32
-#define BLE_UART_BRIDGE_WORKER_DELAY_MS 5
-#define BLE_UART_BRIDGE_WORKER_ACTIVE_DELAY_MS 10
+#define BLE_UART_BRIDGE_UART_QUEUE_STORAGE_SIZE 1024U
+#define BLE_UART_BRIDGE_UART_QUEUE_CAPACITY (BLE_UART_BRIDGE_UART_QUEUE_STORAGE_SIZE - 1U)
+#define BLE_UART_BRIDGE_BLE_RETRY_DELAY_MS 20
+#define BLE_UART_BRIDGE_UART_RETRY_DELAY_MS 5
 
-/* UART driver buffers, software rings, and transfer state. / UART 驱动缓冲、软件环形队列与传输状态。 */
+/* UART driver storage, two bounded queues, and cross-context state. / UART 驱动存储、双向有界队列及跨上下文状态。 */
 static uint8_t g_uart_driver_buffer[BLE_UART_BRIDGE_UART_DRIVER_BUFFER_SIZE];
-static uint8_t g_uart_rx_ring_buffer[BLE_UART_BRIDGE_UART_RING_SIZE];
-static volatile uint16_t g_uart_rx_ring_head;
-static volatile uint16_t g_uart_rx_ring_tail;
+static uint8_t g_uart_rx_queue[BLE_UART_BRIDGE_UART_QUEUE_STORAGE_SIZE];
+static volatile uint16_t g_uart_rx_queue_head;
+static volatile uint16_t g_uart_rx_queue_tail;
+static volatile uint32_t g_uart_rx_dropped_frames;
 static volatile uint32_t g_uart_rx_dropped_bytes;
-static uint8_t g_uart_tx_ring_buffer[BLE_UART_BRIDGE_UART_RING_SIZE];
-static volatile uint16_t g_uart_tx_ring_head;
-static volatile uint16_t g_uart_tx_ring_tail;
+static uint8_t g_uart_tx_queue[BLE_UART_BRIDGE_UART_QUEUE_STORAGE_SIZE];
+static uint8_t g_uart_tx_staging_buffer[BLE_UART_BRIDGE_BLE_PAYLOAD_MAX_LEN];
+static volatile uint16_t g_uart_tx_queue_head;
+static volatile uint16_t g_uart_tx_queue_tail;
+static volatile uint32_t g_uart_tx_dropped_frames;
 static volatile uint32_t g_uart_tx_dropped_bytes;
-static uint8_t g_uart_tx_staging_buffer[BLE_UART_BRIDGE_UART_TX_CHUNK_SIZE];
 static volatile bool g_ble_send_pending;
-static volatile bool g_ble_send_completed;
-static volatile errcode_t g_ble_send_status;
-static uint16_t g_ble_send_pending_length;
+static volatile bool g_ble_retry_required;
+static volatile uint16_t g_ble_send_pending_length;
+static osal_semaphore g_worker_sem;
+static volatile bool g_worker_event_pending;
+static volatile bool g_worker_sem_ready;
 
 /**
  * @if Eng
- * @brief Returns the number of bytes currently stored in a ring buffer.
+ * @brief Returns the number of bytes currently stored in either UART bridge queue.
+ * @param [in] head Queue producer index.
+ * @param [in] tail Queue consumer index.
+ * @return Number of queued bytes.
  * @else
- * @brief 返回环形缓冲区中当前保存的字节数。
+ * @brief 返回任一 UART 透传队列中当前保存的字节数。
+ * @param [in] head 队列生产者索引。
+ * @param [in] tail 队列消费者索引。
+ * @return 已排队字节数。
  * @endif
  */
-static uint16_t ble_uart_bridge_ring_count(uint16_t head, uint16_t tail)
+static uint16_t ble_uart_bridge_uart_queue_count(uint16_t head, uint16_t tail)
 {
-    /* Head and tail wrap independently, so account for the wrapped interval. / 头尾指针独立回绕，需计算跨界区间。 */
-    return (head >= tail) ? (uint16_t)(head - tail) :
-                            (uint16_t)(BLE_UART_BRIDGE_UART_RING_SIZE - tail + head);
+    if (head >= tail) {
+        return (uint16_t)(head - tail);
+    }
+    return (uint16_t)(BLE_UART_BRIDGE_UART_QUEUE_STORAGE_SIZE - tail + head);
 }
 
 /**
  * @if Eng
- * @brief Copies queued bytes without advancing the ring-buffer tail.
+ * @brief Advances a UART bridge queue index inside the fixed-size storage.
+ * @param [in] index Current queue index.
+ * @param [in] length Number of bytes to advance.
+ * @return Wrapped queue index.
  * @else
- * @brief 复制队列中的字节，但不移动环形缓冲区尾指针。
+ * @brief 在固定大小存储区内移动 UART 透传队列索引。
+ * @param [in] index 当前队列索引。
+ * @param [in] length 需要移动的字节数。
+ * @return 回绕后的队列索引。
  * @endif
  */
-static uint16_t ble_uart_bridge_ring_peek(const uint8_t *ring,
-                                          uint16_t head,
-                                          uint16_t tail,
-                                          uint8_t *data,
-                                          uint16_t capacity)
+static uint16_t ble_uart_bridge_uart_queue_advance(uint16_t index, uint16_t length)
 {
-    uint16_t length = 0;
-    uint16_t index = tail;
+    return (uint16_t)((index + length) % BLE_UART_BRIDGE_UART_QUEUE_STORAGE_SIZE);
+}
 
-    /* Peek leaves tail unchanged; the caller consumes bytes only after I/O succeeds. / 预读不移动尾指针，I/O 成功后再消费。 */
-    while (length < capacity && index != head) {
-        data[length++] = ring[index];
-        index = (uint16_t)((index + 1) % BLE_UART_BRIDGE_UART_RING_SIZE);
+/**
+ * @if Eng
+ * @brief Wakes the bridge worker once without accumulating redundant semaphore tokens.
+ * @else
+ * @brief 唤醒一次透传任务，并避免累积无意义的信号量计数。
+ * @endif
+ */
+static void ble_uart_bridge_worker_wake(void)
+{
+    if (!g_worker_sem_ready || g_worker_event_pending) {
+        return;
+    }
+    g_worker_event_pending = true;
+    osal_sem_up(&g_worker_sem);
+}
+
+/**
+ * @if Eng
+ * @brief Copies queued UART bytes without consuming them before BLE completion.
+ * @param [out] data Destination buffer.
+ * @param [in] capacity Destination capacity in bytes.
+ * @return Number of copied bytes.
+ * @else
+ * @brief 在 BLE 完成前预读 UART 队列数据，不提前消费。
+ * @param [out] data 目标缓冲区。
+ * @param [in] capacity 目标缓冲区容量，单位为字节。
+ * @return 已复制字节数。
+ * @endif
+ */
+static uint16_t ble_uart_bridge_uart_queue_peek(uint8_t *data, uint16_t capacity)
+{
+    uint16_t head = g_uart_rx_queue_head;
+    uint16_t index = g_uart_rx_queue_tail;
+    uint16_t length = 0;
+
+    while (index != head && length < capacity) {
+        data[length++] = g_uart_rx_queue[index];
+        index = ble_uart_bridge_uart_queue_advance(index, 1);
     }
     return length;
 }
 
 /**
  * @if Eng
- * @brief Advances a ring-buffer tail after a transfer completes successfully.
+ * @brief Reports both bounded queue overflow counters from task context.
  * @else
- * @brief 在传输成功完成后移动环形缓冲区尾指针。
+ * @brief 在任务上下文中上报双向有界队列的溢出统计。
  * @endif
  */
-static uint16_t ble_uart_bridge_ring_advance(uint16_t tail, uint16_t length)
+static void ble_uart_bridge_report_uart_overflow(void)
 {
-    /* The modulo operation keeps the consumer index inside the fixed-size ring. / 取模保证消费者索引始终位于环形队列内。 */
-    return (uint16_t)((tail + length) % BLE_UART_BRIDGE_UART_RING_SIZE);
+    static uint32_t reported_rx_frames;
+    static uint32_t reported_rx_bytes;
+    static uint32_t reported_tx_frames;
+    static uint32_t reported_tx_bytes;
+    uint32_t dropped_rx_frames = g_uart_rx_dropped_frames;
+    uint32_t dropped_rx_bytes = g_uart_rx_dropped_bytes;
+    uint32_t dropped_tx_frames = g_uart_tx_dropped_frames;
+    uint32_t dropped_tx_bytes = g_uart_tx_dropped_bytes;
+
+    if (dropped_rx_frames != reported_rx_frames || dropped_rx_bytes != reported_rx_bytes) {
+        reported_rx_frames = dropped_rx_frames;
+        reported_rx_bytes = dropped_rx_bytes;
+        osal_printk("[ble uart bridge] UART RX queue overflow: frames=%u, bytes=%u, capacity=%u\r\n",
+                    dropped_rx_frames, dropped_rx_bytes, BLE_UART_BRIDGE_UART_QUEUE_CAPACITY);
+    }
+    if (dropped_tx_frames != reported_tx_frames || dropped_tx_bytes != reported_tx_bytes) {
+        reported_tx_frames = dropped_tx_frames;
+        reported_tx_bytes = dropped_tx_bytes;
+        osal_printk("[ble uart bridge] UART TX queue overflow: frames=%u, bytes=%u, capacity=%u\r\n",
+                    dropped_tx_frames, dropped_tx_bytes, BLE_UART_BRIDGE_UART_QUEUE_CAPACITY);
+    }
 }
 
 /**
  * @if Eng
- * @brief Queues bytes received by the UART interrupt without blocking.
+ * @brief Queues one complete UART RX callback fragment for the bridge worker.
+ * @param [in] buffer UART driver receive buffer.
+ * @param [in] length Number of received bytes.
+ * @param [in] error Whether the UART driver reported an error.
  * @else
- * @brief 在 UART 中断回调中以非阻塞方式缓存接收字节。
+ * @brief 将一段完整 UART 接收回调数据加入队列，等待透传任务处理。
+ * @param [in] buffer UART 驱动接收缓冲区。
+ * @param [in] length 接收字节数。
+ * @param [in] error UART 驱动是否上报错误。
  * @endif
  */
 static void ble_uart_bridge_uart_rx_cb(const void *buffer, uint16_t length, bool error)
 {
     const uint8_t *source = (const uint8_t *)buffer;
-    uint16_t head = g_uart_rx_ring_head;
+    uint16_t free_length;
+    uint16_t head;
     uint16_t index;
 
     if (error || source == NULL || length == 0) {
         return;
     }
 
-    /*
-     * This is a single-producer/single-consumer ring: the ISR publishes head only after copying data,
-     * while the worker task exclusively advances tail. / 这是单生产者单消费者队列：中断复制数据后才发布头指针，
-     * 工作任务独占更新尾指针。
-     */
+    head = g_uart_rx_queue_head;
+    free_length = (uint16_t)(BLE_UART_BRIDGE_UART_QUEUE_CAPACITY -
+                             ble_uart_bridge_uart_queue_count(head, g_uart_rx_queue_tail));
+    /* Reject the whole callback fragment when the bounded queue cannot preserve it. / 空间不足时整段丢弃，避免破坏字节顺序。 */
+    if (length > free_length) {
+        g_uart_rx_dropped_frames++;
+        g_uart_rx_dropped_bytes += length;
+        ble_uart_bridge_worker_wake();
+        return;
+    }
+
     for (index = 0; index < length; index++) {
-        uint16_t next_head = (uint16_t)((head + 1) % BLE_UART_BRIDGE_UART_RING_SIZE);
-        /* One slot remains empty to distinguish a full ring from an empty ring. / 保留一个空槽用于区分队满与队空。 */
-        if (next_head == g_uart_rx_ring_tail) {
-            break;
-        }
-        g_uart_rx_ring_buffer[head] = source[index];
-        head = next_head;
+        g_uart_rx_queue[head] = source[index];
+        head = ble_uart_bridge_uart_queue_advance(head, 1);
     }
-    /* Publish all copied bytes in one step so the worker never sees partial data. / 一次性发布已复制数据，避免任务读取半成品。 */
-    g_uart_rx_ring_head = head;
-    if (index < length) {
-        /* Record overflow in the ISR and defer logging to task context. / 中断内只记录溢出，日志延后到任务上下文输出。 */
-        g_uart_rx_dropped_bytes += (uint32_t)(length - index);
-    }
+    /* Publish head only after the complete fragment is stored. / 完整写入后再发布头指针，任务不会读取半成品。 */
+    g_uart_rx_queue_head = head;
+    ble_uart_bridge_worker_wake();
 }
 
 /**
  * @if Eng
- * @brief Queues data received from BLE for deferred UART transmission.
+ * @brief Queues one complete BLE fragment for task-context UART1 transmission.
+ * @param [in] data BLE payload.
+ * @param [in] length Payload length.
+ * @return ERRCODE_BT_SUCCESS on complete enqueue, ERRCODE_BT_BUSY when the bounded queue is full,
+ *         otherwise ERRCODE_BT_FAIL.
  * @else
- * @brief 将 BLE 接收数据加入队列，等待后续发送到 UART。
+ * @brief 将一段完整 BLE 数据加入有界队列，等待任务上下文写入 UART1。
+ * @param [in] data BLE 数据。
+ * @param [in] length 数据长度。
+ * @return 完整入队返回 ERRCODE_BT_SUCCESS，队列空间不足返回 ERRCODE_BT_BUSY，其他情况返回 ERRCODE_BT_FAIL。
  * @endif
  */
 errcode_t ble_uart_bridge_uart_enqueue(const uint8_t *data, uint16_t length)
 {
-    uint16_t head = g_uart_tx_ring_head;
     uint16_t free_length;
+    uint16_t head;
     uint16_t index;
 
-    if (data == NULL || length == 0) {
-        return ERRCODE_INVALID_PARAM;
+    if (data == NULL || length == 0 || length > BLE_UART_BRIDGE_BLE_PAYLOAD_MAX_LEN) {
+        return ERRCODE_BT_FAIL;
     }
-    /* Reserve one byte so head == tail continues to mean an empty queue. / 预留一个字节，确保头尾相等仍只表示队空。 */
-    free_length = (uint16_t)(BLE_UART_BRIDGE_UART_RING_SIZE - 1 -
-                             ble_uart_bridge_ring_count(head, g_uart_tx_ring_tail));
+
+    head = g_uart_tx_queue_head;
+    free_length = (uint16_t)(BLE_UART_BRIDGE_UART_QUEUE_CAPACITY -
+                             ble_uart_bridge_uart_queue_count(head, g_uart_tx_queue_tail));
+    /* Reject the whole BLE fragment when the bounded queue cannot preserve its byte order. */
     if (length > free_length) {
-        /* Reject the whole BLE fragment to preserve its byte ordering. / 整包拒绝 BLE 分片，避免破坏字节顺序。 */
+        g_uart_tx_dropped_frames++;
         g_uart_tx_dropped_bytes += length;
+        ble_uart_bridge_worker_wake();
         return ERRCODE_BT_BUSY;
     }
+
     for (index = 0; index < length; index++) {
-        g_uart_tx_ring_buffer[head] = data[index];
-        head = (uint16_t)((head + 1) % BLE_UART_BRIDGE_UART_RING_SIZE);
+        g_uart_tx_queue[head] = data[index];
+        head = ble_uart_bridge_uart_queue_advance(head, 1);
     }
-    /* Publish head after the complete fragment is stored. / 完整分片写入后再发布头指针。 */
-    g_uart_tx_ring_head = head;
+    /* Publish the producer index only after the complete BLE fragment has been copied. */
+    g_uart_tx_queue_head = head;
+    ble_uart_bridge_worker_wake();
     return ERRCODE_BT_SUCCESS;
 }
 
 /**
  * @if Eng
- * @brief Records the completion status of the current UART-to-BLE fragment.
+ * @brief Writes one queued BLE fragment to UART1 and consumes only bytes accepted by the driver.
+ * @return true when bytes were consumed, otherwise false.
  * @else
- * @brief 记录当前 UART 到 BLE 数据分片的完成状态。
- * @endif
- */
-void ble_uart_bridge_ble_send_complete(errcode_t status)
-{
-    /* BLE callbacks only publish completion; the worker owns queue consumption. / BLE 回调只发布完成状态，队列消费由任务负责。 */
-    if (g_ble_send_pending) {
-        g_ble_send_status = status;
-        g_ble_send_completed = true;
-    }
-}
-
-/**
- * @if Eng
- * @brief Sends one queued BLE-to-UART fragment through UART.
- * @else
- * @brief 通过 UART 发送一段已排队的 BLE 到 UART 数据。
+ * @brief 将一段已排队 BLE 数据写入 UART1，并且只消费驱动实际接收的字节。
+ * @return 有字节被消费返回 true，否则返回 false。
  * @endif
  */
 static bool ble_uart_bridge_process_uart_tx(void)
 {
+    uint16_t head = g_uart_tx_queue_head;
+    uint16_t index = g_uart_tx_queue_tail;
+    uint16_t length = 0;
     int32_t written;
-    uint16_t length;
 
-    length = ble_uart_bridge_ring_peek(g_uart_tx_ring_buffer, g_uart_tx_ring_head, g_uart_tx_ring_tail,
-                                       g_uart_tx_staging_buffer, sizeof(g_uart_tx_staging_buffer));
+    /* Copy a task-owned fragment so a ring wrap never changes UART byte order. */
+    while (index != head && length < (uint16_t)sizeof(g_uart_tx_staging_buffer)) {
+        g_uart_tx_staging_buffer[length++] = g_uart_tx_queue[index];
+        index = ble_uart_bridge_uart_queue_advance(index, 1);
+    }
     if (length == 0) {
         return false;
     }
-    /* Limit each blocking UART write so BLE processing is serviced regularly. / 限制单次阻塞写长度，保证 BLE 处理能及时运行。 */
-    written = uapi_uart_write_nolock(BLE_UART_BRIDGE_UART_BUS, g_uart_tx_staging_buffer, length, 0);
-    if (written != length) {
-        osal_printk("[ble uart bridge] UART TX failed: expected=%u, actual=%d\r\n", length, written);
+
+    written = uapi_uart_write(BLE_UART_BRIDGE_UART_BUS, g_uart_tx_staging_buffer, length, 0);
+    if (written <= 0) {
+        /* Back off only after a UART rejection; normal traffic has no fixed polling delay. */
+        osal_msleep(BLE_UART_BRIDGE_UART_RETRY_DELAY_MS);
         return false;
     }
-    /* Consume the fragment only after the UART driver writes it completely. / UART 驱动完整写入分片后才消费数据。 */
-    g_uart_tx_ring_tail = ble_uart_bridge_ring_advance(g_uart_tx_ring_tail, length);
+    if (written > (int32_t)length) {
+        written = (int32_t)length;
+    }
+    g_uart_tx_queue_tail = ble_uart_bridge_uart_queue_advance(g_uart_tx_queue_tail, (uint16_t)written);
     return true;
 }
 
 /**
  * @if Eng
- * @brief Sends queued UART data over BLE and preserves it until accepted or confirmed.
+ * @brief Completes the current UART-to-BLE fragment and releases it only on success.
+ * @param [in] status BLE operation result.
  * @else
- * @brief 通过 BLE 发送 UART 队列数据，在接收或确认前保留数据。
+ * @brief 完成当前 UART 到 BLE 分片，并且仅在成功时释放数据。
+ * @param [in] status BLE 操作结果。
  * @endif
  */
-static bool ble_uart_bridge_process_ble_tx(void)
+void ble_uart_bridge_ble_send_complete(errcode_t status)
 {
-    static uint8_t data[BLE_UART_BRIDGE_BLE_PAYLOAD_MAX_LEN];
     uint16_t length;
-    errcode_t ret;
 
-    if (g_ble_send_pending) {
-        /* Only one BLE fragment may be in flight to preserve order and provide backpressure. / 同时只允许一个 BLE 分片在途。 */
-        if (!g_ble_send_completed) {
-            return false;
-        }
-        /* Advance only after success; a failed fragment remains queued for retry. / 仅成功后推进，失败分片保留待重试。 */
-        if (g_ble_send_status == ERRCODE_BT_SUCCESS) {
-            g_uart_rx_ring_tail = ble_uart_bridge_ring_advance(g_uart_rx_ring_tail, g_ble_send_pending_length);
-        }
-        g_ble_send_pending = false;
-        g_ble_send_completed = false;
+    if (!g_ble_send_pending) {
+        return;
     }
-    length = ble_uart_bridge_ring_peek(g_uart_rx_ring_buffer, g_uart_rx_ring_head, g_uart_rx_ring_tail,
-                                       data, sizeof(data));
-    if (length == 0) {
-        return false;
+
+    length = g_ble_send_pending_length;
+    if (status == ERRCODE_BT_SUCCESS) {
+        /* The peer accepted the fragment, so its bytes can now leave the queue. / 对端成功接收后才消费队列数据。 */
+        g_uart_rx_queue_tail = ble_uart_bridge_uart_queue_advance(g_uart_rx_queue_tail, length);
+        g_ble_retry_required = false;
+    } else {
+        /* Keep failed bytes at the queue tail and retry after a short error backoff. / 失败数据保留在队首，退避后重试。 */
+        g_ble_retry_required = true;
     }
-    /*
-     * Mark the fragment pending before calling the role API because the client path may report
-     * completion synchronously. / 调用角色接口前先标记在途，因为客户端路径可能同步上报完成。
-     */
-    g_ble_send_pending = true;
-    g_ble_send_completed = false;
-    g_ble_send_pending_length = length;
-#if defined(CONFIG_SAMPLE_SUPPORT_BLE_UART_BRIDGE_SERVER_SAMPLE)
-    /* The server uses a confirmed indication and completes in the confirmation callback. / 服务端使用有确认的指示。 */
-    ret = ble_uart_bridge_server_send_notification(data, length);
-#else
-    /* The client uses an unacknowledged Write Command and completes once accepted locally. / 客户端使用无响应写命令。 */
-    ret = ble_uart_bridge_client_send_write(data, length);
-#endif
-    if (ret != ERRCODE_BT_SUCCESS) {
-        /* Immediate rejection did not put data on air, so allow the worker to retry. / 立即失败表示未发出数据，允许任务重试。 */
-        g_ble_send_pending = false;
-    }
-    if (ret != ERRCODE_BT_SUCCESS && ret != ERRCODE_BT_BUSY) {
-        osal_printk("[ble uart bridge] UART RX -> BLE failed: bytes=%u, ret=0x%x\r\n", length, ret);
-    }
-    return ret == ERRCODE_BT_SUCCESS;
+    g_ble_send_pending_length = 0;
+    g_ble_send_pending = false;
+    ble_uart_bridge_worker_wake();
 }
 
 /**
  * @if Eng
- * @brief Configures UART1 pins, format, buffers, and the receive callback.
+ * @brief Configures UART1 with the callback-based receive path and bounded queue.
+ * @return ERRCODE_SUCC on success, otherwise the driver error code.
  * @else
- * @brief 配置 UART1 引脚、通信格式、缓冲区与接收回调。
+ * @brief 使用回调接收方式和有界队列配置 UART1。
+ * @return 成功返回 ERRCODE_SUCC，否则返回驱动错误码。
  * @endif
  */
 static errcode_t ble_uart_bridge_uart_init(void)
 {
-    uart_attr_t attr = {.baud_rate = BLE_UART_BRIDGE_UART_BAUDRATE,
-                        .data_bits = UART_DATA_BIT_8,
-                        .stop_bits = UART_STOP_BIT_1,
-                        .parity = UART_PARITY_NONE};
-    uart_pin_config_t pins = {.tx_pin = BLE_UART_BRIDGE_UART_TX_PIN,
-                              .rx_pin = BLE_UART_BRIDGE_UART_RX_PIN,
-                              .cts_pin = PIN_NONE,
-                              .rts_pin = PIN_NONE};
-    uart_buffer_config_t buffer = {.rx_buffer = g_uart_driver_buffer, .rx_buffer_size = sizeof(g_uart_driver_buffer)};
+    uart_attr_t attr = {
+        .baud_rate = BLE_UART_BRIDGE_UART_BAUDRATE,
+        .data_bits = UART_DATA_BIT_8,
+        .stop_bits = UART_STOP_BIT_1,
+        .parity = UART_PARITY_NONE
+    };
+    uart_pin_config_t pins = {
+        .tx_pin = BLE_UART_BRIDGE_UART_TX_PIN,
+        .rx_pin = BLE_UART_BRIDGE_UART_RX_PIN,
+        .cts_pin = PIN_NONE,
+        .rts_pin = PIN_NONE
+    };
+    uart_buffer_config_t buffer = {
+        .rx_buffer = g_uart_driver_buffer,
+        .rx_buffer_size = sizeof(g_uart_driver_buffer)
+    };
     errcode_t ret;
 
     ret = uapi_pin_set_mode(BLE_UART_BRIDGE_UART_TX_PIN, BLE_UART_BRIDGE_UART_TX_MODE);
@@ -308,39 +374,70 @@ static errcode_t ble_uart_bridge_uart_init(void)
     if (ret != ERRCODE_SUCC) {
         return ret;
     }
-    /* Reinitialize UART1 so a previous sample configuration cannot leak into this case. / 重新初始化 UART1，隔离旧案例配置。 */
-    uapi_uart_deinit(BLE_UART_BRIDGE_UART_BUS);
+
+    /* No DMA configuration is supplied; the sample uses the UART driver's basic mode. */
+    (void)uapi_uart_deinit(BLE_UART_BRIDGE_UART_BUS);
     ret = uapi_uart_init(BLE_UART_BRIDGE_UART_BUS, &pins, &attr, NULL, &buffer);
     if (ret != ERRCODE_SUCC) {
         return ret;
     }
-    /* The idle condition flushes short packets; the callback immediately transfers them to the software ring. */
-    /* 空闲条件用于及时提交短包，回调随后立即转存到软件环形队列。 */
-    ret = uapi_uart_register_rx_callback(BLE_UART_BRIDGE_UART_BUS, UART_RX_CONDITION_FULL_OR_SUFFICIENT_DATA_OR_IDLE, 1,
+    ret = uapi_uart_register_rx_callback(BLE_UART_BRIDGE_UART_BUS,
+                                         UART_RX_CONDITION_FULL_OR_SUFFICIENT_DATA_OR_IDLE,
+                                         1,
                                          ble_uart_bridge_uart_rx_cb);
     if (ret == ERRCODE_SUCC) {
-        osal_printk("[ble uart bridge] UART1 ready: TX=GPIO15 RX=GPIO16 115200 8N1\r\n");
+        osal_printk("[ble uart bridge] UART1 ready: IRQ mode, RX queue=%u, TX queue=%u, no DMA, "
+                    "TX=GPIO15 RX=GPIO16 115200 8N1\r\n",
+                    BLE_UART_BRIDGE_UART_QUEUE_CAPACITY, BLE_UART_BRIDGE_UART_QUEUE_CAPACITY);
     }
     return ret;
 }
 
 /**
  * @if Eng
- * @brief Initializes the selected BLE role and transfers queued data in both directions.
+ * @brief Blocks the worker until UART input or BLE completion requires processing.
  * @else
- * @brief 初始化选中的 BLE 角色，并双向转发队列中的数据。
+ * @brief 阻塞工作任务，直到 UART 输入或 BLE 完成事件需要处理。
+ * @endif
+ */
+static void ble_uart_bridge_worker_wait(void)
+{
+    if (osal_sem_down(&g_worker_sem) != OSAL_SUCCESS) {
+        osal_printk("[ble uart bridge] worker semaphore wait failed\r\n");
+    }
+    /* Allow the next producer or completion callback to publish one new wake event. / 允许下一个生产或完成回调发布新的唤醒事件。 */
+    g_worker_event_pending = false;
+}
+
+/**
+ * @if Eng
+ * @brief Initializes the selected BLE role and forwards UART fragments.
+ * @param [in] arg Unused task argument.
+ * @return Task exit status.
+ * @else
+ * @brief 初始化所选 BLE 角色并转发 UART 数据段。
+ * @param [in] arg 未使用的任务参数。
+ * @return 任务退出状态。
  * @endif
  */
 static int ble_uart_bridge_task(const char *arg)
 {
+    uint8_t data[BLE_UART_BRIDGE_BLE_PAYLOAD_MAX_LEN];
+    uint16_t length;
     errcode_t ret;
-    uint32_t reported_rx_drops = 0;
-    uint32_t reported_tx_drops = 0;
 
     (void)arg;
+    if (osal_sem_init(&g_worker_sem, 0) != OSAL_SUCCESS) {
+        osal_printk("[ble uart bridge] worker semaphore init failed\r\n");
+        return (int)ERRCODE_FAIL;
+    }
+    /* Initialize the wake path before registering the interrupt-context UART callback. / 注册 UART 中断回调前先启用任务唤醒通道。 */
+    g_worker_sem_ready = true;
     ret = ble_uart_bridge_uart_init();
     if (ret != ERRCODE_SUCC) {
         osal_printk("[ble uart bridge] UART init failed: 0x%x\r\n", ret);
+        g_worker_sem_ready = false;
+        osal_sem_destroy(&g_worker_sem);
         return (int)ret;
     }
 #if defined(CONFIG_SAMPLE_SUPPORT_BLE_UART_BRIDGE_SERVER_SAMPLE)
@@ -348,50 +445,75 @@ static int ble_uart_bridge_task(const char *arg)
 #elif defined(CONFIG_SAMPLE_SUPPORT_BLE_UART_BRIDGE_CLIENT_SAMPLE)
     ret = ble_uart_bridge_client_init();
 #else
+    (void)uapi_uart_deinit(BLE_UART_BRIDGE_UART_BUS);
+    g_worker_sem_ready = false;
+    osal_sem_destroy(&g_worker_sem);
     return 0;
 #endif
     if (ret != ERRCODE_SUCC) {
+        (void)uapi_uart_deinit(BLE_UART_BRIDGE_UART_BUS);
+        g_worker_sem_ready = false;
+        osal_sem_destroy(&g_worker_sem);
         return (int)ret;
     }
 
     while (1) {
-        /* Service both directions every pass to prevent either stream from starving. / 每轮同时处理两个方向，避免单向饥饿。 */
-        bool uart_active = ble_uart_bridge_process_uart_tx();
-        bool ble_active = ble_uart_bridge_process_ble_tx();
+        ble_uart_bridge_report_uart_overflow();
+        /* Drain peer data in task context even while a UART-to-BLE fragment awaits confirmation. */
+        (void)ble_uart_bridge_process_uart_tx();
 
-        /* Rate-limit overflow reporting by printing only when the cumulative counter changes. / 仅在累计值变化时输出溢出日志。 */
-        if (reported_rx_drops != g_uart_rx_dropped_bytes) {
-            reported_rx_drops = g_uart_rx_dropped_bytes;
-            osal_printk("[ble uart bridge] UART RX overflow, dropped=%u\r\n", reported_rx_drops);
+        if (!g_ble_send_pending && g_ble_retry_required) {
+            /*
+             * Back off only after a BLE rejection; normal traffic has no fixed polling delay.
+             * 仅 BLE 拒绝后退避，正常流量无固定轮询延时。
+             */
+            g_ble_retry_required = false;
+            osal_msleep(BLE_UART_BRIDGE_BLE_RETRY_DELAY_MS);
         }
-        if (reported_tx_drops != g_uart_tx_dropped_bytes) {
-            reported_tx_drops = g_uart_tx_dropped_bytes;
-            osal_printk("[ble uart bridge] UART TX overflow, dropped=%u\r\n", reported_tx_drops);
+
+        if (!g_ble_send_pending) {
+            length = ble_uart_bridge_uart_queue_peek(data, (uint16_t)sizeof(data));
+            if (length > 0) {
+                /* Mark bytes in flight before calling a role API that may complete synchronously. */
+                g_ble_send_pending_length = length;
+                g_ble_send_pending = true;
+#if defined(CONFIG_SAMPLE_SUPPORT_BLE_UART_BRIDGE_SERVER_SAMPLE)
+                ret = ble_uart_bridge_server_send_notification(data, length);
+#else
+                ret = ble_uart_bridge_client_send_write(data, length);
+#endif
+                if (ret != ERRCODE_BT_SUCCESS && g_ble_send_pending) {
+                    /* A rejected submission has no later callback, so release its in-flight state here. */
+                    ble_uart_bridge_ble_send_complete(ERRCODE_BT_FAIL);
+                }
+            }
         }
-        /* A bounded sleep yields CPU time while keeping queue draining responsive. / 有界休眠兼顾 CPU 让出与队列处理时延。 */
-        osal_msleep((uart_active || ble_active) ? BLE_UART_BRIDGE_WORKER_ACTIVE_DELAY_MS :
-                                                BLE_UART_BRIDGE_WORKER_DELAY_MS);
+
+        /* Continue immediately while either bounded queue still contains processable data. */
+        if (g_uart_tx_queue_head != g_uart_tx_queue_tail ||
+            (!g_ble_send_pending && g_uart_rx_queue_head != g_uart_rx_queue_tail)) {
+            continue;
+        }
+        ble_uart_bridge_worker_wait();
     }
 }
 
 /**
  * @if Eng
- * @brief Creates and starts the BLE UART bridge worker task.
+ * @brief Creates the BLE UART bridge task.
  * @else
- * @brief 创建并启动 BLE UART 透传工作任务。
+ * @brief 创建 BLE UART 透传任务。
  * @endif
  */
 static void ble_uart_bridge_entry(void)
 {
     osal_task *task_handle = NULL;
 
-    /* Protect task creation and priority setup as one scheduler operation. / 将任务创建与优先级设置作为一次调度器操作保护。 */
     osal_kthread_lock();
     task_handle = osal_kthread_create((osal_kthread_handler)ble_uart_bridge_task, NULL, "ble_uart_bridge",
                                       BLE_UART_BRIDGE_TASK_STACK_SIZE);
     if (task_handle != NULL) {
         osal_kthread_set_priority(task_handle, BLE_UART_BRIDGE_TASK_PRIO);
-        /* The scheduler owns the task after creation; release only the returned wrapper. / 创建后任务归调度器，仅释放返回句柄。 */
         osal_kfree(task_handle);
     }
     osal_kthread_unlock();
