@@ -96,6 +96,38 @@ typedef uint8_t byte;
 #define RAD_TO_DEG 57.295779513082320876798154814105
 #define EULER 2.718281828459045235360287471352
 
+// Standard Arduino math/bit helpers (api/Common.h). All #ifndef-guarded so
+// user code / libc / other headers can override before Arduino.h is included.
+// NOTE: Arduino language-reference standard API; many third-party libs call
+// min()/max()/constrain() unqualified, so Arduino.h must provide them.
+#ifndef min
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef max
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#endif
+#ifndef constrain
+#define constrain(amt, low, high) ((amt) < (low) ? (low) : ((amt) > (high) ? (high) : (amt)))
+#endif
+#ifndef sq
+#define sq(x) ((x) * (x))
+#endif
+#ifndef radians
+#define radians(deg) ((deg) * DEG_TO_RAD)
+#endif
+#ifndef degrees
+#define degrees(rad) ((rad) * RAD_TO_DEG)
+#endif
+#ifndef bit
+#define bit(b) (1UL << (b))
+#endif
+#ifndef lowByte
+#define lowByte(w) ((uint8_t)((w) & 0xFF))
+#endif
+#ifndef highByte
+#define highByte(w) ((uint8_t)((w) >> 8))
+#endif
+
 // Yield function (for cooperative multitasking)
 void yield(void);
 

@@ -32,6 +32,19 @@
 #define OCT 8
 #define BIN 2
 
+// Forward declaration for String (defined in WString.h). Avoids a circular
+// include: Print.h must not depend on WString.h, but print(const String&) is
+// part of the standard Arduino API.
+class String;
+
+/* Printable — standard Arduino API: objects that know how to print themselves
+ * to a Print. Libraries like ArduinoJson reference this type; the Arduino layer
+ * must provide it so those libraries compile with their Arduino integration on. */
+class Printable {
+public:
+    virtual size_t printTo(class Print &p) const = 0;
+};
+
 class Print {
 private:
     int write_error;
@@ -47,6 +60,9 @@ public:
     virtual size_t write(const char *buffer, size_t size);
     virtual size_t write(const char *str);
 
+    // TX buffer query — standard Arduino API. Default 0 means "always ready".
+    virtual int availableForWrite() { return 0; }
+
     size_t print(const char *str);
     size_t print(char c);
     size_t print(int n, int base = DEC);
@@ -54,6 +70,8 @@ public:
     size_t print(long n, int base = DEC);
     size_t print(unsigned long n, int base = DEC);
     size_t print(double n, int digits = 2);
+    size_t print(const Printable &p);
+    size_t print(const String &str);
 
     size_t println(void);
     size_t println(const char *str);
@@ -63,6 +81,8 @@ public:
     size_t println(long n, int base = DEC);
     size_t println(unsigned long n, int base = DEC);
     size_t println(double n, int digits = 2);
+    size_t println(const Printable &p);
+    size_t println(const String &str);
 
     int getWriteError();
     void clearWriteError();
