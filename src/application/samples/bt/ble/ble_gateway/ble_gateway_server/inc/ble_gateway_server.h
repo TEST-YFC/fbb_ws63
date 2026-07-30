@@ -17,5 +17,6 @@
 
 errcode_t ble_gateway_server_init(void);
 errcode_t ble_gateway_server_send_notification(const uint8_t *data, uint16_t len);
+void ble_gateway_server_report_loop(void);
 
 #endif

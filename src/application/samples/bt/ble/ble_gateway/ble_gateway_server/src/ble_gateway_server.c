@@ -13,11 +13,14 @@
 #include "bts_le_gap.h"
 #include "bts_gatt_stru.h"
 #include "bts_gatt_server.h"
+#include "ble_gateway_protocol.h"
+#include "ble_gateway_sensor.h"
 #include "ble_gateway_server.h"
 #include "ble_gateway_server_adv.h"
 
-#define BLE_GATEWAY_SERVER_LOG "[ble hello server]"
+#define BLE_GATEWAY_SERVER_LOG "[ble environment node]"
 #define BLE_GATEWAY_UUID_LEN 2
+#define BLE_GATEWAY_MS_PER_SECOND 1000U
 
 static uint8_t g_server_id;
 static uint16_t g_conn_id;
@@ -28,10 +31,14 @@ static uint16_t g_notify_cccd_handle;
 static bool g_connected;
 static bool g_hello_notify_enabled;
 static bool g_stack_reset_done;
-static uint8_t g_property_value[BLE_GATEWAY_PROPERTY_MAX_LEN] = "node_ready";
-static uint16_t g_property_value_len = sizeof("node_ready") - 1;
-static const uint8_t DEFAULT_VALUE[] = "node_ready";
-static const uint8_t HELLO_MESSAGE[] = "node=01,temp=24.8,hum=58.0";
+static uint8_t g_property_value[BLE_GATEWAY_COMMAND_SIZE] = {
+    BLE_GATEWAY_PROTOCOL_VERSION, BLE_GATEWAY_COMMAND_SET_INTERVAL,
+    BLE_GATEWAY_DEFAULT_INTERVAL_S, 0, 0, 0
+};
+static uint16_t g_property_value_len = BLE_GATEWAY_COMMAND_SIZE;
+static volatile uint32_t g_report_interval_ms = BLE_GATEWAY_DEFAULT_INTERVAL_S * BLE_GATEWAY_MS_PER_SECOND;
+static uint32_t g_report_sequence;
+static uint8_t g_latest_report[BLE_GATEWAY_REPORT_SIZE];
 #define BLE_UUID_HIGH_BYTE_SHIFT 8
 #define BLE_CCCD_VALUE_LEN 2
 #define BLE_CCCD_NOTIFY_ENABLED 1
@@ -88,8 +95,8 @@ static void ble_gateway_read_request_cb(uint8_t server_id,
     ble_gateway_response_t response = {request->request_id, GATT_STATUS_SUCCESS, g_property_value,
                                        g_property_value_len};
     if (ble_gateway_send_response(server_id, conn_id, &response) == ERRCODE_BT_SUCCESS) {
-        osal_printk("%s read response sent: value=%.*s\r\n", BLE_GATEWAY_SERVER_LOG, g_property_value_len,
-                    g_property_value);
+        osal_printk("%s read response sent: interval=%u s\r\n", BLE_GATEWAY_SERVER_LOG,
+                    ble_gateway_get_u32_le(&g_property_value[2]));
     }
 }
 
@@ -118,9 +125,6 @@ static void ble_gateway_handle_cccd_write(uint8_t server_id, uint16_t conn_id, g
 
     g_hello_notify_enabled = (cccd_value == BLE_CCCD_NOTIFY_ENABLED);
     osal_printk("%s sensor node CCCD %s\r\n", BLE_GATEWAY_SERVER_LOG, g_hello_notify_enabled ? "enabled" : "disabled");
-    if (g_hello_notify_enabled) {
-        (void)ble_gateway_server_send_notification(HELLO_MESSAGE, sizeof(HELLO_MESSAGE) - 1);
-    }
 }
 
 static void ble_gateway_write_request_cb(uint8_t server_id,
@@ -139,14 +143,17 @@ static void ble_gateway_write_request_cb(uint8_t server_id,
     }
     if (request->handle != g_data_handle) {
         response_status = GATT_STATUS_INVALID_HANDLE;
-    } else if (request->length == 0 || request->length >= BLE_GATEWAY_PROPERTY_MAX_LEN) {
+    } else if (request->length != BLE_GATEWAY_COMMAND_SIZE) {
         response_status = GATT_STATUS_INVALID_ATTRIBUTE_VALUE_LENGTH;
     } else {
-        (void)memset_s(g_property_value, sizeof(g_property_value), 0, sizeof(g_property_value));
-        if (memcpy_s(g_property_value, sizeof(g_property_value), request->value, request->length) != EOK) {
+        uint32_t interval_s = 0;
+        if (!ble_gateway_decode_interval_command(request->value, request->length, &interval_s)) {
+            response_status = GATT_STATUS_VALUE_NOT_ALLOWED;
+        } else if (memcpy_s(g_property_value, sizeof(g_property_value), request->value, request->length) != EOK) {
             response_status = GATT_STATUS_UNLIKELY_ERROR;
         } else {
-            g_property_value_len = request->length;
+            g_property_value_len = BLE_GATEWAY_COMMAND_SIZE;
+            g_report_interval_ms = interval_s * BLE_GATEWAY_MS_PER_SECOND;
         }
     }
 
@@ -155,11 +162,9 @@ static void ble_gateway_write_request_cb(uint8_t server_id,
         (void)ble_gateway_send_response(server_id, conn_id, &response);
     }
     if (response_status == GATT_STATUS_SUCCESS) {
-        ble_gateway_server_set_adv_default_state(g_property_value_len == sizeof(DEFAULT_VALUE) - 1 &&
-                                                 memcmp(g_property_value, DEFAULT_VALUE, sizeof(DEFAULT_VALUE) - 1) ==
-                                                     0);
-        osal_printk("%s property updated: %.*s\r\n", BLE_GATEWAY_SERVER_LOG, g_property_value_len, g_property_value);
-        osal_printk("%s write response sent: success\r\n", BLE_GATEWAY_SERVER_LOG);
+        ble_gateway_server_set_adv_default_state(true);
+        osal_printk("%s sampling interval updated: %u s\r\n", BLE_GATEWAY_SERVER_LOG,
+                    ble_gateway_get_u32_le(&g_property_value[2]));
     } else {
         osal_printk("%s write rejected, status=0x%x\r\n", BLE_GATEWAY_SERVER_LOG, response_status);
     }
@@ -199,8 +204,8 @@ static errcode_t ble_gateway_add_notify_characteristic(void)
     characteristic.chara_uuid = notify_uuid;
     characteristic.properties = GATT_CHARACTER_PROPERTY_BIT_NOTIFY;
     characteristic.permissions = GATT_ATTRIBUTE_PERMISSION_READ;
-    characteristic.value = (uint8_t *)HELLO_MESSAGE;
-    characteristic.value_len = sizeof(HELLO_MESSAGE) - 1;
+    characteristic.value = g_latest_report;
+    characteristic.value_len = sizeof(g_latest_report);
     errcode_t ret = gatts_add_characteristic_sync(g_server_id, g_service_handle, &characteristic, &notify_result);
     if (ret != ERRCODE_BT_SUCCESS) {
         return ret;
@@ -258,7 +263,7 @@ static void ble_gateway_service_start_cb(uint8_t server_id, uint16_t handle, err
         return;
     }
     if (ble_gateway_server_start_adv() == ERRCODE_BT_SUCCESS) {
-        osal_printk("%s advertising started: ble_gateway_server\r\n", BLE_GATEWAY_SERVER_LOG);
+        osal_printk("%s advertising started: sensor_node\r\n", BLE_GATEWAY_SERVER_LOG);
     } else {
         osal_printk("%s advertising start failed\r\n", BLE_GATEWAY_SERVER_LOG);
     }
@@ -310,8 +315,7 @@ static void ble_gateway_enable_cb(errcode_t status)
         }
         osal_printk("%s stack reset request failed: 0x%x\r\n", BLE_GATEWAY_SERVER_LOG, ret);
     }
-    ble_gateway_server_set_adv_default_state(g_property_value_len == sizeof(DEFAULT_VALUE) - 1 &&
-                                             memcmp(g_property_value, DEFAULT_VALUE, sizeof(DEFAULT_VALUE) - 1) == 0);
+    ble_gateway_server_set_adv_default_state(true);
     security.bondable = 1;
     security.io_capability = GAP_BLE_IO_CAPABILITY_NOINPUTNOOUTPUT;
     security.sc_enable = 0;
@@ -375,7 +379,7 @@ static errcode_t ble_gateway_send_value_notification(uint16_t handle,
     notification.value_len = len;
     ret = gatts_notify_indicate(g_server_id, g_conn_id, &notification);
     if (ret == ERRCODE_BT_SUCCESS) {
-        osal_printk("%s %s sent: %.*s\r\n", BLE_GATEWAY_SERVER_LOG, name, len, data);
+        osal_printk("%s %s sent, len=%u\r\n", BLE_GATEWAY_SERVER_LOG, name, len);
     } else {
         osal_printk("%s %s failed: 0x%x\r\n", BLE_GATEWAY_SERVER_LOG, name, ret);
     }
@@ -404,4 +408,46 @@ errcode_t ble_gateway_server_init(void)
     }
     osal_printk("%s enabling BLE\r\n", BLE_GATEWAY_SERVER_LOG);
     return enable_ble();
+}
+
+void ble_gateway_server_report_loop(void)
+{
+    ble_gateway_sensor_data_t sensor_data = {0};
+    ble_gateway_report_t report = {0};
+    bool sensor_ready = false;
+
+    while (true) {
+        if (!sensor_ready) {
+            errcode_t init_ret = ble_gateway_sensor_init();
+            if (init_ret != ERRCODE_SUCC) {
+                osal_printk("%s AHT20/BMP280 init failed: 0x%x\r\n", BLE_GATEWAY_SERVER_LOG, init_ret);
+                osal_msleep(BLE_GATEWAY_MS_PER_SECOND);
+                continue;
+            }
+            sensor_ready = true;
+        }
+        if (ble_gateway_sensor_read(&sensor_data) != ERRCODE_SUCC) {
+            osal_printk("%s sensor read failed\r\n", BLE_GATEWAY_SERVER_LOG);
+            osal_msleep(g_report_interval_ms);
+            continue;
+        }
+        g_report_sequence++;
+        if (g_report_sequence == 0U) {
+            g_report_sequence = 1U;
+        }
+        report.version = BLE_GATEWAY_PROTOCOL_VERSION;
+        report.node_id = BLE_GATEWAY_NODE_ID_DEFAULT;
+        report.sequence = g_report_sequence;
+        report.temperature_tenths_celsius = (int16_t)sensor_data.temperature_tenths_celsius;
+        report.humidity_tenths_percent = (uint16_t)sensor_data.humidity_tenths_percent;
+        report.pressure_pa = sensor_data.pressure_pa;
+        ble_gateway_encode_report(g_latest_report, &report);
+        osal_printk("%s sample ready: node=%u seq=%u temp_x10=%d hum_x10=%u pressure=%u Pa\r\n",
+                    BLE_GATEWAY_SERVER_LOG, report.node_id, report.sequence, report.temperature_tenths_celsius,
+                    report.humidity_tenths_percent, report.pressure_pa);
+        if (g_hello_notify_enabled) {
+            (void)ble_gateway_server_send_notification(g_latest_report, sizeof(g_latest_report));
+        }
+        osal_msleep(g_report_interval_ms);
+    }
 }

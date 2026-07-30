@@ -30,7 +30,7 @@
 #define BLE_AD_ELEMENT_HEADER_LEN 2
 #define BLE_AD_FIXED_PAYLOAD_LEN 5
 
-static const uint8_t BLE_GATEWAY_NAME[] = "gateway_node";
+static const uint8_t BLE_GATEWAY_NAME[] = "sensor_node";
 static bool g_ble_gateway_default_state = true;
 
 void ble_gateway_server_set_adv_default_state(bool is_default)

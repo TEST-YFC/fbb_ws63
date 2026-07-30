@@ -13,30 +13,39 @@
 #include "bts_le_gap.h"
 #include "bts_gatt_stru.h"
 #include "bts_gatt_client.h"
+#include "ble_gateway_protocol.h"
 #include "ble_gateway_client.h"
+#include "ble_gateway_iotda.h"
+#include "ble_gateway_wifi.h"
 
-#define BLE_GATEWAY_CLIENT_LOG "[ble hello client]"
+#define BLE_GATEWAY_CLIENT_LOG "[ble mqtt gateway]"
 #define BLE_GATEWAY_SERVICE_UUID 0x3333
 #define BLE_GATEWAY_DATA_UUID 0x3434
 #define BLE_GATEWAY_NOTIFY_UUID 0x3435
 #define BLE_GATEWAY_CCCD_UUID 0x2902
 #define BLE_GATEWAY_UUID_LEN 2
-#define BLE_GATEWAY_MTU 247
 #define BLE_GATEWAY_SCAN_INTERVAL 0x30
 #define BLE_GATEWAY_AD_COMPLETE_NAME 0x09
 #define BLE_GATEWAY_AD_SERVICE_DATA16 0x16
-#define BLE_GATEWAY_STATE_DEFAULT 0x00
 #define BLE_UUID_HIGH_BYTE_SHIFT 8
 #define BLE_AD_HEADER_LEN 2
 #define BLE_AD_SERVICE_DATA_FIELD_LEN 4
-#define BLE_AD_SERVICE_DATA_STATE_OFFSET 4
 #define BLE_AD_UUID_LOW_OFFSET 2
 #define BLE_AD_UUID_HIGH_OFFSET 3
+#define BLE_GATEWAY_CONTROL_TASK_STACK_SIZE 0x1000
+#define BLE_GATEWAY_CONTROL_TASK_PRIO 25
+#define BLE_GATEWAY_CONTROL_POLL_MS 50
+#define BLE_GATEWAY_SCAN_RESTART_TICKS 100
+#define BLE_GATEWAY_DISCOVERY_DELAY_TICKS 10
+#define BLE_GATEWAY_DISCOVERY_TIMEOUT_TICKS 60
+#define BLE_GATEWAY_DISCOVERY_MAX_RETRIES 3
+#define BLE_GATEWAY_FIXED_SERVICE_START_HANDLE 0x000E
+#define BLE_GATEWAY_FIXED_SERVICE_END_HANDLE 0x0013
+#define BLE_GATEWAY_FIXED_DATA_HANDLE 0x0010
+#define BLE_GATEWAY_FIXED_NOTIFY_HANDLE 0x0012
+#define BLE_GATEWAY_FIXED_NOTIFY_CCCD_HANDLE 0x0013
 
-static const uint8_t TARGET_NAME[] = "gateway_node";
-static const uint8_t DEFAULT_VALUE[] = "node_ready";
-static const uint8_t NEW_VALUE[] = "sample=1000";
-static const uint8_t EXPECTED_NODE_REPORT[] = "node=01,temp=24.8,hum=58.0";
+static const uint8_t TARGET_NAME[] = "sensor_node";
 static bt_uuid_t g_client_app_uuid = {BLE_GATEWAY_UUID_LEN, {0x33, 0x33}};
 static uint8_t g_client_id;
 static uint16_t g_conn_id;
@@ -48,17 +57,24 @@ static uint16_t g_notify_declare_handle;
 static uint16_t g_notify_handle;
 static uint16_t g_notify_cccd_handle;
 static bd_addr_t g_peer_addr;
-static bool g_peer_default_state;
 static bool g_connected;
 static bool g_connecting;
 static bool g_pairing_started;
-static bool g_mtu_exchange_started;
 static bool g_discovery_started;
-static bool g_read_started;
-static bool g_write_started;
 static bool g_hello_cccd_started;
 static bool g_stack_reset_done;
-static bool g_cache_sync_write_started;
+static bool g_control_task_started;
+static volatile bool g_scan_restart_requested;
+static bool g_scan_restart_stopped;
+static volatile bool g_service_discovery_pending;
+static uint8_t g_service_discovery_delay_ticks;
+static uint8_t g_service_discovery_timeout_ticks;
+static uint8_t g_service_discovery_retries;
+static volatile bool g_command_write_pending;
+static uint8_t g_command_value[BLE_GATEWAY_COMMAND_SIZE];
+static uint32_t g_last_sequence;
+
+static errcode_t ble_gateway_enable_cccd(uint16_t conn_id, uint16_t handle, const char *name);
 
 static void ble_gateway_uuid16(uint16_t value, bt_uuid_t *uuid)
 {
@@ -82,15 +98,15 @@ static void ble_gateway_reset_discovery_state(void)
     g_notify_declare_handle = 0;
     g_notify_handle = 0;
     g_notify_cccd_handle = 0;
-    g_mtu_exchange_started = false;
     g_discovery_started = false;
-    g_read_started = false;
-    g_write_started = false;
+    g_service_discovery_pending = false;
+    g_service_discovery_delay_ticks = 0;
+    g_service_discovery_timeout_ticks = 0;
+    g_service_discovery_retries = 0;
     g_hello_cccd_started = false;
-    g_cache_sync_write_started = false;
 }
 
-static bool ble_gateway_parse_adv(const uint8_t *data, uint8_t data_len, bool *default_state)
+static bool ble_gateway_parse_adv(const uint8_t *data, uint8_t data_len)
 {
     uint16_t index = 0;
     const uint16_t target_len = sizeof(TARGET_NAME) - 1;
@@ -114,12 +130,12 @@ static bool ble_gateway_parse_adv(const uint8_t *data, uint8_t data_len, bool *d
                    data[index + BLE_AD_UUID_LOW_OFFSET] == (uint8_t)(BLE_GATEWAY_SERVICE_UUID & 0xFF) &&
                    data[index + BLE_AD_UUID_HIGH_OFFSET] ==
                    (uint8_t)(BLE_GATEWAY_SERVICE_UUID >> BLE_UUID_HIGH_BYTE_SHIFT)) {
-            *default_state = (data[index + BLE_AD_SERVICE_DATA_STATE_OFFSET] == BLE_GATEWAY_STATE_DEFAULT);
             state_found = true;
         }
         index = field_end;
     }
-    return name_matched && state_found;
+    /* Active scan data and scan response data can be delivered in separate callbacks. */
+    return name_matched || state_found;
 }
 
 static errcode_t ble_gateway_start_scan(void)
@@ -139,19 +155,17 @@ static void ble_gateway_set_scan_param_cb(errcode_t status)
 
 static void ble_gateway_scan_result_cb(gap_scan_result_data_t *result)
 {
-    bool default_state = false;
-    if (g_connecting || g_connected || result == NULL || result->adv_data == NULL ||
-        !ble_gateway_parse_adv(result->adv_data, result->adv_len, &default_state)) {
+    bool matched = result != NULL && result->adv_data != NULL &&
+                   ble_gateway_parse_adv(result->adv_data, result->adv_len);
+    if (g_connecting || g_connected || !matched) {
         return;
     }
 
     if (memcpy_s(&g_peer_addr, sizeof(g_peer_addr), &result->addr, sizeof(result->addr)) != EOK) {
         return;
     }
-    g_peer_default_state = default_state;
     g_connecting = true;
-    osal_printk("%s found ble_gateway_server, state=%s, connecting\r\n", BLE_GATEWAY_CLIENT_LOG,
-                g_peer_default_state ? "device_status_ok" : "retained");
+    osal_printk("%s found environment sensor node, connecting\r\n", BLE_GATEWAY_CLIENT_LOG);
     (void)gap_ble_stop_scan();
     if (gap_ble_connect_remote_device(&g_peer_addr) != ERRCODE_BT_SUCCESS) {
         g_connecting = false;
@@ -167,16 +181,89 @@ static errcode_t ble_gateway_discover_service(uint16_t conn_id)
     return gattc_discovery_service(g_client_id, conn_id, &uuid);
 }
 
-static errcode_t ble_gateway_exchange_mtu(uint16_t conn_id)
+static int ble_gateway_control_task(void *arg)
 {
     errcode_t ret;
-    osal_printk("%s exchange MTU %u\r\n", BLE_GATEWAY_CLIENT_LOG, BLE_GATEWAY_MTU);
-    g_mtu_exchange_started = true;
-    ret = gattc_exchange_mtu_req(g_client_id, conn_id, BLE_GATEWAY_MTU);
-    if (ret != ERRCODE_BT_SUCCESS) {
-        g_mtu_exchange_started = false;
+    uint16_t scan_retry_ticks = 0;
+    (void)arg;
+    while (true) {
+        if (!g_connecting && !g_connected && !g_scan_restart_requested) {
+            scan_retry_ticks++;
+            if (scan_retry_ticks >= BLE_GATEWAY_SCAN_RESTART_TICKS) {
+                /* Wi-Fi scanning can pause BLE scanning; periodically restart it while no node is connected. */
+                g_scan_restart_stopped = false;
+                g_scan_restart_requested = true;
+                scan_retry_ticks = 0;
+            }
+        } else if (g_connecting || g_connected) {
+            scan_retry_ticks = 0;
+        }
+        if (g_scan_restart_requested && !g_connecting && !g_connected) {
+            if (!g_scan_restart_stopped) {
+                (void)gap_ble_stop_scan();
+                g_scan_restart_stopped = true;
+            } else {
+                ret = ble_gateway_start_scan();
+                if (ret == ERRCODE_BT_SUCCESS) {
+                    g_scan_restart_requested = false;
+                    g_scan_restart_stopped = false;
+                }
+            }
+        }
+        if (g_service_discovery_pending && g_connected && !g_discovery_started &&
+            g_service_discovery_delay_ticks > 0) {
+            g_service_discovery_delay_ticks--;
+        } else if (g_service_discovery_pending && g_connected && !g_discovery_started) {
+            /* Run discovery from task context after pairing callbacks have returned. */
+            ret = ble_gateway_discover_service(g_conn_id);
+            if (ret == ERRCODE_BT_SUCCESS) {
+                g_discovery_started = true;
+                g_service_discovery_pending = false;
+                g_service_discovery_timeout_ticks = BLE_GATEWAY_DISCOVERY_TIMEOUT_TICKS;
+            } else {
+                osal_printk("%s service discovery start deferred: 0x%x\r\n", BLE_GATEWAY_CLIENT_LOG, ret);
+            }
+        }
+        if (g_discovery_started && g_service_start_handle == 0U) {
+            if (g_service_discovery_timeout_ticks > 0U) {
+                g_service_discovery_timeout_ticks--;
+            } else if (++g_service_discovery_retries >= BLE_GATEWAY_DISCOVERY_MAX_RETRIES) {
+                /* Both roles belong to this sample, so their GATT registration order and handles are fixed. */
+                g_service_start_handle = BLE_GATEWAY_FIXED_SERVICE_START_HANDLE;
+                g_service_end_handle = BLE_GATEWAY_FIXED_SERVICE_END_HANDLE;
+                g_data_handle = BLE_GATEWAY_FIXED_DATA_HANDLE;
+                g_notify_handle = BLE_GATEWAY_FIXED_NOTIFY_HANDLE;
+                g_notify_cccd_handle = BLE_GATEWAY_FIXED_NOTIFY_CCCD_HANDLE;
+                g_service_discovery_pending = false;
+                g_hello_cccd_started = true;
+                osal_printk("%s discovery fallback to sample GATT handles\r\n", BLE_GATEWAY_CLIENT_LOG);
+                (void)ble_gateway_enable_cccd(g_conn_id, g_notify_cccd_handle, "sensor report");
+            } else {
+                osal_printk("%s service discovery timeout, retrying\r\n", BLE_GATEWAY_CLIENT_LOG);
+                g_discovery_started = false;
+                g_service_discovery_delay_ticks = BLE_GATEWAY_DISCOVERY_DELAY_TICKS;
+                g_service_discovery_pending = true;
+            }
+        }
+        osal_msleep(BLE_GATEWAY_CONTROL_POLL_MS);
     }
-    return ret;
+    return 0;
+}
+
+static errcode_t ble_gateway_start_control_task(void)
+{
+    osal_task *task;
+    if (g_control_task_started) {
+        return ERRCODE_SUCC;
+    }
+    task = osal_kthread_create(ble_gateway_control_task, NULL, "ble_gateway_ctl", BLE_GATEWAY_CONTROL_TASK_STACK_SIZE);
+    if (task == NULL) {
+        return ERRCODE_FAIL;
+    }
+    osal_kthread_set_priority(task, BLE_GATEWAY_CONTROL_TASK_PRIO);
+    osal_kfree(task);
+    g_control_task_started = true;
+    return ERRCODE_SUCC;
 }
 
 static void ble_gateway_conn_state_cb(uint16_t conn_id,
@@ -190,11 +277,14 @@ static void ble_gateway_conn_state_cb(uint16_t conn_id,
         g_conn_id = conn_id;
         g_connected = true;
         g_connecting = false;
+        g_last_sequence = 0U;
+        ble_gateway_iotda_node_state(true);
         ble_gateway_reset_discovery_state();
         osal_printk("%s connected, conn_id=0x%04x\r\n", BLE_GATEWAY_CLIENT_LOG, conn_id);
         if (pair_state == GAP_BLE_PAIR_PAIRED) {
             g_pairing_started = false;
-            (void)ble_gateway_exchange_mtu(conn_id);
+            g_service_discovery_delay_ticks = BLE_GATEWAY_DISCOVERY_DELAY_TICKS;
+            g_service_discovery_pending = true;
         } else {
             ret = gap_ble_pair_remote_device(addr);
             g_pairing_started = (ret == ERRCODE_BT_SUCCESS);
@@ -208,6 +298,12 @@ static void ble_gateway_conn_state_cb(uint16_t conn_id,
         g_pairing_started = false;
         g_connected = false;
         g_connecting = false;
+        g_last_sequence = 0U;
+        ble_gateway_iotda_node_state(false);
+        if (g_command_write_pending) {
+            g_command_write_pending = false;
+            ble_gateway_iotda_command_result(false);
+        }
         ble_gateway_reset_discovery_state();
         osal_printk("%s disconnected, reason=0x%x, restart scan\r\n", BLE_GATEWAY_CLIENT_LOG, reason);
         (void)ble_gateway_start_scan();
@@ -216,10 +312,12 @@ static void ble_gateway_conn_state_cb(uint16_t conn_id,
 
 static void ble_gateway_pair_result_cb(uint16_t conn_id, const bd_addr_t *addr, errcode_t status)
 {
+    (void)conn_id;
     g_pairing_started = false;
     osal_printk("%s pair complete, status=0x%x\r\n", BLE_GATEWAY_CLIENT_LOG, status);
     if (status == ERRCODE_BT_SUCCESS) {
-        (void)ble_gateway_exchange_mtu(conn_id);
+        g_service_discovery_delay_ticks = BLE_GATEWAY_DISCOVERY_DELAY_TICKS;
+        g_service_discovery_pending = true;
         return;
     }
     (void)gap_ble_remove_pair(addr);
@@ -230,11 +328,7 @@ static void ble_gateway_mtu_changed_cb(uint8_t client_id, uint16_t conn_id, uint
 {
     (void)client_id;
     osal_printk("%s MTU changed: %u, status=0x%x\r\n", BLE_GATEWAY_CLIENT_LOG, mtu_size, status);
-    if (status == ERRCODE_BT_SUCCESS && g_connected && conn_id == g_conn_id && g_mtu_exchange_started &&
-        !g_discovery_started) {
-        g_discovery_started = true;
-        (void)ble_gateway_discover_service(conn_id);
-    }
+    (void)conn_id;
 }
 
 static void ble_gateway_discovery_service_cb(uint8_t client_id,
@@ -244,9 +338,19 @@ static void ble_gateway_discovery_service_cb(uint8_t client_id,
 {
     gattc_discovery_character_param_t param = {0};
     (void)client_id;
-    if (status != ERRCODE_BT_SUCCESS || !ble_gateway_uuid_is(&service->uuid, BLE_GATEWAY_SERVICE_UUID)) {
+    if (status != ERRCODE_BT_SUCCESS) {
+        osal_printk("%s service discovery callback failed: 0x%x\r\n", BLE_GATEWAY_CLIENT_LOG, status);
+        g_discovery_started = false;
+        g_service_discovery_delay_ticks = BLE_GATEWAY_DISCOVERY_DELAY_TICKS;
+        g_service_discovery_pending = true;
         return;
     }
+    if (service == NULL || !ble_gateway_uuid_is(&service->uuid, BLE_GATEWAY_SERVICE_UUID)) {
+        osal_printk("%s service discovery returned unexpected UUID\r\n", BLE_GATEWAY_CLIENT_LOG);
+        return;
+    }
+    g_service_discovery_timeout_ticks = 0;
+    g_service_discovery_retries = 0;
     g_service_start_handle = service->start_hdl;
     g_service_end_handle = service->end_hdl;
     param.service_handle = service->start_hdl;
@@ -320,8 +424,6 @@ static void ble_gateway_discovery_descriptor_complete_cb(uint8_t client_id,
                                                          uint16_t characteristic_handle,
                                                          errcode_t status)
 {
-    gattc_handle_value_t write_value = {0};
-    errcode_t ret;
     (void)client_id;
     (void)conn_id;
     if (status != ERRCODE_BT_SUCCESS || !g_connected || conn_id != g_conn_id || g_notify_cccd_handle == 0) {
@@ -329,21 +431,8 @@ static void ble_gateway_discovery_descriptor_complete_cb(uint8_t client_id,
                     characteristic_handle, status);
         return;
     }
-    if (g_peer_default_state) {
-        write_value.handle = g_data_handle;
-        write_value.data = (uint8_t *)DEFAULT_VALUE;
-        write_value.data_len = sizeof(DEFAULT_VALUE) - 1;
-        g_cache_sync_write_started = true;
-        osal_printk("%s syncing data attribute: device_status_ok\r\n", BLE_GATEWAY_CLIENT_LOG);
-        ret = gattc_write_req(g_client_id, conn_id, &write_value);
-        if (ret != ERRCODE_BT_SUCCESS) {
-            g_cache_sync_write_started = false;
-            osal_printk("%s cache sync write request failed: 0x%x\r\n", BLE_GATEWAY_CLIENT_LOG, ret);
-        }
-        return;
-    }
     g_hello_cccd_started = true;
-    (void)ble_gateway_enable_cccd(conn_id, g_notify_cccd_handle, "hello");
+    (void)ble_gateway_enable_cccd(conn_id, g_notify_cccd_handle, "sensor report");
 }
 
 static void ble_gateway_notification_cb(uint8_t client_id,
@@ -351,66 +440,25 @@ static void ble_gateway_notification_cb(uint8_t client_id,
                                         gattc_handle_value_t *data,
                                         errcode_t status)
 {
-    errcode_t ret;
+    ble_gateway_report_t report = {0};
     (void)client_id;
     (void)conn_id;
     if (status != ERRCODE_BT_SUCCESS || data->handle != g_notify_handle) {
         return;
     }
-    osal_printk("%s node report received: %.*s\r\n", BLE_GATEWAY_CLIENT_LOG, data->data_len, data->data);
-    if ((data->data_len == sizeof(EXPECTED_NODE_REPORT) - 1) &&
-        (memcmp(data->data, EXPECTED_NODE_REPORT, sizeof(EXPECTED_NODE_REPORT) - 1) == 0)) {
-        osal_printk("%s aggregate: {\"node\":1,\"temp\":24.8,\"hum\":58.0}\r\n", BLE_GATEWAY_CLIENT_LOG);
-        osal_printk("%s uplink adapter queued, gateway test passed\r\n", BLE_GATEWAY_CLIENT_LOG);
-    }
-    if (!g_read_started) {
-        g_read_started = true;
-        osal_printk("%s read request sent\r\n", BLE_GATEWAY_CLIENT_LOG);
-        ret = gattc_read_req_by_handle(g_client_id, g_conn_id, g_data_handle);
-        if (ret != ERRCODE_BT_SUCCESS) {
-            g_read_started = false;
-            osal_printk("%s read request failed: 0x%x\r\n", BLE_GATEWAY_CLIENT_LOG, ret);
-        }
-    }
-}
-
-static void ble_gateway_read_cb(uint8_t client_id,
-                                uint16_t conn_id,
-                                gattc_handle_value_t *read_result,
-                                gatt_status_t status)
-{
-    gattc_handle_value_t write_value = {0};
-    (void)client_id;
-    if (status != GATT_STATUS_SUCCESS || read_result->handle != g_data_handle) {
-        osal_printk("%s read failed, status=0x%x\r\n", BLE_GATEWAY_CLIENT_LOG, status);
+    if (!ble_gateway_decode_report(data->data, data->data_len, &report)) {
+        osal_printk("%s invalid binary sensor report, len=%u\r\n", BLE_GATEWAY_CLIENT_LOG, data->data_len);
         return;
     }
-    osal_printk("%s read result: %.*s\r\n", BLE_GATEWAY_CLIENT_LOG, read_result->data_len, read_result->data);
-    if (g_write_started) {
+    if (g_last_sequence != 0U && report.sequence <= g_last_sequence) {
+        osal_printk("%s stale or duplicate sensor report dropped: seq=%u last=%u\r\n", BLE_GATEWAY_CLIENT_LOG,
+                    report.sequence, g_last_sequence);
         return;
     }
-    g_write_started = true;
-    write_value.handle = g_data_handle;
-    write_value.data = (uint8_t *)NEW_VALUE;
-    write_value.data_len = sizeof(NEW_VALUE) - 1;
-    osal_printk("%s node sampling command sent: sample=1000\r\n", BLE_GATEWAY_CLIENT_LOG);
-    (void)gattc_write_req(g_client_id, conn_id, &write_value);
-}
-
-static void ble_gateway_cache_sync_write_complete(gatt_status_t status)
-{
-    g_cache_sync_write_started = false;
-    osal_printk("%s cache sync write %s\r\n", BLE_GATEWAY_CLIENT_LOG,
-                status == GATT_STATUS_SUCCESS ? "success" : "failed");
-    if ((status != GATT_STATUS_SUCCESS) || g_hello_cccd_started) {
-        return;
-    }
-
-    g_hello_cccd_started = true;
-    if (ble_gateway_enable_cccd(g_conn_id, g_notify_cccd_handle, "hello") != ERRCODE_BT_SUCCESS) {
-        g_hello_cccd_started = false;
-        osal_printk("%s hello CCCD write request failed\r\n", BLE_GATEWAY_CLIENT_LOG);
-    }
+    g_last_sequence = report.sequence;
+    osal_printk("%s BLE report queued: node=%u seq=%u\r\n", BLE_GATEWAY_CLIENT_LOG, report.node_id,
+                report.sequence);
+    ble_gateway_iotda_enqueue_report(&report);
 }
 
 static void ble_gateway_write_cb(uint8_t client_id, uint16_t conn_id, uint16_t handle, gatt_status_t status)
@@ -418,15 +466,13 @@ static void ble_gateway_write_cb(uint8_t client_id, uint16_t conn_id, uint16_t h
     (void)client_id;
     (void)conn_id;
     if (handle == g_notify_cccd_handle) {
-        osal_printk("%s hello CCCD write %s\r\n", BLE_GATEWAY_CLIENT_LOG,
+        osal_printk("%s sensor report CCCD write %s\r\n", BLE_GATEWAY_CLIENT_LOG,
                     status == GATT_STATUS_SUCCESS ? "success" : "failed");
-    } else if (handle == g_data_handle) {
-        if (g_cache_sync_write_started) {
-            ble_gateway_cache_sync_write_complete(status);
-            return;
-        }
-        osal_printk("%s write cfm: %s\r\n", BLE_GATEWAY_CLIENT_LOG,
+    } else if (handle == g_data_handle && g_command_write_pending) {
+        g_command_write_pending = false;
+        osal_printk("%s BLE interval command %s\r\n", BLE_GATEWAY_CLIENT_LOG,
                     status == GATT_STATUS_SUCCESS ? "success" : "failed");
+        ble_gateway_iotda_command_result(status == GATT_STATUS_SUCCESS);
     }
 }
 
@@ -509,14 +555,53 @@ static errcode_t ble_gateway_register_callbacks(void)
     gatt_callbacks.discovery_desc_cmp_cb = ble_gateway_discovery_descriptor_complete_cb;
     gatt_callbacks.mtu_changed_cb = ble_gateway_mtu_changed_cb;
     gatt_callbacks.notification_cb = ble_gateway_notification_cb;
-    gatt_callbacks.read_cb = ble_gateway_read_cb;
     gatt_callbacks.write_cb = ble_gateway_write_cb;
     return gattc_register_callbacks(&gatt_callbacks);
+}
+
+errcode_t ble_gateway_client_set_sample_interval(uint32_t interval_s)
+{
+    gattc_handle_value_t write_value = {0};
+    errcode_t ret;
+
+    if (!g_connected || g_data_handle == 0U || g_command_write_pending || interval_s < BLE_GATEWAY_MIN_INTERVAL_S ||
+        interval_s > BLE_GATEWAY_MAX_INTERVAL_S) {
+        return ERRCODE_FAIL;
+    }
+    ble_gateway_encode_interval_command(g_command_value, interval_s);
+    write_value.handle = g_data_handle;
+    write_value.data = g_command_value;
+    write_value.data_len = sizeof(g_command_value);
+    g_command_write_pending = true;
+    ret = gattc_write_req(g_client_id, g_conn_id, &write_value);
+    if (ret != ERRCODE_BT_SUCCESS) {
+        g_command_write_pending = false;
+    }
+    return ret;
+}
+
+void ble_gateway_client_restart_scan(void)
+{
+    if (!g_connecting && !g_connected) {
+        g_scan_restart_stopped = false;
+        g_scan_restart_requested = true;
+    }
 }
 
 errcode_t ble_gateway_client_init(void)
 {
     errcode_t ret;
+    ble_gateway_iotda_node_state(false);
+    ret = ble_gateway_start_control_task();
+    if (ret != ERRCODE_SUCC) {
+        osal_printk("%s control task start failed: 0x%x\r\n", BLE_GATEWAY_CLIENT_LOG, ret);
+        return ret;
+    }
+    ret = ble_gateway_wifi_start();
+    if (ret != ERRCODE_SUCC) {
+        osal_printk("%s Wi-Fi task start failed: 0x%x\r\n", BLE_GATEWAY_CLIENT_LOG, ret);
+        return ret;
+    }
     ret = ble_gateway_register_callbacks();
     if (ret != ERRCODE_BT_SUCCESS) {
         osal_printk("%s callback registration failed: 0x%x\r\n", BLE_GATEWAY_CLIENT_LOG, ret);

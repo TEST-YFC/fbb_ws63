@@ -37,6 +37,10 @@ config SAMPLE_SUPPORT_BLE_GATEWAY_SERVER_SAMPLE
 config SAMPLE_SUPPORT_BLE_GATEWAY_CLIENT_SAMPLE
     bool "Support BLE Gateway Central Sample"
 
+if SAMPLE_SUPPORT_BLE_GATEWAY_CLIENT_SAMPLE
+osource "application/samples/bt/ble/ble_gateway/Kconfig"
+endif
+
 config SAMPLE_SUPPORT_BLE_HID_BTN_SAMPLE
     bool "Support BLE HID Button Sample"
 
