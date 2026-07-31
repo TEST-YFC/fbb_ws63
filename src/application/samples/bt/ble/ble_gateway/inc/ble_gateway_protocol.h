@@ -31,6 +31,10 @@
 #define BLE_GATEWAY_PRESSURE_OFFSET 10U
 #define BLE_GATEWAY_COMMAND_TYPE_OFFSET 1U
 #define BLE_GATEWAY_COMMAND_INTERVAL_OFFSET 2U
+#define BLE_GATEWAY_BYTE_0_OFFSET 0U
+#define BLE_GATEWAY_BYTE_1_OFFSET 1U
+#define BLE_GATEWAY_BYTE_2_OFFSET 2U
+#define BLE_GATEWAY_BYTE_3_OFFSET 3U
 #define BLE_GATEWAY_BYTE_SHIFT 8U
 #define BLE_GATEWAY_HALF_WORD_SHIFT 16U
 #define BLE_GATEWAY_THREE_BYTE_SHIFT 24U
@@ -46,28 +50,30 @@ typedef struct {
 
 static inline uint16_t ble_gateway_get_u16_le(const uint8_t *data)
 {
-    return (uint16_t)data[0] | ((uint16_t)data[1] << BLE_GATEWAY_BYTE_SHIFT);
+    return (uint16_t)data[BLE_GATEWAY_BYTE_0_OFFSET] |
+           ((uint16_t)data[BLE_GATEWAY_BYTE_1_OFFSET] << BLE_GATEWAY_BYTE_SHIFT);
 }
 
 static inline uint32_t ble_gateway_get_u32_le(const uint8_t *data)
 {
-    return (uint32_t)data[0] | ((uint32_t)data[1] << BLE_GATEWAY_BYTE_SHIFT) |
-           ((uint32_t)data[2] << BLE_GATEWAY_HALF_WORD_SHIFT) |
-           ((uint32_t)data[3] << BLE_GATEWAY_THREE_BYTE_SHIFT);
+    return (uint32_t)data[BLE_GATEWAY_BYTE_0_OFFSET] |
+           ((uint32_t)data[BLE_GATEWAY_BYTE_1_OFFSET] << BLE_GATEWAY_BYTE_SHIFT) |
+           ((uint32_t)data[BLE_GATEWAY_BYTE_2_OFFSET] << BLE_GATEWAY_HALF_WORD_SHIFT) |
+           ((uint32_t)data[BLE_GATEWAY_BYTE_3_OFFSET] << BLE_GATEWAY_THREE_BYTE_SHIFT);
 }
 
 static inline void ble_gateway_put_u16_le(uint8_t *data, uint16_t value)
 {
-    data[0] = (uint8_t)value;
-    data[1] = (uint8_t)(value >> BLE_GATEWAY_BYTE_SHIFT);
+    data[BLE_GATEWAY_BYTE_0_OFFSET] = (uint8_t)value;
+    data[BLE_GATEWAY_BYTE_1_OFFSET] = (uint8_t)(value >> BLE_GATEWAY_BYTE_SHIFT);
 }
 
 static inline void ble_gateway_put_u32_le(uint8_t *data, uint32_t value)
 {
-    data[0] = (uint8_t)value;
-    data[1] = (uint8_t)(value >> BLE_GATEWAY_BYTE_SHIFT);
-    data[2] = (uint8_t)(value >> BLE_GATEWAY_HALF_WORD_SHIFT);
-    data[3] = (uint8_t)(value >> BLE_GATEWAY_THREE_BYTE_SHIFT);
+    data[BLE_GATEWAY_BYTE_0_OFFSET] = (uint8_t)value;
+    data[BLE_GATEWAY_BYTE_1_OFFSET] = (uint8_t)(value >> BLE_GATEWAY_BYTE_SHIFT);
+    data[BLE_GATEWAY_BYTE_2_OFFSET] = (uint8_t)(value >> BLE_GATEWAY_HALF_WORD_SHIFT);
+    data[BLE_GATEWAY_BYTE_3_OFFSET] = (uint8_t)(value >> BLE_GATEWAY_THREE_BYTE_SHIFT);
 }
 
 static inline void ble_gateway_encode_report(uint8_t output[BLE_GATEWAY_REPORT_SIZE],
