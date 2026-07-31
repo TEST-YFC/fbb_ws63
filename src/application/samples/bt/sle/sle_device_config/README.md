@@ -1,8 +1,6 @@
 # 参数配置与持久化
 
-仓库中部署了一台环境监测设备B。维护人员使用手持终端A，通过SLE修改B的数据上报周期、温度告警阈值和工作模式。B负责校验输入、拒绝越界值、将合法业务参数写入非易失性存储（NV），并在重启后恢复给后续业务模块。本样例使用两块WS63：A运行Client，B运行Server，通过SLE Service Access Protocol（SSAP）完成这条配置链路。
-
-> 当前样例只实现业务参数的传输、校验、保存和恢复，没有连接真实传感器，也没有实现周期上报、温度告警或低功耗业务。三个字段不是SLE广播间隔、连接参数或发射功率等协议栈设置。
+本样例使用两块 WS63 演示通过 SSAP 属性读写配置参数并保存到 NV：Client 读取和写入配置，Server 校验数据并保存合法值、拒绝非法值，复位后再从 NV 恢复。示例字段只用于验证配置链路，不驱动实际业务。
 
 > 建议先完成 [sle_hello](../sle_hello/) 的连接和属性读写实验。本样例不需要传感器、Wi-Fi 或云端账号。
 
@@ -10,13 +8,13 @@
 
 | 角色 | 功能 | 成功判据 |
 |------|------|----------|
-| 设备B Server | 以 `config_server` 广播，校验业务参数并写入 NV ID `0x20A1` | 输出 `config saved`；非法值输出 `status=0xf` |
-| 设备A Client | 扫描、连接、配对、发现属性，自动读取和写入设备B | 输出 `valid config accepted`，随后回读值一致 |
+| Server | 以 `config_server` 广播，校验参数并写入 NV ID `0x20A1` | 输出 `config saved`；非法值输出 `status=0xf` |
+| Client | 扫描、连接、配对、发现属性，自动读取和写入 Server | 输出 `valid config accepted`，随后回读值一致 |
 
 Client 自动执行以下流程：
 
 ```text
-读取设备B当前业务参数
+读取 Server 当前参数
   → 写入合法配置 500 ms / 75.0 ℃ / mode 1
   → 收到成功 Write Confirmation
   → 写后回读
@@ -25,15 +23,29 @@ Client 自动执行以下流程：
 
 非法配置的失败状态在本次实测中只由 Server 端日志稳定呈现，不能把 Client 没有继续输出日志误判为测试失败或成功。真正的 NV 持久化还需要复位 Server 后观察加载日志。
 
-## 8 字节业务参数结构
+## 公共配置结构体
 
-| 偏移 | 长度 | 字段 | 合法范围 |
-|:---:|:---:|------|----------|
-| 0 | 2 | `magic` | 固定为 `0x5343` |
-| 2 | 2 | `report_interval_ms` | 100～60000 ms |
-| 4 | 2 | `alarm_threshold_decicelsius` | -200～1000，单位 0.1 ℃ |
-| 6 | 1 | `mode` | 0～1 |
-| 7 | 1 | `version` | 当前为 1 |
+Client 和 Server 共用 `sle_device_config_protocol.h` 中的 `sle_device_config_t`：
+
+```c
+typedef struct {
+    uint16_t magic;
+    uint16_t report_interval_ms;
+    int16_t alarm_threshold_decicelsius;
+    uint8_t mode;
+    uint8_t version;
+} sle_device_config_t;
+```
+
+当前结构体共 8 字节，各字段约束如下：
+
+| 字段 | 类型 | 约束和说明 |
+|------|------|------------|
+| `magic` | `uint16_t` | 固定为 `0x5343` |
+| `report_interval_ms` | `uint16_t` | 100～60000 ms |
+| `alarm_threshold_decicelsius` | `int16_t` | -200～1000，单位 0.1 ℃ |
+| `mode` | `uint8_t` | 0 为正常模式，1 为低功耗模式 |
+| `version` | `uint8_t` | 当前为 1 |
 
 本样例的两端都是相同工具链构建的 WS63，直接传输 `sle_device_config_t`。迁移到不同处理器或编译器时，应改为显式的逐字节编码和解码，不能依赖结构体布局与本机字节序。
 
@@ -64,83 +76,46 @@ Support SLE Device Config Client Sample.
 
 两个选项位于同一个 `choice`，一次构建只能选择一个角色。`CONFIG_SUPPORT_SLE_PERIPHERAL` 或 `CONFIG_SUPPORT_SLE_CENTRAL` 会由角色自动派生，不需要手工选择。
 
-## 构建并保存双角色固件
+## 构建与烧录
 
-先选择 Server，保存 Kconfig UI 后构建：
-
-```powershell
-fbb build --clean ws63-liteos-app
-New-Item -ItemType Directory -Force .\firmware-snapshots
-Copy-Item .\src\output\ws63\fwpkg\ws63-liteos-app\ws63-liteos-app_all.fwpkg `
-    .\firmware-snapshots\sle-device-config-server.fwpkg
-```
-
-再通过 Kconfig UI 切换为 Client，重新构建并保存：
+先选择 Server，保存 Kconfig UI 后构建并烧录：
 
 ```powershell
 fbb build --clean ws63-liteos-app
-Copy-Item .\src\output\ws63\fwpkg\ws63-liteos-app\ws63-liteos-app_all.fwpkg `
-    .\firmware-snapshots\sle-device-config-client.fwpkg
+fbb flash ws63-liteos-app --port <server_port> --baud 2000000 --json-summary
 ```
 
-两个角色共用默认输出路径，第二次构建会覆盖第一次的包，因此必须先保存 Server 快照。
-
-## 烧录与逐级验收
-
-端口以实际枚举结果为准。本次实测使用 COM6 作为 Server、COM8 作为 Client，烧录波特率为 2000000：
+再通过 Kconfig UI 切换为 Client，重新构建并烧录：
 
 ```powershell
-fbb flash -f .\firmware-snapshots\sle-device-config-server.fwpkg --chip ws63 --port <server_port> --baud 2000000 --json-summary
-fbb flash -f .\firmware-snapshots\sle-device-config-client.fwpkg --chip ws63 --port <client_port> --baud 2000000 --json-summary
+fbb build --clean ws63-liteos-app
+fbb flash ws63-liteos-app --port <client_port> --baud 2000000 --json-summary
 ```
 
-### 关卡一：Server启动并广播
+必须在切换为 Client 前完成 Server 烧录，因为两个角色共用同一个构建输出。端口以实际枚举结果为准。
+
+## 运行结果
+
+先启动 Server，再启动 Client。Client 输出：
 
 ```text
-[sle device config server] start announce success.
-[sle device config server] init ok
-[sle device config server] waiting for connection
-```
-
-### 关卡二：Client完成连接和属性发现
-
-```text
-[sle device config client] found config_server, stopping seek...
-[sle device config client] connected, conn_id=0x00
-[sle device config client] pair complete conn_id:0, ... status:0
-[sle device config client] sending read request, handle=0x0011
-```
-
-### 关卡三：合法写入与非法值拒绝
-
-Client合法写入成功：
-
-```text
+[sle device config client] write valid config: interval=500, threshold=750, mode=1
 [sle device config client] valid config accepted, handle=0x11
 [sle device config client] read config: interval=500, threshold=750, mode=1
 [sle device config client] persisted config verified
+[sle device config client] write invalid config: interval=50
 ```
 
-源码中的 `persisted config verified` 只表示同一次运行中的写后回读一致，不代表已经完成断电或复位恢复测试。非法值应在 Server 端验收：
+Server 输出：
 
 ```text
+[sle device config server] config saved: interval=500, threshold=750, mode=1
 [sle device config server] rejected: interval=50, threshold=750, mode=1
 [sle device config server] write response status=0xf
 ```
 
-### 关卡四：复位后验证 NV 恢复
-
-合法配置写入完成后复位 Server，必须看到：
+复位 Server 后输出：
 
 ```text
 [sle device config server] config loaded from NV: interval=500, threshold=750, mode=1
 ```
-
-只有这一关通过，才能判定 NV 持久化成功。
-
-## 已知限制
-
-- Client 当前没有稳定收到非法写响应的失败确认，因此不要等待 `invalid config rejected` 或 `test passed` 作为实板判据。
-- `persisted config verified` 是现有源码日志名称，含义是写后回读一致。
-- 配置协议直接使用 C 结构体，只适用于本案例相同架构、相同工具链的两块 WS63。
-- `config_server` 和教学 UUID 仅用于样例，产品应使用自己的设备标识和服务 UUID。
