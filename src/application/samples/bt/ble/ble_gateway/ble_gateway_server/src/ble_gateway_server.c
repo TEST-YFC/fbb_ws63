@@ -96,7 +96,7 @@ static void ble_gateway_read_request_cb(uint8_t server_id,
                                        g_property_value_len};
     if (ble_gateway_send_response(server_id, conn_id, &response) == ERRCODE_BT_SUCCESS) {
         osal_printk("%s read response sent: interval=%u s\r\n", BLE_GATEWAY_SERVER_LOG,
-                    ble_gateway_get_u32_le(&g_property_value[2]));
+                    ble_gateway_get_u32_le(&g_property_value[BLE_GATEWAY_COMMAND_INTERVAL_OFFSET]));
     }
 }
 
@@ -164,7 +164,7 @@ static void ble_gateway_write_request_cb(uint8_t server_id,
     if (response_status == GATT_STATUS_SUCCESS) {
         ble_gateway_server_set_adv_default_state(true);
         osal_printk("%s sampling interval updated: %u s\r\n", BLE_GATEWAY_SERVER_LOG,
-                    ble_gateway_get_u32_le(&g_property_value[2]));
+                    ble_gateway_get_u32_le(&g_property_value[BLE_GATEWAY_COMMAND_INTERVAL_OFFSET]));
     } else {
         osal_printk("%s write rejected, status=0x%x\r\n", BLE_GATEWAY_SERVER_LOG, response_status);
     }

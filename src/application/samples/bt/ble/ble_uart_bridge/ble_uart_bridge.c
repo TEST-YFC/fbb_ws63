@@ -420,10 +420,49 @@ static void ble_uart_bridge_worker_wait(void)
  * @return 任务退出状态。
  * @endif
  */
-static int ble_uart_bridge_task(const char *arg)
+static errcode_t ble_uart_bridge_role_init(void)
+{
+#if defined(CONFIG_SAMPLE_SUPPORT_BLE_UART_BRIDGE_SERVER_SAMPLE)
+    return ble_uart_bridge_server_init();
+#elif defined(CONFIG_SAMPLE_SUPPORT_BLE_UART_BRIDGE_CLIENT_SAMPLE)
+    return ble_uart_bridge_client_init();
+#else
+    return ERRCODE_FAIL;
+#endif
+}
+
+static void ble_uart_bridge_process_ble_tx(void)
 {
     uint8_t data[BLE_UART_BRIDGE_BLE_PAYLOAD_MAX_LEN];
     uint16_t length;
+    errcode_t ret;
+    if (g_ble_send_pending) {
+        return;
+    }
+    length = ble_uart_bridge_uart_queue_peek(data, (uint16_t)sizeof(data));
+    if (length == 0) {
+        return;
+    }
+    g_ble_send_pending_length = length;
+    g_ble_send_pending = true;
+#if defined(CONFIG_SAMPLE_SUPPORT_BLE_UART_BRIDGE_SERVER_SAMPLE)
+    ret = ble_uart_bridge_server_send_notification(data, length);
+#else
+    ret = ble_uart_bridge_client_send_write(data, length);
+#endif
+    if (ret != ERRCODE_BT_SUCCESS && g_ble_send_pending) {
+        ble_uart_bridge_ble_send_complete(ERRCODE_BT_FAIL);
+    }
+}
+
+static bool ble_uart_bridge_work_pending(void)
+{
+    return g_uart_tx_queue_head != g_uart_tx_queue_tail ||
+           (!g_ble_send_pending && g_uart_rx_queue_head != g_uart_rx_queue_tail);
+}
+
+static int ble_uart_bridge_task(const char *arg)
+{
     errcode_t ret;
 
     (void)arg;
@@ -440,16 +479,7 @@ static int ble_uart_bridge_task(const char *arg)
         osal_sem_destroy(&g_worker_sem);
         return (int)ret;
     }
-#if defined(CONFIG_SAMPLE_SUPPORT_BLE_UART_BRIDGE_SERVER_SAMPLE)
-    ret = ble_uart_bridge_server_init();
-#elif defined(CONFIG_SAMPLE_SUPPORT_BLE_UART_BRIDGE_CLIENT_SAMPLE)
-    ret = ble_uart_bridge_client_init();
-#else
-    (void)uapi_uart_deinit(BLE_UART_BRIDGE_UART_BUS);
-    g_worker_sem_ready = false;
-    osal_sem_destroy(&g_worker_sem);
-    return 0;
-#endif
+    ret = ble_uart_bridge_role_init();
     if (ret != ERRCODE_SUCC) {
         (void)uapi_uart_deinit(BLE_UART_BRIDGE_UART_BUS);
         g_worker_sem_ready = false;
@@ -471,27 +501,10 @@ static int ble_uart_bridge_task(const char *arg)
             osal_msleep(BLE_UART_BRIDGE_BLE_RETRY_DELAY_MS);
         }
 
-        if (!g_ble_send_pending) {
-            length = ble_uart_bridge_uart_queue_peek(data, (uint16_t)sizeof(data));
-            if (length > 0) {
-                /* Mark bytes in flight before calling a role API that may complete synchronously. */
-                g_ble_send_pending_length = length;
-                g_ble_send_pending = true;
-#if defined(CONFIG_SAMPLE_SUPPORT_BLE_UART_BRIDGE_SERVER_SAMPLE)
-                ret = ble_uart_bridge_server_send_notification(data, length);
-#else
-                ret = ble_uart_bridge_client_send_write(data, length);
-#endif
-                if (ret != ERRCODE_BT_SUCCESS && g_ble_send_pending) {
-                    /* A rejected submission has no later callback, so release its in-flight state here. */
-                    ble_uart_bridge_ble_send_complete(ERRCODE_BT_FAIL);
-                }
-            }
-        }
+        ble_uart_bridge_process_ble_tx();
 
         /* Continue immediately while either bounded queue still contains processable data. */
-        if (g_uart_tx_queue_head != g_uart_tx_queue_tail ||
-            (!g_ble_send_pending && g_uart_rx_queue_head != g_uart_rx_queue_tail)) {
+        if (ble_uart_bridge_work_pending()) {
             continue;
         }
         ble_uart_bridge_worker_wait();

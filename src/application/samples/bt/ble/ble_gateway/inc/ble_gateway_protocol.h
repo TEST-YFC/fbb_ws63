@@ -17,6 +17,23 @@
 #define BLE_GATEWAY_MIN_INTERVAL_S 5U
 #define BLE_GATEWAY_MAX_INTERVAL_S 3600U
 #define BLE_GATEWAY_DEFAULT_INTERVAL_S 10U
+#define BLE_GATEWAY_MIN_TEMPERATURE_TENTHS_C (-400)
+#define BLE_GATEWAY_MAX_TEMPERATURE_TENTHS_C 850
+#define BLE_GATEWAY_MAX_HUMIDITY_TENTHS_PERCENT 1000U
+#define BLE_GATEWAY_MIN_PRESSURE_PA 30000U
+#define BLE_GATEWAY_MAX_PRESSURE_PA 110000U
+
+#define BLE_GATEWAY_VERSION_OFFSET 0U
+#define BLE_GATEWAY_NODE_ID_OFFSET 1U
+#define BLE_GATEWAY_SEQUENCE_OFFSET 2U
+#define BLE_GATEWAY_TEMPERATURE_OFFSET 6U
+#define BLE_GATEWAY_HUMIDITY_OFFSET 8U
+#define BLE_GATEWAY_PRESSURE_OFFSET 10U
+#define BLE_GATEWAY_COMMAND_TYPE_OFFSET 1U
+#define BLE_GATEWAY_COMMAND_INTERVAL_OFFSET 2U
+#define BLE_GATEWAY_BYTE_SHIFT 8U
+#define BLE_GATEWAY_HALF_WORD_SHIFT 16U
+#define BLE_GATEWAY_THREE_BYTE_SHIFT 24U
 
 typedef struct {
     uint8_t version;
@@ -29,77 +46,102 @@ typedef struct {
 
 static inline uint16_t ble_gateway_get_u16_le(const uint8_t *data)
 {
-    return (uint16_t)data[0] | ((uint16_t)data[1] << 8);
+    return (uint16_t)data[0] | ((uint16_t)data[1] << BLE_GATEWAY_BYTE_SHIFT);
 }
 
 static inline uint32_t ble_gateway_get_u32_le(const uint8_t *data)
 {
-    return (uint32_t)data[0] | ((uint32_t)data[1] << 8) | ((uint32_t)data[2] << 16) | ((uint32_t)data[3] << 24);
+    return (uint32_t)data[0] | ((uint32_t)data[1] << BLE_GATEWAY_BYTE_SHIFT) |
+           ((uint32_t)data[2] << BLE_GATEWAY_HALF_WORD_SHIFT) |
+           ((uint32_t)data[3] << BLE_GATEWAY_THREE_BYTE_SHIFT);
 }
 
 static inline void ble_gateway_put_u16_le(uint8_t *data, uint16_t value)
 {
     data[0] = (uint8_t)value;
-    data[1] = (uint8_t)(value >> 8);
+    data[1] = (uint8_t)(value >> BLE_GATEWAY_BYTE_SHIFT);
 }
 
 static inline void ble_gateway_put_u32_le(uint8_t *data, uint32_t value)
 {
     data[0] = (uint8_t)value;
-    data[1] = (uint8_t)(value >> 8);
-    data[2] = (uint8_t)(value >> 16);
-    data[3] = (uint8_t)(value >> 24);
+    data[1] = (uint8_t)(value >> BLE_GATEWAY_BYTE_SHIFT);
+    data[2] = (uint8_t)(value >> BLE_GATEWAY_HALF_WORD_SHIFT);
+    data[3] = (uint8_t)(value >> BLE_GATEWAY_THREE_BYTE_SHIFT);
 }
 
 static inline void ble_gateway_encode_report(uint8_t output[BLE_GATEWAY_REPORT_SIZE],
                                              const ble_gateway_report_t *report)
 {
-    output[0] = report->version;
-    output[1] = report->node_id;
-    ble_gateway_put_u32_le(&output[2], report->sequence);
-    ble_gateway_put_u16_le(&output[6], (uint16_t)report->temperature_tenths_celsius);
-    ble_gateway_put_u16_le(&output[8], report->humidity_tenths_percent);
-    ble_gateway_put_u32_le(&output[10], report->pressure_pa);
+    output[BLE_GATEWAY_VERSION_OFFSET] = report->version;
+    output[BLE_GATEWAY_NODE_ID_OFFSET] = report->node_id;
+    ble_gateway_put_u32_le(&output[BLE_GATEWAY_SEQUENCE_OFFSET], report->sequence);
+    ble_gateway_put_u16_le(&output[BLE_GATEWAY_TEMPERATURE_OFFSET],
+                           (uint16_t)report->temperature_tenths_celsius);
+    ble_gateway_put_u16_le(&output[BLE_GATEWAY_HUMIDITY_OFFSET], report->humidity_tenths_percent);
+    ble_gateway_put_u32_le(&output[BLE_GATEWAY_PRESSURE_OFFSET], report->pressure_pa);
+}
+
+static inline void ble_gateway_unpack_report(const uint8_t *data, ble_gateway_report_t *report)
+{
+    report->version = data[BLE_GATEWAY_VERSION_OFFSET];
+    report->node_id = data[BLE_GATEWAY_NODE_ID_OFFSET];
+    report->sequence = ble_gateway_get_u32_le(&data[BLE_GATEWAY_SEQUENCE_OFFSET]);
+    report->temperature_tenths_celsius =
+        (int16_t)ble_gateway_get_u16_le(&data[BLE_GATEWAY_TEMPERATURE_OFFSET]);
+    report->humidity_tenths_percent = ble_gateway_get_u16_le(&data[BLE_GATEWAY_HUMIDITY_OFFSET]);
+    report->pressure_pa = ble_gateway_get_u32_le(&data[BLE_GATEWAY_PRESSURE_OFFSET]);
+}
+
+static inline bool ble_gateway_report_fields_valid(const ble_gateway_report_t *report)
+{
+    return report->node_id == BLE_GATEWAY_NODE_ID_DEFAULT && report->sequence != 0U &&
+           report->temperature_tenths_celsius >= BLE_GATEWAY_MIN_TEMPERATURE_TENTHS_C &&
+           report->temperature_tenths_celsius <= BLE_GATEWAY_MAX_TEMPERATURE_TENTHS_C &&
+           report->humidity_tenths_percent <= BLE_GATEWAY_MAX_HUMIDITY_TENTHS_PERCENT &&
+           report->pressure_pa >= BLE_GATEWAY_MIN_PRESSURE_PA && report->pressure_pa <= BLE_GATEWAY_MAX_PRESSURE_PA;
 }
 
 static inline bool ble_gateway_decode_report(const uint8_t *data, uint16_t length, ble_gateway_report_t *report)
 {
     if (data == NULL || report == NULL || length != BLE_GATEWAY_REPORT_SIZE ||
-        data[0] != BLE_GATEWAY_PROTOCOL_VERSION) {
+        data[BLE_GATEWAY_VERSION_OFFSET] != BLE_GATEWAY_PROTOCOL_VERSION) {
         return false;
     }
-    report->version = data[0];
-    report->node_id = data[1];
-    report->sequence = ble_gateway_get_u32_le(&data[2]);
-    report->temperature_tenths_celsius = (int16_t)ble_gateway_get_u16_le(&data[6]);
-    report->humidity_tenths_percent = ble_gateway_get_u16_le(&data[8]);
-    report->pressure_pa = ble_gateway_get_u32_le(&data[10]);
-    return report->node_id == BLE_GATEWAY_NODE_ID_DEFAULT && report->sequence != 0U &&
-           report->temperature_tenths_celsius >= -400 && report->temperature_tenths_celsius <= 850 &&
-           report->humidity_tenths_percent <= 1000U && report->pressure_pa >= 30000U &&
-           report->pressure_pa <= 110000U;
+    ble_gateway_unpack_report(data, report);
+    return ble_gateway_report_fields_valid(report);
 }
 
 static inline void ble_gateway_encode_interval_command(uint8_t output[BLE_GATEWAY_COMMAND_SIZE], uint32_t interval_s)
 {
-    output[0] = BLE_GATEWAY_PROTOCOL_VERSION;
-    output[1] = BLE_GATEWAY_COMMAND_SET_INTERVAL;
-    ble_gateway_put_u32_le(&output[2], interval_s);
+    output[BLE_GATEWAY_VERSION_OFFSET] = BLE_GATEWAY_PROTOCOL_VERSION;
+    output[BLE_GATEWAY_COMMAND_TYPE_OFFSET] = BLE_GATEWAY_COMMAND_SET_INTERVAL;
+    ble_gateway_put_u32_le(&output[BLE_GATEWAY_COMMAND_INTERVAL_OFFSET], interval_s);
 }
 
-static inline bool ble_gateway_decode_interval_command(const uint8_t *data, uint16_t length, uint32_t *interval_s)
+static inline bool ble_gateway_command_header_valid(const uint8_t *data, uint16_t length, const uint32_t *interval_s)
 {
-    uint32_t value;
-    if (data == NULL || interval_s == NULL || length != BLE_GATEWAY_COMMAND_SIZE ||
-        data[0] != BLE_GATEWAY_PROTOCOL_VERSION || data[1] != BLE_GATEWAY_COMMAND_SET_INTERVAL) {
-        return false;
-    }
-    value = ble_gateway_get_u32_le(&data[2]);
+    return data != NULL && interval_s != NULL && length == BLE_GATEWAY_COMMAND_SIZE &&
+           data[BLE_GATEWAY_VERSION_OFFSET] == BLE_GATEWAY_PROTOCOL_VERSION &&
+           data[BLE_GATEWAY_COMMAND_TYPE_OFFSET] == BLE_GATEWAY_COMMAND_SET_INTERVAL;
+}
+
+static inline bool ble_gateway_store_interval(const uint8_t *data, uint32_t *interval_s)
+{
+    uint32_t value = ble_gateway_get_u32_le(&data[BLE_GATEWAY_COMMAND_INTERVAL_OFFSET]);
     if (value < BLE_GATEWAY_MIN_INTERVAL_S || value > BLE_GATEWAY_MAX_INTERVAL_S) {
         return false;
     }
     *interval_s = value;
     return true;
+}
+
+static inline bool ble_gateway_decode_interval_command(const uint8_t *data, uint16_t length, uint32_t *interval_s)
+{
+    if (!ble_gateway_command_header_valid(data, length, interval_s)) {
+        return false;
+    }
+    return ble_gateway_store_interval(data, interval_s);
 }
 
 #endif

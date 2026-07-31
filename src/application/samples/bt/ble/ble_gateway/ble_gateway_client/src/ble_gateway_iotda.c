@@ -17,6 +17,7 @@
 #include "mbedtls/md.h"
 #include "ble_gateway_client.h"
 #include "ble_gateway_iotda.h"
+#include "ble_gateway_iotda_ca.h"
 
 #define IOTDA_LOG "[ble mqtt gateway]"
 #define IOTDA_QOS 1
@@ -30,11 +31,9 @@
 #define IOTDA_REQUEST_ID_MAX_LEN 128U
 #define IOTDA_HMAC_SIZE 32U
 #define IOTDA_PASSWORD_HEX_SIZE (IOTDA_HMAC_SIZE * 2U + 1U)
-
-extern const unsigned char g_ble_gateway_iotda_ca[];
-extern const size_t g_ble_gateway_iotda_ca_size;
-extern int MQTTClient_init(void);
-extern void MQTTClient_cleanup(void);
+#define IOTDA_HEX_NIBBLE_BITS 4U
+#define IOTDA_COMMAND_SUCCESS 0
+#define IOTDA_COMMAND_FAILURE 1
 
 typedef struct {
     bool node_state_ready;
@@ -46,6 +45,15 @@ typedef struct {
     int response_code;
     char request_id[IOTDA_REQUEST_ID_MAX_LEN];
 } iotda_bridge_state_t;
+
+typedef struct {
+    char uri[IOTDA_URI_MAX_LEN];
+    char client_id[IOTDA_CLIENT_ID_MAX_LEN];
+    char report_topic[IOTDA_TOPIC_MAX_LEN];
+    char command_topic[IOTDA_TOPIC_MAX_LEN];
+    char password[IOTDA_PASSWORD_HEX_SIZE];
+    MQTTClient client;
+} iotda_connection_context_t;
 
 static osal_mutex g_iotda_mutex;
 static bool g_iotda_initialized;
@@ -96,7 +104,7 @@ static bool iotda_build_password(char output[IOTDA_PASSWORD_HEX_SIZE])
         return false;
     }
     for (index = 0; index < IOTDA_HMAC_SIZE; index++) {
-        output[index * 2U] = hex[digest[index] >> 4];
+        output[index * 2U] = hex[digest[index] >> IOTDA_HEX_NIBBLE_BITS];
         output[index * 2U + 1U] = hex[digest[index] & 0x0FU];
     }
     output[IOTDA_PASSWORD_HEX_SIZE - 1U] = '\0';
@@ -138,7 +146,7 @@ static bool iotda_copy_request_id(const char *topic, char output[IOTDA_REQUEST_I
     return strcpy_s(output, IOTDA_REQUEST_ID_MAX_LEN, request_id) == EOK;
 }
 
-static bool iotda_parse_interval_command(const void *payload, int payload_len, uint32_t *interval_s)
+static bool iotda_parse_interval_command(const char *payload, int payload_len, uint32_t *interval_s)
 {
     char *json_text;
     cJSON *root = NULL;
@@ -192,7 +200,7 @@ static int iotda_message_arrived(void *context, char *topic_name, int topic_len,
     (void)topic_len;
 
     if (topic_name != NULL && message != NULL && iotda_copy_request_id(topic_name, request_id) &&
-        iotda_parse_interval_command(message->payload, message->payloadlen, &interval_s)) {
+        iotda_parse_interval_command((const char *)message->payload, message->payloadlen, &interval_s)) {
         if (osal_mutex_lock(&g_iotda_mutex) == OSAL_SUCCESS) {
             busy = g_bridge_state.command_waiting || g_bridge_state.response_ready;
             if (!busy && strcpy_s(g_bridge_state.request_id, sizeof(g_bridge_state.request_id), request_id) == EOK) {
@@ -208,7 +216,7 @@ static int iotda_message_arrived(void *context, char *topic_name, int topic_len,
         }
     }
     if (ret != ERRCODE_SUCC && request_id[0] != '\0') {
-        if (iotda_queue_response(request_id, 1)) {
+        if (iotda_queue_response(request_id, IOTDA_COMMAND_FAILURE)) {
             osal_printk("%s cloud command rejected or BLE node unavailable\r\n", IOTDA_LOG);
         } else {
             osal_printk("%s cloud command ignored while another command is pending\r\n", IOTDA_LOG);
@@ -357,10 +365,12 @@ static int iotda_publish_response(MQTTClient client, const char *request_id, int
 
 void ble_gateway_iotda_init(void)
 {
+    MQTTClient_init_options mqtt_init_options = MQTTClient_init_options_initializer;
     if (g_iotda_initialized) {
         return;
     }
     if (osal_mutex_init(&g_iotda_mutex) == OSAL_SUCCESS) {
+        MQTTClient_global_init(&mqtt_init_options);
         (void)memset_s(&g_bridge_state, sizeof(g_bridge_state), 0, sizeof(g_bridge_state));
         g_iotda_initialized = true;
     }
@@ -382,7 +392,7 @@ void ble_gateway_iotda_command_result(bool success)
         return;
     }
     if (g_bridge_state.command_waiting) {
-        g_bridge_state.response_code = success ? 0 : 1;
+        g_bridge_state.response_code = success ? IOTDA_COMMAND_SUCCESS : IOTDA_COMMAND_FAILURE;
         g_bridge_state.response_ready = true;
         g_bridge_state.command_waiting = false;
     }
@@ -399,46 +409,40 @@ void ble_gateway_iotda_node_state(bool online)
     osal_mutex_unlock(&g_iotda_mutex);
 }
 
-void ble_gateway_iotda_run(void)
+static bool iotda_prepare_connection(iotda_connection_context_t *context)
 {
-    char uri[IOTDA_URI_MAX_LEN] = {0};
-    char client_id[IOTDA_CLIENT_ID_MAX_LEN] = {0};
-    char report_topic[IOTDA_TOPIC_MAX_LEN] = {0};
-    char command_topic[IOTDA_TOPIC_MAX_LEN] = {0};
-    char password[IOTDA_PASSWORD_HEX_SIZE] = {0};
-    MQTTClient client = NULL;
-    MQTTClient_SSLOptions ssl_options = MQTTClient_SSLOptions_initializer;
-    MQTTClient_connectOptions connect_options = MQTTClient_connectOptions_initializer;
-    cert_string trust_store = {g_ble_gateway_iotda_ca, 0};
-    int ret;
-
-    ble_gateway_iotda_init();
-    if (!g_iotda_initialized || !iotda_config_valid() || !iotda_build_password(password)) {
-        osal_printk("%s private Kconfig is incomplete or invalid\r\n", IOTDA_LOG);
-        return;
+    if (!iotda_config_valid() || !iotda_build_password(context->password)) {
+        return false;
     }
-    trust_store.size = g_ble_gateway_iotda_ca_size;
-    if (snprintf_s(uri, sizeof(uri), sizeof(uri) - 1U, "ssl://%s:%d", CONFIG_IOTDA_MQTT_HOST,
-                   CONFIG_IOTDA_MQTT_PORT) < 0 ||
-        snprintf_s(client_id, sizeof(client_id), sizeof(client_id) - 1U, "%s_0_0_%s", CONFIG_IOTDA_DEVICE_ID,
-                   CONFIG_IOTDA_AUTH_TIMESTAMP) < 0 ||
-        snprintf_s(report_topic, sizeof(report_topic), sizeof(report_topic) - 1U,
+    if (snprintf_s(context->uri, sizeof(context->uri), sizeof(context->uri) - 1U, "ssl://%s:%d",
+                   CONFIG_IOTDA_MQTT_HOST, CONFIG_IOTDA_MQTT_PORT) < 0 ||
+        snprintf_s(context->client_id, sizeof(context->client_id), sizeof(context->client_id) - 1U, "%s_0_0_%s",
+                   CONFIG_IOTDA_DEVICE_ID, CONFIG_IOTDA_AUTH_TIMESTAMP) < 0 ||
+        snprintf_s(context->report_topic, sizeof(context->report_topic), sizeof(context->report_topic) - 1U,
                    "$oc/devices/%s/sys/properties/report", CONFIG_IOTDA_DEVICE_ID) < 0 ||
-        snprintf_s(command_topic, sizeof(command_topic), sizeof(command_topic) - 1U,
+        snprintf_s(context->command_topic, sizeof(context->command_topic), sizeof(context->command_topic) - 1U,
                    "$oc/devices/%s/sys/commands/#", CONFIG_IOTDA_DEVICE_ID) < 0) {
         osal_printk("%s IoTDA connection parameter is too long\r\n", IOTDA_LOG);
-        goto clear_password;
+        return false;
     }
-    if (MQTTClient_init() != MQTTCLIENT_SUCCESS) {
-        goto clear_password;
-    }
-    ret = MQTTClient_create(&client, uri, client_id, MQTTCLIENT_PERSISTENCE_NONE, NULL);
+    return true;
+}
+
+static bool iotda_connect(iotda_connection_context_t *context)
+{
+    MQTTClient_SSLOptions ssl_options = MQTTClient_SSLOptions_initializer;
+    MQTTClient_connectOptions connect_options = MQTTClient_connectOptions_initializer;
+    cert_string trust_store = {BLE_GATEWAY_IOTDA_CA, BLE_GATEWAY_IOTDA_CA_SIZE};
+    int ret;
+
+    ret = MQTTClient_create(&context->client, context->uri, context->client_id, MQTTCLIENT_PERSISTENCE_NONE, NULL);
     if (ret != MQTTCLIENT_SUCCESS) {
-        goto mqtt_cleanup;
+        return false;
     }
-    ret = MQTTClient_setCallbacks(client, NULL, iotda_connection_lost, iotda_message_arrived, NULL);
+    ret = MQTTClient_setCallbacks(context->client, NULL, iotda_connection_lost, iotda_message_arrived, NULL);
     if (ret != MQTTCLIENT_SUCCESS) {
-        goto client_destroy;
+        MQTTClient_destroy(&context->client);
+        return false;
     }
     ssl_options.los_trustStore = &trust_store;
     ssl_options.sslVersion = MQTT_SSL_VERSION_TLS_1_2;
@@ -446,65 +450,107 @@ void ble_gateway_iotda_run(void)
     connect_options.keepAliveInterval = IOTDA_KEEP_ALIVE_S;
     connect_options.cleansession = 1;
     connect_options.username = CONFIG_IOTDA_DEVICE_ID;
-    connect_options.password = password;
+    connect_options.password = context->password;
     connect_options.ssl = &ssl_options;
     connect_options.MQTTVersion = MQTTVERSION_3_1_1;
-    ret = MQTTClient_connect(client, &connect_options);
-    (void)memset_s(password, sizeof(password), 0, sizeof(password));
+    ret = MQTTClient_connect(context->client, &connect_options);
+    (void)memset_s(context->password, sizeof(context->password), 0, sizeof(context->password));
     if (ret != MQTTCLIENT_SUCCESS) {
         osal_printk("%s MQTTS connect failed: %d\r\n", IOTDA_LOG, ret);
-        goto client_destroy;
+        MQTTClient_destroy(&context->client);
+        return false;
     }
-    ret = MQTTClient_subscribe(client, command_topic, IOTDA_QOS);
+    ret = MQTTClient_subscribe(context->client, context->command_topic, IOTDA_QOS);
     if (ret != MQTTCLIENT_SUCCESS) {
         osal_printk("%s command subscription failed: %d\r\n", IOTDA_LOG, ret);
-        goto client_disconnect;
+        (void)MQTTClient_disconnect(context->client, IOTDA_TIMEOUT_MS);
+        MQTTClient_destroy(&context->client);
+        return false;
+    }
+    return true;
+}
+
+static bool iotda_publish_pending_node_state(const iotda_connection_context_t *context)
+{
+    bool node_online = false;
+    int ret;
+    if (!iotda_take_node_state(&node_online)) {
+        return true;
+    }
+    ret = iotda_publish_node_state(context->client, context->report_topic, node_online);
+    osal_printk("%s BLE node state %s\r\n", IOTDA_LOG,
+                ret == MQTTCLIENT_SUCCESS ? "reported" : "report failed");
+    if (ret != MQTTCLIENT_SUCCESS) {
+        iotda_restore_node_state_if_empty(node_online);
+        return false;
+    }
+    return true;
+}
+
+static bool iotda_publish_pending_report(const iotda_connection_context_t *context)
+{
+    ble_gateway_report_t report = {0};
+    int ret;
+    if (!iotda_take_report(&report)) {
+        return true;
+    }
+    ret = iotda_publish_report(context->client, context->report_topic, &report);
+    osal_printk("%s property report %s: node=%u seq=%u\r\n", IOTDA_LOG,
+                ret == MQTTCLIENT_SUCCESS ? "sent" : "failed", report.node_id, report.sequence);
+    if (ret != MQTTCLIENT_SUCCESS) {
+        iotda_restore_report_if_empty(&report);
+        return false;
+    }
+    return true;
+}
+
+static bool iotda_publish_pending_response(const iotda_connection_context_t *context)
+{
+    char request_id[IOTDA_REQUEST_ID_MAX_LEN] = {0};
+    int result_code = IOTDA_COMMAND_FAILURE;
+    int ret;
+    if (!iotda_take_response(request_id, &result_code)) {
+        return true;
+    }
+    ret = iotda_publish_response(context->client, request_id, result_code);
+    osal_printk("%s command response %s\r\n", IOTDA_LOG, ret == MQTTCLIENT_SUCCESS ? "sent" : "failed");
+    if (ret != MQTTCLIENT_SUCCESS) {
+        (void)iotda_queue_response(request_id, result_code);
+        return false;
+    }
+    return true;
+}
+
+static void iotda_process_messages(const iotda_connection_context_t *context)
+{
+    while (g_mqtt_connected && MQTTClient_isConnected(context->client)) {
+        if (!iotda_publish_pending_node_state(context) || !iotda_publish_pending_report(context) ||
+            !iotda_publish_pending_response(context)) {
+            break;
+        }
+        osal_msleep(IOTDA_LOOP_DELAY_MS);
+    }
+}
+
+void ble_gateway_iotda_run(void)
+{
+    iotda_connection_context_t context = {0};
+
+    ble_gateway_iotda_init();
+    if (!g_iotda_initialized || !iotda_prepare_connection(&context)) {
+        osal_printk("%s private Kconfig is incomplete or invalid\r\n", IOTDA_LOG);
+        (void)memset_s(context.password, sizeof(context.password), 0, sizeof(context.password));
+        return;
+    }
+    if (!iotda_connect(&context)) {
+        (void)memset_s(context.password, sizeof(context.password), 0, sizeof(context.password));
+        return;
     }
     g_mqtt_connected = true;
     osal_printk("%s IoTDA MQTTS online, QoS 1\r\n", IOTDA_LOG);
     ble_gateway_client_restart_scan();
-    while (g_mqtt_connected && MQTTClient_isConnected(client)) {
-        ble_gateway_report_t report = {0};
-        char request_id[IOTDA_REQUEST_ID_MAX_LEN] = {0};
-        int result_code = 1;
-        bool node_online = false;
-        if (iotda_take_node_state(&node_online)) {
-            ret = iotda_publish_node_state(client, report_topic, node_online);
-            osal_printk("%s BLE node state %s\r\n", IOTDA_LOG,
-                        ret == MQTTCLIENT_SUCCESS ? "reported" : "report failed");
-            if (ret != MQTTCLIENT_SUCCESS) {
-                iotda_restore_node_state_if_empty(node_online);
-                break;
-            }
-        }
-        if (iotda_take_report(&report)) {
-            ret = iotda_publish_report(client, report_topic, &report);
-            osal_printk("%s property report %s: node=%u seq=%u\r\n", IOTDA_LOG,
-                        ret == MQTTCLIENT_SUCCESS ? "sent" : "failed", report.node_id, report.sequence);
-            if (ret != MQTTCLIENT_SUCCESS) {
-                iotda_restore_report_if_empty(&report);
-                break;
-            }
-        }
-        if (iotda_take_response(request_id, &result_code)) {
-            ret = iotda_publish_response(client, request_id, result_code);
-            osal_printk("%s command response %s\r\n", IOTDA_LOG,
-                        ret == MQTTCLIENT_SUCCESS ? "sent" : "failed");
-            if (ret != MQTTCLIENT_SUCCESS) {
-                (void)iotda_queue_response(request_id, result_code);
-                break;
-            }
-        }
-        osal_msleep(IOTDA_LOOP_DELAY_MS);
-    }
-
-client_disconnect:
+    iotda_process_messages(&context);
     g_mqtt_connected = false;
-    (void)MQTTClient_disconnect(client, IOTDA_TIMEOUT_MS);
-client_destroy:
-    MQTTClient_destroy(&client);
-mqtt_cleanup:
-    MQTTClient_cleanup();
-clear_password:
-    (void)memset_s(password, sizeof(password), 0, sizeof(password));
+    (void)MQTTClient_disconnect(context.client, IOTDA_TIMEOUT_MS);
+    MQTTClient_destroy(&context.client);
 }

@@ -22,6 +22,7 @@
 #define GATEWAY_WIFI_DHCP_TIMEOUT_COUNT 300U
 #define GATEWAY_WIFI_TASK_STACK_SIZE 0x3000U
 #define GATEWAY_WIFI_TASK_PRIO 24U
+#define GATEWAY_WIFI_IP_TYPE_DHCP 1U
 
 typedef enum {
     GATEWAY_WIFI_INIT = 0,
@@ -95,13 +96,90 @@ static bool gateway_wifi_find_target(wifi_sta_config_stru *target)
             break;
         }
         target->security_type = results[index].security_type;
-        target->ip_type = 1;
+        target->ip_type = GATEWAY_WIFI_IP_TYPE_DHCP;
         found = true;
         break;
     }
     (void)memset_s(results, buffer_size, 0, buffer_size);
     osal_kfree(results);
     return found;
+}
+
+static bool gateway_wifi_initialize(void)
+{
+    if (!gateway_wifi_config_valid()) {
+        osal_printk("%s Wi-Fi private Kconfig is incomplete\r\n", GATEWAY_WIFI_LOG);
+        return false;
+    }
+    if (wifi_register_event_cb(&g_gateway_wifi_callbacks) != 0) {
+        osal_printk("%s Wi-Fi callback registration failed\r\n", GATEWAY_WIFI_LOG);
+        return false;
+    }
+    while (wifi_is_wifi_inited() == 0) {
+        osal_msleep(GATEWAY_WIFI_POLL_MS);
+    }
+    if (wifi_sta_enable() != 0) {
+        osal_printk("%s Wi-Fi STA enable failed\r\n", GATEWAY_WIFI_LOG);
+        return false;
+    }
+    osal_printk("%s Wi-Fi STA enabled\r\n", GATEWAY_WIFI_LOG);
+    return true;
+}
+
+static void gateway_wifi_handle_init(wifi_sta_config_stru *target, uint32_t *dhcp_wait_count)
+{
+    errcode_t ret;
+    (void)memset_s(target, sizeof(*target), 0, sizeof(*target));
+    *dhcp_wait_count = 0;
+    g_gateway_wifi_state = GATEWAY_WIFI_SCANNING;
+    ret = gateway_wifi_start_scan();
+    if (ret != ERRCODE_SUCC) {
+        osal_printk("%s Wi-Fi scan start failed: 0x%x\r\n", GATEWAY_WIFI_LOG, ret);
+        g_gateway_wifi_state = GATEWAY_WIFI_INIT;
+        osal_msleep(GATEWAY_WIFI_SCAN_RETRY_MS);
+    }
+}
+
+static void gateway_wifi_handle_scan_done(wifi_sta_config_stru *target)
+{
+    int32_t ret;
+    if (!gateway_wifi_find_target(target)) {
+        osal_printk("%s configured Wi-Fi was not found, rescanning\r\n", GATEWAY_WIFI_LOG);
+        g_gateway_wifi_state = GATEWAY_WIFI_INIT;
+        osal_msleep(GATEWAY_WIFI_SCAN_RETRY_MS);
+        return;
+    }
+    g_gateway_wifi_state = GATEWAY_WIFI_CONNECTING;
+    ret = wifi_sta_connect(target);
+    (void)memset_s(target, sizeof(*target), 0, sizeof(*target));
+    if (ret != 0) {
+        osal_printk("%s Wi-Fi connect request failed: %d\r\n", GATEWAY_WIFI_LOG, ret);
+        g_gateway_wifi_state = GATEWAY_WIFI_INIT;
+    }
+}
+
+static void gateway_wifi_handle_connected(struct netif **netif)
+{
+    *netif = netifapi_netif_find(GATEWAY_WIFI_IFNAME);
+    g_gateway_wifi_state = (*netif != NULL && netifapi_dhcp_start(*netif) == 0) ?
+        GATEWAY_WIFI_GOT_IP : GATEWAY_WIFI_INIT;
+}
+
+static void gateway_wifi_handle_got_ip(struct netif *netif, uint32_t *dhcp_wait_count)
+{
+    if (netif != NULL && !ip_addr_isany(&netif->ip_addr)) {
+        osal_printk("%s DHCP ready, starting IoTDA\r\n", GATEWAY_WIFI_LOG);
+        ble_gateway_iotda_run();
+        if (g_gateway_wifi_state == GATEWAY_WIFI_GOT_IP) {
+            osal_msleep(GATEWAY_WIFI_SCAN_RETRY_MS);
+        }
+        return;
+    }
+    (*dhcp_wait_count)++;
+    if (*dhcp_wait_count > GATEWAY_WIFI_DHCP_TIMEOUT_COUNT) {
+        osal_printk("%s DHCP timeout, reconnecting\r\n", GATEWAY_WIFI_LOG);
+        g_gateway_wifi_state = GATEWAY_WIFI_INIT;
+    }
 }
 
 static int gateway_wifi_task(void *arg)
@@ -111,66 +189,26 @@ static int gateway_wifi_task(void *arg)
     uint32_t dhcp_wait_count = 0;
     (void)arg;
 
-    if (!gateway_wifi_config_valid()) {
-        osal_printk("%s Wi-Fi private Kconfig is incomplete\r\n", GATEWAY_WIFI_LOG);
+    if (!gateway_wifi_initialize()) {
         return (int)ERRCODE_FAIL;
     }
-    if (wifi_register_event_cb(&g_gateway_wifi_callbacks) != 0) {
-        osal_printk("%s Wi-Fi callback registration failed\r\n", GATEWAY_WIFI_LOG);
-        return (int)ERRCODE_FAIL;
-    }
-    while (wifi_is_wifi_inited() == 0) {
-        osal_msleep(GATEWAY_WIFI_POLL_MS);
-    }
-    if (wifi_sta_enable() != 0) {
-        osal_printk("%s Wi-Fi STA enable failed\r\n", GATEWAY_WIFI_LOG);
-        return (int)ERRCODE_FAIL;
-    }
-    osal_printk("%s Wi-Fi STA enabled\r\n", GATEWAY_WIFI_LOG);
 
     while (true) {
-        if (g_gateway_wifi_state == GATEWAY_WIFI_INIT) {
-            (void)memset_s(&target, sizeof(target), 0, sizeof(target));
-            dhcp_wait_count = 0;
-            g_gateway_wifi_state = GATEWAY_WIFI_SCANNING;
-            errcode_t scan_ret = gateway_wifi_start_scan();
-            if (scan_ret != ERRCODE_SUCC) {
-                osal_printk("%s Wi-Fi scan start failed: 0x%x\r\n", GATEWAY_WIFI_LOG, scan_ret);
-                g_gateway_wifi_state = GATEWAY_WIFI_INIT;
-                osal_msleep(GATEWAY_WIFI_SCAN_RETRY_MS);
-            }
-        } else if (g_gateway_wifi_state == GATEWAY_WIFI_SCAN_DONE) {
-            if (!gateway_wifi_find_target(&target)) {
-                osal_printk("%s configured Wi-Fi was not found, rescanning\r\n", GATEWAY_WIFI_LOG);
-                g_gateway_wifi_state = GATEWAY_WIFI_INIT;
-                osal_msleep(GATEWAY_WIFI_SCAN_RETRY_MS);
-            } else {
-                g_gateway_wifi_state = GATEWAY_WIFI_CONNECTING;
-                int32_t connect_ret = wifi_sta_connect(&target);
-                (void)memset_s(&target, sizeof(target), 0, sizeof(target));
-                if (connect_ret != 0) {
-                    osal_printk("%s Wi-Fi connect request failed: %d\r\n", GATEWAY_WIFI_LOG, connect_ret);
-                    g_gateway_wifi_state = GATEWAY_WIFI_INIT;
-                }
-            }
-        } else if (g_gateway_wifi_state == GATEWAY_WIFI_CONNECTED) {
-            netif = netifapi_netif_find(GATEWAY_WIFI_IFNAME);
-            if (netif == NULL || netifapi_dhcp_start(netif) != 0) {
-                g_gateway_wifi_state = GATEWAY_WIFI_INIT;
-            } else {
-                g_gateway_wifi_state = GATEWAY_WIFI_GOT_IP;
-            }
-        } else if (g_gateway_wifi_state == GATEWAY_WIFI_GOT_IP) {
-            if (netif != NULL && !ip_addr_isany(&netif->ip_addr)) {
-                osal_printk("%s DHCP ready, starting IoTDA\r\n", GATEWAY_WIFI_LOG);
-                ble_gateway_iotda_run();
-                if (g_gateway_wifi_state == GATEWAY_WIFI_GOT_IP) {
-                    osal_msleep(GATEWAY_WIFI_SCAN_RETRY_MS);
-                }
-            } else if (++dhcp_wait_count > GATEWAY_WIFI_DHCP_TIMEOUT_COUNT) {
-                osal_printk("%s DHCP timeout, reconnecting\r\n", GATEWAY_WIFI_LOG);
-                g_gateway_wifi_state = GATEWAY_WIFI_INIT;
-            }
+        switch (g_gateway_wifi_state) {
+            case GATEWAY_WIFI_INIT:
+                gateway_wifi_handle_init(&target, &dhcp_wait_count);
+                break;
+            case GATEWAY_WIFI_SCAN_DONE:
+                gateway_wifi_handle_scan_done(&target);
+                break;
+            case GATEWAY_WIFI_CONNECTED:
+                gateway_wifi_handle_connected(&netif);
+                break;
+            case GATEWAY_WIFI_GOT_IP:
+                gateway_wifi_handle_got_ip(netif, &dhcp_wait_count);
+                break;
+            default:
+                break;
         }
         osal_msleep(GATEWAY_WIFI_POLL_MS);
     }

@@ -45,7 +45,7 @@ static const bd_addr_t g_ble_uart_bridge_addr = {
 };
 static uint8_t g_property_value[BLE_UART_BRIDGE_PROPERTY_MAX_LEN] = "uart_ready";
 static uint16_t g_property_value_len = sizeof("uart_ready") - 1;
-/* The SDK response path requires a nonzero copy span even when an ATT Write Response has no value. / SDK 写响应无值时仍要求非零复制长度。 */
+/* The SDK response path requires a nonzero copy span even when an ATT Write Response has no value. */
 static uint8_t g_empty_response_value;
 static const uint8_t DEFAULT_VALUE[] = "uart_ready";
 static const uint8_t HELLO_MESSAGE[] = "uart_from_peripheral";

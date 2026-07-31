@@ -181,70 +181,96 @@ static errcode_t ble_gateway_discover_service(uint16_t conn_id)
     return gattc_discovery_service(g_client_id, conn_id, &uuid);
 }
 
-static int ble_gateway_control_task(void *arg)
+static void ble_gateway_update_scan_restart(uint16_t *scan_retry_ticks)
+{
+    if (!g_connecting && !g_connected && !g_scan_restart_requested) {
+        (*scan_retry_ticks)++;
+        if (*scan_retry_ticks >= BLE_GATEWAY_SCAN_RESTART_TICKS) {
+            /* Wi-Fi scanning can pause BLE scanning; periodically restart it while no node is connected. */
+            g_scan_restart_stopped = false;
+            g_scan_restart_requested = true;
+            *scan_retry_ticks = 0;
+        }
+    } else if (g_connecting || g_connected) {
+        *scan_retry_ticks = 0;
+    }
+}
+
+static void ble_gateway_process_scan_restart(void)
+{
+    if (!g_scan_restart_requested || g_connecting || g_connected) {
+        return;
+    }
+    if (!g_scan_restart_stopped) {
+        (void)gap_ble_stop_scan();
+        g_scan_restart_stopped = true;
+        return;
+    }
+    if (ble_gateway_start_scan() == ERRCODE_BT_SUCCESS) {
+        g_scan_restart_requested = false;
+        g_scan_restart_stopped = false;
+    }
+}
+
+static void ble_gateway_process_discovery_start(void)
 {
     errcode_t ret;
+    if (!g_service_discovery_pending || !g_connected || g_discovery_started) {
+        return;
+    }
+    if (g_service_discovery_delay_ticks > 0) {
+        g_service_discovery_delay_ticks--;
+        return;
+    }
+    /* Run discovery from task context after pairing callbacks have returned. */
+    ret = ble_gateway_discover_service(g_conn_id);
+    if (ret == ERRCODE_BT_SUCCESS) {
+        g_discovery_started = true;
+        g_service_discovery_pending = false;
+        g_service_discovery_timeout_ticks = BLE_GATEWAY_DISCOVERY_TIMEOUT_TICKS;
+    } else {
+        osal_printk("%s service discovery start deferred: 0x%x\r\n", BLE_GATEWAY_CLIENT_LOG, ret);
+    }
+}
+
+static void ble_gateway_process_discovery_timeout(void)
+{
+    if (!g_discovery_started || g_service_start_handle != 0U) {
+        return;
+    }
+    if (g_service_discovery_timeout_ticks > 0U) {
+        g_service_discovery_timeout_ticks--;
+        return;
+    }
+    g_service_discovery_retries++;
+    if (g_service_discovery_retries < BLE_GATEWAY_DISCOVERY_MAX_RETRIES) {
+        osal_printk("%s service discovery timeout, retrying\r\n", BLE_GATEWAY_CLIENT_LOG);
+        g_discovery_started = false;
+        g_service_discovery_delay_ticks = BLE_GATEWAY_DISCOVERY_DELAY_TICKS;
+        g_service_discovery_pending = true;
+        return;
+    }
+    /* Both roles belong to this sample, so their GATT registration order and handles are fixed. */
+    g_service_start_handle = BLE_GATEWAY_FIXED_SERVICE_START_HANDLE;
+    g_service_end_handle = BLE_GATEWAY_FIXED_SERVICE_END_HANDLE;
+    g_data_handle = BLE_GATEWAY_FIXED_DATA_HANDLE;
+    g_notify_handle = BLE_GATEWAY_FIXED_NOTIFY_HANDLE;
+    g_notify_cccd_handle = BLE_GATEWAY_FIXED_NOTIFY_CCCD_HANDLE;
+    g_service_discovery_pending = false;
+    g_hello_cccd_started = true;
+    osal_printk("%s discovery fallback to sample GATT handles\r\n", BLE_GATEWAY_CLIENT_LOG);
+    (void)ble_gateway_enable_cccd(g_conn_id, g_notify_cccd_handle, "sensor report");
+}
+
+static int ble_gateway_control_task(void *arg)
+{
     uint16_t scan_retry_ticks = 0;
     (void)arg;
     while (true) {
-        if (!g_connecting && !g_connected && !g_scan_restart_requested) {
-            scan_retry_ticks++;
-            if (scan_retry_ticks >= BLE_GATEWAY_SCAN_RESTART_TICKS) {
-                /* Wi-Fi scanning can pause BLE scanning; periodically restart it while no node is connected. */
-                g_scan_restart_stopped = false;
-                g_scan_restart_requested = true;
-                scan_retry_ticks = 0;
-            }
-        } else if (g_connecting || g_connected) {
-            scan_retry_ticks = 0;
-        }
-        if (g_scan_restart_requested && !g_connecting && !g_connected) {
-            if (!g_scan_restart_stopped) {
-                (void)gap_ble_stop_scan();
-                g_scan_restart_stopped = true;
-            } else {
-                ret = ble_gateway_start_scan();
-                if (ret == ERRCODE_BT_SUCCESS) {
-                    g_scan_restart_requested = false;
-                    g_scan_restart_stopped = false;
-                }
-            }
-        }
-        if (g_service_discovery_pending && g_connected && !g_discovery_started &&
-            g_service_discovery_delay_ticks > 0) {
-            g_service_discovery_delay_ticks--;
-        } else if (g_service_discovery_pending && g_connected && !g_discovery_started) {
-            /* Run discovery from task context after pairing callbacks have returned. */
-            ret = ble_gateway_discover_service(g_conn_id);
-            if (ret == ERRCODE_BT_SUCCESS) {
-                g_discovery_started = true;
-                g_service_discovery_pending = false;
-                g_service_discovery_timeout_ticks = BLE_GATEWAY_DISCOVERY_TIMEOUT_TICKS;
-            } else {
-                osal_printk("%s service discovery start deferred: 0x%x\r\n", BLE_GATEWAY_CLIENT_LOG, ret);
-            }
-        }
-        if (g_discovery_started && g_service_start_handle == 0U) {
-            if (g_service_discovery_timeout_ticks > 0U) {
-                g_service_discovery_timeout_ticks--;
-            } else if (++g_service_discovery_retries >= BLE_GATEWAY_DISCOVERY_MAX_RETRIES) {
-                /* Both roles belong to this sample, so their GATT registration order and handles are fixed. */
-                g_service_start_handle = BLE_GATEWAY_FIXED_SERVICE_START_HANDLE;
-                g_service_end_handle = BLE_GATEWAY_FIXED_SERVICE_END_HANDLE;
-                g_data_handle = BLE_GATEWAY_FIXED_DATA_HANDLE;
-                g_notify_handle = BLE_GATEWAY_FIXED_NOTIFY_HANDLE;
-                g_notify_cccd_handle = BLE_GATEWAY_FIXED_NOTIFY_CCCD_HANDLE;
-                g_service_discovery_pending = false;
-                g_hello_cccd_started = true;
-                osal_printk("%s discovery fallback to sample GATT handles\r\n", BLE_GATEWAY_CLIENT_LOG);
-                (void)ble_gateway_enable_cccd(g_conn_id, g_notify_cccd_handle, "sensor report");
-            } else {
-                osal_printk("%s service discovery timeout, retrying\r\n", BLE_GATEWAY_CLIENT_LOG);
-                g_discovery_started = false;
-                g_service_discovery_delay_ticks = BLE_GATEWAY_DISCOVERY_DELAY_TICKS;
-                g_service_discovery_pending = true;
-            }
-        }
+        ble_gateway_update_scan_restart(&scan_retry_ticks);
+        ble_gateway_process_scan_restart();
+        ble_gateway_process_discovery_start();
+        ble_gateway_process_discovery_timeout();
         osal_msleep(BLE_GATEWAY_CONTROL_POLL_MS);
     }
     return 0;

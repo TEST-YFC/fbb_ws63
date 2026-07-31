@@ -73,6 +73,61 @@
 #define BMP280_PRESSURE_ADC_FULL_SCALE 1048576
 #define BMP280_PRESSURE_CALC_MULTIPLIER 3125
 
+#define SENSOR_BYTE_SHIFT 8
+#define BMP280_CALIB_T1_OFFSET 0
+#define BMP280_CALIB_T2_OFFSET 2
+#define BMP280_CALIB_T3_OFFSET 4
+#define BMP280_CALIB_P1_OFFSET 6
+#define BMP280_CALIB_P2_OFFSET 8
+#define BMP280_CALIB_P3_OFFSET 10
+#define BMP280_CALIB_P4_OFFSET 12
+#define BMP280_CALIB_P5_OFFSET 14
+#define BMP280_CALIB_P6_OFFSET 16
+#define BMP280_CALIB_P7_OFFSET 18
+#define BMP280_CALIB_P8_OFFSET 20
+#define BMP280_CALIB_P9_OFFSET 22
+
+#define AHT20_HUMIDITY_HIGH_OFFSET 1
+#define AHT20_HUMIDITY_MIDDLE_OFFSET 2
+#define AHT20_SHARED_DATA_OFFSET 3
+#define AHT20_TEMPERATURE_MIDDLE_OFFSET 4
+#define AHT20_TEMPERATURE_LOW_OFFSET 5
+#define AHT20_RAW_HIGH_SHIFT 12
+#define AHT20_RAW_MIDDLE_SHIFT 4
+#define AHT20_TEMPERATURE_HIGH_SHIFT 16
+#define AHT20_TEMPERATURE_HIGH_MASK 0x0F
+
+#define BMP280_PRESSURE_HIGH_OFFSET 0
+#define BMP280_PRESSURE_MIDDLE_OFFSET 1
+#define BMP280_PRESSURE_LOW_OFFSET 2
+#define BMP280_TEMPERATURE_HIGH_OFFSET 3
+#define BMP280_TEMPERATURE_MIDDLE_OFFSET 4
+#define BMP280_TEMPERATURE_LOW_OFFSET 5
+#define BMP280_RAW_HIGH_SHIFT 12
+#define BMP280_RAW_MIDDLE_SHIFT 4
+
+#define BMP280_TEMP_ADC_VAR1_SHIFT 3
+#define BMP280_TEMP_CALIB_T1_SHIFT 1
+#define BMP280_TEMP_VAR1_RESULT_SHIFT 11
+#define BMP280_TEMP_ADC_VAR2_SHIFT 4
+#define BMP280_TEMP_VAR2_PRODUCT_SHIFT 12
+#define BMP280_TEMP_VAR2_RESULT_SHIFT 14
+#define BMP280_TEMP_RESULT_MULTIPLIER 5
+#define BMP280_TEMP_RESULT_ROUNDING 128
+#define BMP280_TEMP_RESULT_SHIFT 8
+#define BMP280_PRESSURE_P5_SHIFT 17
+#define BMP280_PRESSURE_P4_SHIFT 35
+#define BMP280_PRESSURE_P3_SHIFT 8
+#define BMP280_PRESSURE_P2_SHIFT 12
+#define BMP280_PRESSURE_BASE_SHIFT 47
+#define BMP280_PRESSURE_VAR1_SHIFT 33
+#define BMP280_PRESSURE_NUMERATOR_SHIFT 31
+#define BMP280_PRESSURE_P9_INPUT_SHIFT 13
+#define BMP280_PRESSURE_P9_RESULT_SHIFT 25
+#define BMP280_PRESSURE_P8_SHIFT 19
+#define BMP280_PRESSURE_RESULT_SHIFT 8
+#define BMP280_PRESSURE_P7_SHIFT 4
+
 /**
  * @if Eng
  * @brief Stores factory calibration parameters read from the BMP280.
@@ -173,7 +228,7 @@ static errcode_t bmp280_write_register(uint8_t reg, uint8_t value)
  */
 static uint16_t bmp280_read_u16_le(const uint8_t *data)
 {
-    return (uint16_t)data[0] | ((uint16_t)data[1] << 8);
+    return (uint16_t)data[0] | ((uint16_t)data[1] << SENSOR_BYTE_SHIFT);
 }
 
 /**
@@ -197,18 +252,18 @@ static int16_t bmp280_read_s16_le(const uint8_t *data)
  */
 static void bmp280_load_calibration(const uint8_t *data)
 {
-    g_bmp280_calibration.dig_t1 = bmp280_read_u16_le(&data[0]);
-    g_bmp280_calibration.dig_t2 = bmp280_read_s16_le(&data[2]);
-    g_bmp280_calibration.dig_t3 = bmp280_read_s16_le(&data[4]);
-    g_bmp280_calibration.dig_p1 = bmp280_read_u16_le(&data[6]);
-    g_bmp280_calibration.dig_p2 = bmp280_read_s16_le(&data[8]);
-    g_bmp280_calibration.dig_p3 = bmp280_read_s16_le(&data[10]);
-    g_bmp280_calibration.dig_p4 = bmp280_read_s16_le(&data[12]);
-    g_bmp280_calibration.dig_p5 = bmp280_read_s16_le(&data[14]);
-    g_bmp280_calibration.dig_p6 = bmp280_read_s16_le(&data[16]);
-    g_bmp280_calibration.dig_p7 = bmp280_read_s16_le(&data[18]);
-    g_bmp280_calibration.dig_p8 = bmp280_read_s16_le(&data[20]);
-    g_bmp280_calibration.dig_p9 = bmp280_read_s16_le(&data[22]);
+    g_bmp280_calibration.dig_t1 = bmp280_read_u16_le(&data[BMP280_CALIB_T1_OFFSET]);
+    g_bmp280_calibration.dig_t2 = bmp280_read_s16_le(&data[BMP280_CALIB_T2_OFFSET]);
+    g_bmp280_calibration.dig_t3 = bmp280_read_s16_le(&data[BMP280_CALIB_T3_OFFSET]);
+    g_bmp280_calibration.dig_p1 = bmp280_read_u16_le(&data[BMP280_CALIB_P1_OFFSET]);
+    g_bmp280_calibration.dig_p2 = bmp280_read_s16_le(&data[BMP280_CALIB_P2_OFFSET]);
+    g_bmp280_calibration.dig_p3 = bmp280_read_s16_le(&data[BMP280_CALIB_P3_OFFSET]);
+    g_bmp280_calibration.dig_p4 = bmp280_read_s16_le(&data[BMP280_CALIB_P4_OFFSET]);
+    g_bmp280_calibration.dig_p5 = bmp280_read_s16_le(&data[BMP280_CALIB_P5_OFFSET]);
+    g_bmp280_calibration.dig_p6 = bmp280_read_s16_le(&data[BMP280_CALIB_P6_OFFSET]);
+    g_bmp280_calibration.dig_p7 = bmp280_read_s16_le(&data[BMP280_CALIB_P7_OFFSET]);
+    g_bmp280_calibration.dig_p8 = bmp280_read_s16_le(&data[BMP280_CALIB_P8_OFFSET]);
+    g_bmp280_calibration.dig_p9 = bmp280_read_s16_le(&data[BMP280_CALIB_P9_OFFSET]);
 }
 
 /**
@@ -331,8 +386,13 @@ static errcode_t aht20_read(int32_t *temperature_tenths, uint32_t *humidity_tent
         return ERRCODE_FAIL;
     }
 
-    raw_humidity = ((uint32_t)response[1] << 12) | ((uint32_t)response[2] << 4) | (response[3] >> 4);
-    raw_temperature = (((uint32_t)response[3] & 0x0F) << 16) | ((uint32_t)response[4] << 8) | response[5];
+    raw_humidity = ((uint32_t)response[AHT20_HUMIDITY_HIGH_OFFSET] << AHT20_RAW_HIGH_SHIFT) |
+                   ((uint32_t)response[AHT20_HUMIDITY_MIDDLE_OFFSET] << AHT20_RAW_MIDDLE_SHIFT) |
+                   (response[AHT20_SHARED_DATA_OFFSET] >> AHT20_RAW_MIDDLE_SHIFT);
+    raw_temperature = (((uint32_t)response[AHT20_SHARED_DATA_OFFSET] & AHT20_TEMPERATURE_HIGH_MASK) <<
+                       AHT20_TEMPERATURE_HIGH_SHIFT) |
+                      ((uint32_t)response[AHT20_TEMPERATURE_MIDDLE_OFFSET] << SENSOR_BYTE_SHIFT) |
+                      response[AHT20_TEMPERATURE_LOW_OFFSET];
     *humidity_tenths = (uint32_t)(((uint64_t)raw_humidity * AHT20_HUMIDITY_TENTHS_SCALE +
                                    AHT20_RAW_ROUNDING) /
                                   AHT20_RAW_FULL_SCALE);
@@ -351,13 +411,17 @@ static errcode_t aht20_read(int32_t *temperature_tenths, uint32_t *humidity_tent
  */
 static int32_t bmp280_compensate_temperature(int32_t adc_temperature)
 {
-    int32_t var1 = ((((adc_temperature >> 3) - ((int32_t)g_bmp280_calibration.dig_t1 << 1))) *
-                    (int32_t)g_bmp280_calibration.dig_t2) >> 11;
-    int32_t var2 = (((((adc_temperature >> 4) - (int32_t)g_bmp280_calibration.dig_t1) *
-                      ((adc_temperature >> 4) - (int32_t)g_bmp280_calibration.dig_t1)) >> 12) *
-                    (int32_t)g_bmp280_calibration.dig_t3) >> 14;
+    int32_t var1 = ((((adc_temperature >> BMP280_TEMP_ADC_VAR1_SHIFT) -
+                     ((int32_t)g_bmp280_calibration.dig_t1 << BMP280_TEMP_CALIB_T1_SHIFT))) *
+                    (int32_t)g_bmp280_calibration.dig_t2) >> BMP280_TEMP_VAR1_RESULT_SHIFT;
+    int32_t var2 = (((((adc_temperature >> BMP280_TEMP_ADC_VAR2_SHIFT) -
+                       (int32_t)g_bmp280_calibration.dig_t1) *
+                      ((adc_temperature >> BMP280_TEMP_ADC_VAR2_SHIFT) -
+                       (int32_t)g_bmp280_calibration.dig_t1)) >> BMP280_TEMP_VAR2_PRODUCT_SHIFT) *
+                    (int32_t)g_bmp280_calibration.dig_t3) >> BMP280_TEMP_VAR2_RESULT_SHIFT;
     g_bmp280_t_fine = var1 + var2;
-    return (g_bmp280_t_fine * 5 + 128) >> 8;
+    return (g_bmp280_t_fine * BMP280_TEMP_RESULT_MULTIPLIER + BMP280_TEMP_RESULT_ROUNDING) >>
+           BMP280_TEMP_RESULT_SHIFT;
 }
 
 /**
@@ -373,19 +437,23 @@ static uint32_t bmp280_compensate_pressure(int32_t adc_pressure)
     int64_t var2 = var1 * var1 * (int64_t)g_bmp280_calibration.dig_p6;
     int64_t pressure;
 
-    var2 += (var1 * (int64_t)g_bmp280_calibration.dig_p5) << 17;
-    var2 += (int64_t)g_bmp280_calibration.dig_p4 << 35;
-    var1 = ((var1 * var1 * (int64_t)g_bmp280_calibration.dig_p3) >> 8) +
-           ((var1 * (int64_t)g_bmp280_calibration.dig_p2) << 12);
-    var1 = (((((int64_t)1 << 47) + var1) * (int64_t)g_bmp280_calibration.dig_p1) >> 33);
+    var2 += (var1 * (int64_t)g_bmp280_calibration.dig_p5) << BMP280_PRESSURE_P5_SHIFT;
+    var2 += (int64_t)g_bmp280_calibration.dig_p4 << BMP280_PRESSURE_P4_SHIFT;
+    var1 = ((var1 * var1 * (int64_t)g_bmp280_calibration.dig_p3) >> BMP280_PRESSURE_P3_SHIFT) +
+           ((var1 * (int64_t)g_bmp280_calibration.dig_p2) << BMP280_PRESSURE_P2_SHIFT);
+    var1 = (((((int64_t)1 << BMP280_PRESSURE_BASE_SHIFT) + var1) *
+             (int64_t)g_bmp280_calibration.dig_p1) >> BMP280_PRESSURE_VAR1_SHIFT);
     if (var1 == 0) {
         return 0;
     }
     pressure = BMP280_PRESSURE_ADC_FULL_SCALE - adc_pressure;
-    pressure = (((pressure << 31) - var2) * BMP280_PRESSURE_CALC_MULTIPLIER) / var1;
-    var1 = ((int64_t)g_bmp280_calibration.dig_p9 * (pressure >> 13) * (pressure >> 13)) >> 25;
-    var2 = ((int64_t)g_bmp280_calibration.dig_p8 * pressure) >> 19;
-    pressure = ((pressure + var1 + var2) >> 8) + ((int64_t)g_bmp280_calibration.dig_p7 << 4);
+    pressure = (((pressure << BMP280_PRESSURE_NUMERATOR_SHIFT) - var2) *
+                BMP280_PRESSURE_CALC_MULTIPLIER) / var1;
+    var1 = ((int64_t)g_bmp280_calibration.dig_p9 * (pressure >> BMP280_PRESSURE_P9_INPUT_SHIFT) *
+            (pressure >> BMP280_PRESSURE_P9_INPUT_SHIFT)) >> BMP280_PRESSURE_P9_RESULT_SHIFT;
+    var2 = ((int64_t)g_bmp280_calibration.dig_p8 * pressure) >> BMP280_PRESSURE_P8_SHIFT;
+    pressure = ((pressure + var1 + var2) >> BMP280_PRESSURE_RESULT_SHIFT) +
+               ((int64_t)g_bmp280_calibration.dig_p7 << BMP280_PRESSURE_P7_SHIFT);
     return (uint32_t)pressure;
 }
 
@@ -407,8 +475,12 @@ static errcode_t bmp280_read(uint32_t *pressure_pa)
         return ret;
     }
 
-    raw_pressure = ((int32_t)response[0] << 12) | ((int32_t)response[1] << 4) | (response[2] >> 4);
-    raw_temperature = ((int32_t)response[3] << 12) | ((int32_t)response[4] << 4) | (response[5] >> 4);
+    raw_pressure = ((int32_t)response[BMP280_PRESSURE_HIGH_OFFSET] << BMP280_RAW_HIGH_SHIFT) |
+                   ((int32_t)response[BMP280_PRESSURE_MIDDLE_OFFSET] << BMP280_RAW_MIDDLE_SHIFT) |
+                   (response[BMP280_PRESSURE_LOW_OFFSET] >> BMP280_RAW_MIDDLE_SHIFT);
+    raw_temperature = ((int32_t)response[BMP280_TEMPERATURE_HIGH_OFFSET] << BMP280_RAW_HIGH_SHIFT) |
+                      ((int32_t)response[BMP280_TEMPERATURE_MIDDLE_OFFSET] << BMP280_RAW_MIDDLE_SHIFT) |
+                      (response[BMP280_TEMPERATURE_LOW_OFFSET] >> BMP280_RAW_MIDDLE_SHIFT);
     if (raw_pressure == BMP280_RAW_INVALID || raw_temperature == BMP280_RAW_INVALID) {
         return ERRCODE_FAIL;
     }

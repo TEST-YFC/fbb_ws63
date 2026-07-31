@@ -3,9 +3,9 @@
  * Public certificate bundle downloaded from the official IoTDA resource page.
  */
 
-#include <stddef.h>
+#include "ble_gateway_iotda_ca.h"
 
-const unsigned char g_ble_gateway_iotda_ca[] =
+const unsigned char BLE_GATEWAY_IOTDA_CA[] =
     "-----BEGIN CERTIFICATE-----\r\n"
     "MIIDXzCCAkegAwIBAgILBAAAAAABIVhTCKIwDQYJKoZIhvcNAQELBQAwTDEgMB4G\r\n"
     "A1UECxMXR2xvYmFsU2lnbiBSb290IENBIC0gUjMxEzARBgNVBAoTCkdsb2JhbFNp\r\n"
@@ -91,4 +91,4 @@ const unsigned char g_ble_gateway_iotda_ca[] =
     "vouXsXgxT7PntgMTzlSdriVZzH81Xwj3QEUxeCp6\r\n"
     "-----END CERTIFICATE-----\r\n";
 
-const size_t g_ble_gateway_iotda_ca_size = sizeof(g_ble_gateway_iotda_ca);
+const size_t BLE_GATEWAY_IOTDA_CA_SIZE = sizeof(BLE_GATEWAY_IOTDA_CA);
