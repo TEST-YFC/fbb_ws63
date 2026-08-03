@@ -95,6 +95,24 @@ String::String(const char *cstr)
     }
 }
 
+String::String(const char *cstr, unsigned int length)
+{
+    _buffer = NULL;
+    _len = 0;
+    _capacity = 0;
+    if (cstr && length > 0) {
+        _len = length;
+        _capacity = _len + 1;
+        _buffer = (char *)malloc(_capacity);
+        if (_buffer) {
+            (void)memcpy_s(_buffer, _capacity, cstr, _len);
+            _buffer[_len] = '\0';
+        } else {
+            invalidate();
+        }
+    }
+}
+
 String::String(const String &str)
 {
     _buffer = NULL;
@@ -110,6 +128,17 @@ String::String(const String &str)
             invalidate();
         }
     }
+}
+
+String::String(String &&rval)
+{
+    // Steal the heap buffer from rval, leaving rval in a valid empty state.
+    _buffer = rval._buffer;
+    _capacity = rval._capacity;
+    _len = rval._len;
+    rval._buffer = NULL;
+    rval._capacity = 0;
+    rval._len = 0;
 }
 
 String::String(char c)
@@ -338,6 +367,22 @@ char *String::buffer() const
     return _buffer;
 }
 
+void String::getBytes(unsigned char *buf, unsigned int bufsize, unsigned int index) const
+{
+    if (buf == NULL || bufsize == 0) {
+        return;
+    }
+    // Arduino contract: output is always NUL-terminated.
+    buf[0] = '\0';
+    if (_buffer == NULL || index >= _len) {
+        return;
+    }
+    unsigned int avail = _len - index;
+    unsigned int toCopy = (avail < bufsize - 1) ? avail : (bufsize - 1);
+    (void)memcpy_s(buf, bufsize, _buffer + index, toCopy);
+    buf[toCopy] = '\0';
+}
+
 // Concatenation //////////////////////////////////////////////////////////////
 
 String &String::concat(const String &str)
@@ -385,10 +430,51 @@ String &String::concat(const char *cstr)
     return *this;
 }
 
+String &String::concat(const char *cstr, unsigned int length)
+{
+    if (!cstr || length == 0)
+        return *this;
+
+    if (!_buffer) {
+        _len = length;
+        _capacity = _len + 1;
+        _buffer = (char *)malloc(_capacity);
+        if (_buffer) {
+            (void)memcpy_s(_buffer, _capacity, cstr, _len);
+            _buffer[_len] = '\0';
+        } else {
+            invalidate();
+        }
+        return *this;
+    }
+
+    if (_len + length + 1 > _capacity) {
+        unsigned int newCapacity = _capacity;
+        while (newCapacity < _len + length + 1) {
+            newCapacity *= STRING_EXPAND_FACTOR;
+        }
+        if (!reserve(newCapacity)) {
+            return *this; // Allocation failed
+        }
+    }
+
+    if (memcpy_s(_buffer + _len, _capacity - _len, cstr, length) != EOK) {
+        return *this;
+    }
+    _len += length;
+    _buffer[_len] = '\0';
+    return *this;
+}
+
 String &String::concat(char c)
 {
     char buf[STRING_ITOA_BUF_SIZE_CHAR] = {c, '\0'};
     return concat(buf);
+}
+
+String &String::concat(unsigned char num)
+{
+    return concat((int)num);
 }
 
 String &String::concat(int num)
@@ -531,6 +617,22 @@ String &String::operator=(const char *cstr)
     return *this;
 }
 
+String &String::operator=(String &&rval)
+{
+    if (this != &rval) {
+        if (_buffer) {
+            free(_buffer);
+        }
+        _buffer = rval._buffer;
+        _capacity = rval._capacity;
+        _len = rval._len;
+        rval._buffer = NULL;
+        rval._capacity = 0;
+        rval._len = 0;
+    }
+    return *this;
+}
+
 String &String::operator+=(const String &rhs)
 {
     return concat(rhs);
@@ -587,6 +689,30 @@ bool String::equals(const String &s) const
     if (!_buffer || !s._buffer)
         return false;
     return strcmp(_buffer, s._buffer) == 0;
+}
+
+int String::compareTo(const char *cstr) const
+{
+    if (!_buffer) {
+        bool otherNonEmpty = (cstr != NULL && cstr[0] != '\0');
+        return otherNonEmpty ? -1 : 0;
+    }
+    if (cstr == NULL) {
+        return 1; // this non-empty, other null
+    }
+    return strcmp(_buffer, cstr);
+}
+
+bool String::equals(const char *cstr) const
+{
+    if (_len == 0) {
+        // Empty/invalid string: equal only to an empty C-string.
+        return (cstr == NULL) || (cstr[0] == '\0');
+    }
+    if (cstr == NULL) {
+        return false;
+    }
+    return strcmp(_buffer, cstr) == 0;
 }
 
 bool String::equalsIgnoreCase(const String &s) const
@@ -814,6 +940,109 @@ void String::trim()
     }
 }
 
+void String::replace(char find, char replace)
+{
+    if (!_buffer) return;
+    for (unsigned int i = 0; i < _len; i++) {
+        if (_buffer[i] == find) {
+            _buffer[i] = replace;
+        }
+    }
+}
+
+void String::replace(const String &find, const String &replace)
+{
+    // Self-alias guard (#2): if this == &find or this == &replace, the diff>0
+    // branch's reserve() reallocs this->_buffer and would dangle find/replace's
+    // _buffer pointers (use-after-free). Operate via fp/rp that point to
+    // independent defensive copies in the aliased case; normal (non-aliased)
+    // calls just rebind the pointers, no copy.
+    String findCopy, replaceCopy;
+    const String *fp = &find;
+    const String *rp = &replace;
+    if (fp == this) { findCopy = *fp; fp = &findCopy; }
+    if (rp == this) { replaceCopy = *rp; rp = &replaceCopy; }
+
+    if (_len == 0 || fp->_len == 0) return;
+    if (!_buffer || !fp->_buffer) return;
+    // #5: a default-constructed empty replace (buffer NULL, len 0) is a valid
+    // "delete all occurrences" request, not an error. Only require replace to
+    // hold a buffer when it is non-empty.
+    if (rp->_len > 0 && !rp->_buffer) return;
+    if (fp->_len > _len) return;
+
+    int diff = (int)rp->_len - (int)fp->_len;
+    char *readFrom = _buffer;
+    char *foundAt;
+
+    if (diff == 0) {
+        while ((foundAt = strstr(readFrom, fp->_buffer)) != NULL) {
+            (void)memcpy_s(foundAt, _len - (foundAt - _buffer), rp->_buffer, rp->_len);
+            readFrom = foundAt + rp->_len;
+        }
+    } else if (diff < 0) {
+        char *writeTo = _buffer;
+        while ((foundAt = strstr(readFrom, fp->_buffer)) != NULL) {
+            unsigned int n = foundAt - readFrom;
+            (void)memmove_s(writeTo, _len - (writeTo - _buffer), readFrom, n);
+            writeTo += n;
+            if (rp->_len > 0) {   // #5: skip the (0-byte, possibly NULL-src) copy when replace is empty
+                (void)memcpy_s(writeTo, _len - (writeTo - _buffer), rp->_buffer, rp->_len);
+            }
+            writeTo += rp->_len;
+            readFrom = foundAt + fp->_len;
+            _len += diff;
+        }
+        // #4: copy the remaining tail. writeTo < readFrom (overlapping), so use
+        // memmove_s (strcpy_s on overlapping buffers is UB). tailChars is the
+        // remaining DEST length (_len is the post-shrink final length); the
+        // source at readFrom holds exactly that many chars + the NUL, so copy
+        // tailChars+1 bytes to include the terminator.
+        unsigned int tailChars = _len - (unsigned int)(writeTo - _buffer);
+        (void)memmove_s(writeTo, _capacity - (unsigned int)(writeTo - _buffer), readFrom, tailChars + 1);
+    } else {
+        unsigned int size = _len;
+        char *scan = _buffer;
+        while ((foundAt = strstr(scan, fp->_buffer)) != NULL) {
+            scan = foundAt + fp->_len;
+            size += diff;
+        }
+        if (size == _len) return;
+        if (!reserve(size + 1)) return;   // reallocs this->_buffer; fp/rp are safe
+                                          // (aliased copies own their buffers)
+
+        int index = (int)_len - 1;
+        while (index >= 0 && (index = lastIndexOf(*fp, index)) >= 0) {
+            readFrom = _buffer + index + fp->_len;
+            unsigned int tailLen = _len - (readFrom - _buffer);
+            (void)memmove_s(readFrom + diff, _capacity - (readFrom + diff - _buffer), readFrom, tailLen);
+            _len += diff;
+            _buffer[_len] = '\0';
+            (void)memcpy_s(_buffer + index, _capacity - index, rp->_buffer, rp->_len);
+            index--;
+        }
+    }
+}
+
+void String::remove(unsigned int index)
+{
+    remove(index, (unsigned int)-1);
+}
+
+void String::remove(unsigned int index, unsigned int count)
+{
+    if (!_buffer) return;
+    if (index >= _len) return;
+    if (count == 0) return;
+    if (count > _len - index) {
+        count = _len - index;
+    }
+    unsigned int newLen = _len - count;
+    (void)memmove_s(_buffer + index, _capacity - index, _buffer + index + count, _len - index - count);
+    _len = newLen;
+    _buffer[_len] = '\0';
+}
+
 // Operators //////////////////////////////////////////////////////////////////
 
 bool String::operator==(const String &rhs) const
@@ -867,6 +1096,13 @@ char &String::operator[](unsigned int index)
     if (!_buffer || index >= _len)
         return dummy;
     return _buffer[index];
+}
+
+// True if the string holds a valid (non-null) buffer. Standard Arduino API;
+// lets a String be used in a bool context (e.g. ArduinoJson ArduinoStringWriter).
+String::operator bool() const
+{
+    return (_buffer != NULL);
 }
 
 String operator+(const char *cstr, const String &rhs)

@@ -31,6 +31,7 @@
 */
 
 #include "Print.h"
+#include "WString.h"
 #include <string.h>
 
 /* Arduino compatibility layer uart output interface */
@@ -202,6 +203,19 @@ size_t Print::print(double n, int digits)
     return printFloat(n, (uint8_t)digits);
 }
 
+size_t Print::print(const Printable &p)
+{
+    return p.printTo(*this);
+}
+
+size_t Print::print(const String &str)
+{
+    // Dispatch via write(const char*) — it is virtual and overridden by
+    // HardwareSerial/Wire, so output lands on the correct bus (not the base
+    // class's hardcoded UART0). c_str() never returns null (empty String → "").
+    return write(str.c_str());
+}
+
 // ============ println() overloads ============
 
 size_t Print::println(void)
@@ -254,6 +268,20 @@ size_t Print::println(unsigned long n, int base)
 size_t Print::println(double n, int digits)
 {
     size_t s = print(n, digits);
+    s += println();
+    return s;
+}
+
+size_t Print::println(const Printable &p)
+{
+    size_t s = print(p);
+    s += println();
+    return s;
+}
+
+size_t Print::println(const String &str)
+{
+    size_t s = print(str);
     s += println();
     return s;
 }

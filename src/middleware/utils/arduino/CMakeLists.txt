@@ -20,6 +20,13 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Servo.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/SPI.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/I2SClass.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/itoa.c
+)
+
+# The component uses C++-only compiler flags; compile the C-compatible itoa implementation as C++.
+set_source_files_properties(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/itoa.c
+    PROPERTIES LANGUAGE CXX
 )
 
 set(PUBLIC_HEADER
