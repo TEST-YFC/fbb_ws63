@@ -115,7 +115,7 @@
 		]
 	},
 	"flash": {
-		"backend": "burntool",
+		"backend": "hsflash",
 		"chiptype": "WS63",
 		"signalbaud": 921600,
 		"expected_sections": 7
