@@ -22,6 +22,18 @@ config LARGE_THROUGHPUT_CLIENT
     default y
     depends on SAMPLE_SUPPORT_SLE_SPEED_CLIENT_SAMPLE
 
+config SAMPLE_SUPPORT_SLE_DEVICE_CONFIG_SERVER_SAMPLE
+    bool "Support SLE Device Config Server Sample."
+
+config SAMPLE_SUPPORT_SLE_DEVICE_CONFIG_CLIENT_SAMPLE
+    bool "Support SLE Device Config Client Sample."
+
+config SAMPLE_SUPPORT_SLE_FRAGMENTATION_SERVER_SAMPLE
+    bool "Support SLE Fragmentation Server Sample."
+
+config SAMPLE_SUPPORT_SLE_FRAGMENTATION_CLIENT_SAMPLE
+    bool "Support SLE Fragmentation Client Sample."
+
 config SAMPLE_SUPPORT_SLE_HELLO_SERVER_SAMPLE
     bool "Support SLE Hello Server Sample."
 
@@ -59,6 +71,14 @@ config SAMPLE_SUPPORT_SLE_RSSI_RANGING_CLIENT_SAMPLE
     bool "Support SLE RSSI Ranging Client Sample."
 
 endchoice
+
+if SAMPLE_SUPPORT_SLE_DEVICE_CONFIG_SERVER_SAMPLE || SAMPLE_SUPPORT_SLE_DEVICE_CONFIG_CLIENT_SAMPLE
+osource "application/samples/bt/sle/sle_device_config/Kconfig"
+endif
+
+if SAMPLE_SUPPORT_SLE_FRAGMENTATION_SERVER_SAMPLE || SAMPLE_SUPPORT_SLE_FRAGMENTATION_CLIENT_SAMPLE
+osource "application/samples/bt/sle/sle_fragmentation/Kconfig"
+endif
 
 if SAMPLE_SUPPORT_SLE_UART_SERVER_SAMPLE || SAMPLE_SUPPORT_SLE_UART_CLIENT_SAMPLE
 osource "application/samples/bt/sle/sle_uart/Kconfig"

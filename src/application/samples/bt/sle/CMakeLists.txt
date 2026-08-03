@@ -10,6 +10,16 @@ if(DEFINED CONFIG_SAMPLE_SUPPORT_SLE_SPEED_CLIENT_SAMPLE)
     add_subdirectory_if_exist(sle_speed_client)
 endif()
 
+if(DEFINED CONFIG_SAMPLE_SUPPORT_SLE_DEVICE_CONFIG_SERVER_SAMPLE OR
+   DEFINED CONFIG_SAMPLE_SUPPORT_SLE_DEVICE_CONFIG_CLIENT_SAMPLE)
+    add_subdirectory_if_exist(sle_device_config)
+endif()
+
+if(DEFINED CONFIG_SAMPLE_SUPPORT_SLE_FRAGMENTATION_SERVER_SAMPLE OR
+   DEFINED CONFIG_SAMPLE_SUPPORT_SLE_FRAGMENTATION_CLIENT_SAMPLE)
+    add_subdirectory_if_exist(sle_fragmentation)
+endif()
+
 if(DEFINED CONFIG_SAMPLE_SUPPORT_SLE_HELLO_SERVER_SAMPLE)
     add_subdirectory_if_exist(sle_hello)
 endif()
