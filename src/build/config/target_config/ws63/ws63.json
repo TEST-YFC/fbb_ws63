@@ -1,7 +1,7 @@
 {
 	"chipName": "ws63",
 	"requires": {
-		"min_cli_version": "0.1.0",
+		"min_cli_version": "1.1.0",
 		"toolchains": [
 			{ "name": "hcc", "version": "7.3.0-20240618" }
 		]
@@ -115,10 +115,13 @@
 		]
 	},
 	"flash": {
-		"backend": "burntool",
+		"backend": "hsflash",
+		"transport": "serial",
 		"chiptype": "WS63",
 		"signalbaud": 921600,
-		"expected_sections": 7
+		"switch_after_loader": true,
+		"before_reset": true,
+		"after_reset": true
 	},
 	"examples": {
 		"roots": [
