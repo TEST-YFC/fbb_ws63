@@ -248,7 +248,7 @@ errcode_t uapi_adc_auto_scan_ch_enable(uint8_t channel, adc_scan_config_t config
         return ERRCODE_ADC_INVALID_PARAMETER;
     }
     if (unlikely(!adc_is_power_on)) {
-        return ERRCODE_PWM_NOT_POWER_ON;
+        return ERRCODE_ADC_NOT_POWER_ON;
     }
 
     adc_config.type = (hal_adc_scan_type_t)config.type;
