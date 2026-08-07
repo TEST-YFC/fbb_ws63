@@ -18,7 +18,7 @@
 #if !defined(SOCKET_H)
 #define SOCKET_H
 
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 #include <stdint.h>
 #include <sys/types.h>
 #endif
@@ -49,21 +49,25 @@
 #define socklen_t int
 #else
 #define INVALID_SOCKET SOCKET_ERROR
+#if !defined(WEAR_LITEOS_ADAPT)
 #include <sys/socket.h>
+#endif
 #if !defined(_WRS_KERNEL)
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 #include <sys/param.h>
 #endif
 #include <sys/time.h>
+#if !defined(WEAR_LITEOS_ADAPT)
 #include <sys/select.h>
+#endif
 #include <poll.h>
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 #include <sys/uio.h>
 #endif
 #else
 #include <selectLib.h>
 #endif
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
@@ -80,6 +84,11 @@ extern int errno;
 #endif
 #define ULONG size_t
 #define SOCKET int
+#endif
+
+#if defined(WEAR_LITEOS_ADAPT)
+#define USE_SELECT 1
+#define socklen_t int
 #endif
 
 #include "mutex_type.h" /* Needed for mutex_type */
@@ -147,7 +156,7 @@ typedef struct
 #endif
 } Sockets;
 
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) 
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 int Socket_outInitialize(void);
 #else
 void Socket_outInitialize(void);

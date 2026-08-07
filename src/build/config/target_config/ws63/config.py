@@ -88,6 +88,7 @@ target = {
             "coap",
             "sle_netdev", "chba_at",
             "tiot_driver",
+            "mqtt",
             "lvgl",
             "cxx_adapter",
             "arduino",

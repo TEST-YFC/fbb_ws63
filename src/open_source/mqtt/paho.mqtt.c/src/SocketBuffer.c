@@ -33,6 +33,9 @@
 #include <string.h>
 
 #include "Heap.h"
+#if defined(WEAR_LITEOS_ADAPT)
+#include "lwip/sockets.h"
+#endif
 
 #if defined(_WIN32) || defined(_WIN64)
 #define iov_len len
@@ -96,7 +99,7 @@ int SocketBuffer_newDefQ(void)
 			def_queue->buflen = def_queue->datalen = def_queue->headerlen = 0;
 			rc = 0;
 		}
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		else
 		{
 			free(def_queue);
@@ -120,7 +123,7 @@ int SocketBuffer_initialize(void)
 	if (rc == 0)
 	{
 		if ((queues = ListInitialize()) == NULL)
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		{
 			SocketBuffer_freeDefQ();
 			rc = PAHO_MEMORY_ERROR;
@@ -225,7 +228,7 @@ char* SocketBuffer_getQueuedData(SOCKET socket, size_t bytes, size_t* actual_len
 			}
 			else
 			{
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 				free(queue->buf);
 				queue->buf = NULL;
 #endif

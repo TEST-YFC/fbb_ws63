@@ -84,7 +84,7 @@ LIBMQTT_API int Thread_lock_mutex(mutex_type);
 LIBMQTT_API int Thread_unlock_mutex(mutex_type);
 int Thread_destroy_mutex(mutex_type);
 
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 LIBMQTT_API thread_id_type Thread_getid(void);
 #else
 LIBMQTT_API thread_id_type Thread_getid();

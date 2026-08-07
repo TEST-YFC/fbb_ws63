@@ -209,7 +209,7 @@ size_t WebSocket_calculateFrameHeaderSize(networkHandles *net, int mask_data, si
 			ret = 2; /* header 2 bytes */
 		else if ( data_len < 65536u )
 			ret = 4; /* for extra 2-bytes for payload length */
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		else if ( data_len < 0xFFFFFFFF )
 #else
 		else if ( data_len < 0xFFFFFFFFFFFFFFFF )
@@ -321,7 +321,7 @@ static struct frameData WebSocket_buildFrame(networkHandles* net, int opcode, in
 			memcpy( &rc.wsbuf0[buf_len], &len, 2u );
 			buf_len += 2;
 		}
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		else if ( data_len < 0xFFFFFFFF )
 #else
 		else if ( data_len < 0xFFFFFFFFFFFFFFFF )
@@ -514,14 +514,14 @@ int WebSocket_connect( networkHandles *net, int ssl, const char *uri)
 
 #if defined(OPENSSL) || defined(MBEDTLS)
 		if (net->ssl)
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			rc = SSLSocket_putdatas(net->ssl, net->socket, buf, buf_len, nulbufs);
 #else
 			SSLSocket_putdatas(net->ssl, net->socket, buf, buf_len, nulbufs);
 #endif
 		else
 #endif
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			rc = Socket_putdatas(net->socket, buf, buf_len, nulbufs);
 		if (rc != TCPSOCKET_INTERRUPTED)
 			free( buf );
@@ -557,7 +557,7 @@ void WebSocket_close(networkHandles *net, int status_code, const char *reason)
 	FUNC_ENTRY;
 	if ( net->websocket )
 	{
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		int rc;
 #endif
 		char *buf0;
@@ -588,14 +588,14 @@ void WebSocket_close(networkHandles *net, int status_code, const char *reason)
 
 #if defined(OPENSSL) || defined(MBEDTLS)
 		if (net->ssl)
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			rc = SSLSocket_putdatas(net->ssl, net->socket, fd.wsbuf0, fd.wsbuf0len, nulbufs);
 #else
 			SSLSocket_putdatas(net->ssl, net->socket, fd.wsbuf0, fd.wsbuf0len, nulbufs);
 #endif
 		else
 #endif
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			rc = Socket_putdatas(net->socket, fd.wsbuf0, fd.wsbuf0len, nulbufs);
 
 		if (rc != TCPSOCKET_INTERRUPTED)
@@ -676,7 +676,7 @@ exit:
 	return rc;
 }
 
-size_t WebSocket_framePos()
+size_t WebSocket_framePos(void)
 {
 	if ( in_frames && in_frames->first )
 	{
@@ -939,7 +939,7 @@ void WebSocket_pong(networkHandles *net, char *app_data, size_t app_data_len)
 	FUNC_ENTRY;
 	if ( net->websocket )
 	{
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		int rc;
 #endif
 		char *buf0 = NULL;
@@ -955,14 +955,14 @@ void WebSocket_pong(networkHandles *net, char *app_data, size_t app_data_len)
 
 #if defined(OPENSSL) || defined(MBEDTLS)
 		if (net->ssl)
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			rc = SSLSocket_putdatas(net->ssl, net->socket, fd.wsbuf0, fd.wsbuf0len /*header_len + app_data_len*/, appbuf);
 #else
 			SSLSocket_putdatas(net->ssl, net->socket, fd.wsbuf0, fd.wsbuf0len /*header_len + app_data_len*/, appbuf);
 #endif
 		else
 #endif
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			rc = Socket_putdatas(net->socket, fd.wsbuf0, fd.wsbuf0len /*header_len + app_data_len*/, appbuf);
 
 		if (rc != TCPSOCKET_INTERRUPTED)
@@ -1056,11 +1056,11 @@ int WebSocket_receiveFrame(networkHandles *net, size_t *actual_len)
 
 	FUNC_ENTRY;
 	if ( !in_frames )
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	{
 #endif
 		in_frames = ListInitialize();
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		if (in_frames == NULL)
 		{
 			rc = SOCKET_ERROR;

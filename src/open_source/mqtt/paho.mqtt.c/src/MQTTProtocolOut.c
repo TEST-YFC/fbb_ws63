@@ -230,7 +230,7 @@ int MQTTProtocol_connect(const char* ip_address, Clients* aClient, int websocket
 	if (aClient->httpProxy)
 		p0 = aClient->httpProxy;
 	else
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		p0 = 0;
 #else
 		p0 = getenv("http_proxy");
@@ -249,7 +249,7 @@ int MQTTProtocol_connect(const char* ip_address, Clients* aClient, int websocket
 	if (aClient->httpsProxy)
 		p0 = aClient->httpsProxy;
 	else
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		p0 = 0;
 #else
 		p0 = getenv("https_proxy");

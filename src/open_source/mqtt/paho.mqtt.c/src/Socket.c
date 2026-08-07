@@ -40,8 +40,12 @@
 #include "atiny_mqtt_commu.h"
 #endif
 
-#if defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 #include "lwip/sockets.h"
+#endif
+
+#if defined(WEAR_LITEOS_ADAPT)
+#include "lwip/netdb.h"
 #endif
 
 #if defined(OPENSSL) || defined(MBEDTLS)
@@ -54,7 +58,7 @@
 #include <ctype.h>
 
 #include "Heap.h"
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 #define RETRY_TIMES 2
 #define RETRY_TIMEOUT_S 10
 #endif
@@ -98,7 +102,7 @@ extern mutex_type socket_mutex;
  */
 int Socket_setnonblocking(SOCKET sock)
 {
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT)
     return 0;
 #else
 	int rc;
@@ -111,9 +115,17 @@ int Socket_setnonblocking(SOCKET sock)
 	int flags;
 
 	FUNC_ENTRY;
+#if defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+	if ((flags = lwip_fcntl(sock, F_GETFL, 0)))
+#else
 	if ((flags = fcntl(sock, F_GETFL, 0)))
+#endif
 		flags = 0;
+#if defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+	rc = lwip_fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+#else
 	rc = fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+#endif
 #endif
 	FUNC_EXIT_RC(rc);
 	return rc;
@@ -139,13 +151,13 @@ int Socket_error(char* aString, SOCKET sock)
 	if (err != EINTR && err != EAGAIN && err != EINPROGRESS && err != EWOULDBLOCK)
 	{
 		if (strcmp(aString, "shutdown") != 0 || (err != ENOTCONN && err != ECONNRESET))
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			Log(TRACE_MINIMUM, -1, "Socket error (%d) in %s for socket %d", err, aString, sock);
 #else
 			Log(TRACE_MINIMUM, -1, "Socket error %s(%d) in %s for socket %d", strerror(err), err, aString, sock);
 #endif
 	}
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT)
 	return -1;
 #else
 	return err;
@@ -156,7 +168,7 @@ int Socket_error(char* aString, SOCKET sock)
 /**
  * Initialize the socket module
  */
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 int Socket_outInitialize(void)
 #else
 void Socket_outInitialize(void)
@@ -170,12 +182,12 @@ void Socket_outInitialize(void)
 	WSAStartup(winsockVer, &wsd);
 #else
 	FUNC_ENTRY;
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 	signal(SIGPIPE, SIG_IGN);
 #endif
 #endif
 
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	int rc;
 	rc = SocketBuffer_initialize();
 	if (rc != 0)
@@ -188,7 +200,7 @@ void Socket_outInitialize(void)
 
 #if defined(USE_SELECT)
 	mod_s.clientsds = ListInitialize();
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	if ((mod_s.clientsds == NULL) || (mod_s.connect_pending == NULL) || (mod_s.write_pending == NULL))
 	{
 		SocketBuffer_terminate();
@@ -227,7 +239,7 @@ void Socket_outInitialize(void)
 	mod_s.saved.fds_read = NULL;
 	mod_s.saved.nfds = 0;
 #endif
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 exit:
 	FUNC_EXIT_RC(rc);
 	return rc;
@@ -306,11 +318,11 @@ int Socket_addSocket(SOCKET newSd)
 		}
 	}
 	else
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	{
 #endif
 		Log(LOG_ERROR, -1, "addSocket: socket %d already in the list", newSd);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		rc = 1;
 	}
 #endif
@@ -455,7 +467,7 @@ int isReady(int index)
  */
 SOCKET Socket_getReadySocket(int more_work, int timeout, mutex_type mutex, int* rc)
 {
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	SOCKET sock = SOCKET_ERROR;
 #else
 	SOCKET sock = 0;
@@ -516,7 +528,7 @@ SOCKET Socket_getReadySocket(int more_work, int timeout, mutex_type mutex, int* 
 			goto exit;
 		}
 		Log(TRACE_MAX, -1, "Return code %d from read select", *rc);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		rc1 = Socket_continueWrites(&pwset, &sock, mutex);
 #if defined(SEND_MAX_LEN)
         if (rc1 == SOCKET_ERROR || rc1 == EXT_SOCKET_RET_MESSAGE_TOO_LONG)
@@ -550,7 +562,7 @@ SOCKET Socket_getReadySocket(int more_work, int timeout, mutex_type mutex, int* 
 
 		if (*rc == 0 && rc1 == 0)
 		{
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			sock = SOCKET_ERROR;
 #else
 			sock = 0;
@@ -570,7 +582,7 @@ SOCKET Socket_getReadySocket(int more_work, int timeout, mutex_type mutex, int* 
 
 	*rc = 0;
 	if (mod_s.cur_clientsds == NULL)
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	{
 		sock = SOCKET_ERROR;
 	}
@@ -709,14 +721,14 @@ int Socket_getch(SOCKET socket, char* c)
 		goto exit;
 #if defined(IOT_CONNECT)
 	if ((rc = adapt_recv(socket, c, (size_t)1, 0)) == SOCKET_ERROR)
-#elif defined(IOT_LITEOS_ADAPT)
+#elif defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
     if ((rc = lwip_recv(socket, c, (size_t)1, 0)) == SOCKET_ERROR)
 #else
 	if ((rc = recv(socket, c, (size_t)1, 0)) == SOCKET_ERROR)
 #endif
 	{
 		int err = Socket_error("recv - getch", socket);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT)
 		if (err == EWOULDBLOCK)
 #else
 		if (err == EWOULDBLOCK || err == EAGAIN)
@@ -762,14 +774,14 @@ char *Socket_getdata(SOCKET socket, size_t bytes, size_t* actual_len, int *rc)
 
 #if defined(IOT_CONNECT)
 	if ((*rc = adapt_recv(socket, buf + (*actual_len), (int)(bytes - (*actual_len)), 0)) == SOCKET_ERROR)
-#elif defined(IOT_LITEOS_ADAPT)
+#elif defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
     if ((*rc = lwip_recv(socket, buf + (*actual_len), (int)(bytes - (*actual_len)), 0)) == SOCKET_ERROR)
 #else
 	if ((*rc = recv(socket, buf + (*actual_len), (int)(bytes - (*actual_len)), 0)) == SOCKET_ERROR)
 #endif
 	{
 		*rc = Socket_error("recv - getdata", socket);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT)
 		if (*rc != EWOULDBLOCK)
 #else
 		if (*rc != EAGAIN && *rc != EWOULDBLOCK)
@@ -865,7 +877,7 @@ for testing purposes only!
 #endif
 #if defined(IOT_CONNECT)
 	rc = adapt_writev(socket, iovecs, count);
-#elif defined(IOT_LITEOS_ADAPT)
+#elif defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
     rc = lwip_writev(socket, iovecs, count);
 #else
 	rc = writev(socket, iovecs, count);
@@ -877,7 +889,7 @@ for testing purposes only!
 #endif
 	{
 		int err = Socket_error("writev - putdatas", socket);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT)
 		if (err == EWOULDBLOCK)
 #else
 		if (err == EWOULDBLOCK || err == EAGAIN)
@@ -957,7 +969,7 @@ int Socket_putdatas(SOCKET socket, char* buf0, size_t buf0len, PacketBuffers buf
 				rc = PAHO_MEMORY_ERROR;
 				goto exit;
 			}
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			Log(TRACE_MIN, -1, "Partial write: %lu bytes of %lu actually written on socket %d",
 					bytes, (unsigned long)total, socket);
 #else
@@ -1031,13 +1043,13 @@ int Socket_close_only(SOCKET socket)
 	if ((rc = closesocket(socket)) == SOCKET_ERROR)
 		Socket_error("close", socket);
 #else
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 	if (shutdown(socket, SHUT_WR) == SOCKET_ERROR)
 		Socket_error("shutdown", socket);
 #endif
 #if defined(IOT_CONNECT)
 	if ((rc = adapt_recv(socket, NULL, (size_t)0, 0)) == SOCKET_ERROR)
-#elif defined(IOT_LITEOS_ADAPT)
+#elif defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
     if ((rc = lwip_recv(socket, NULL, (size_t)0, 0)) == SOCKET_ERROR)
 #else
 	if ((rc = recv(socket, NULL, (size_t)0, 0)) == SOCKET_ERROR)
@@ -1045,7 +1057,7 @@ int Socket_close_only(SOCKET socket)
 		Socket_error("shutdown", socket);
 #if defined(IOT_CONNECT)
 	if ((rc = closesocket(socket, SOCK_CLOSE_FORCE_MODE)) == SOCKET_ERROR)
-#elif defined(IOT_LITEOS_ADAPT)
+#elif defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
     if ((rc = lwip_close(socket)) == SOCKET_ERROR)
 #else
 	if ((rc = close(socket)) == SOCKET_ERROR)
@@ -1203,7 +1215,7 @@ int Socket_new(const char* addr, size_t addr_len, int port, SOCKET* sock)
 	int type = SOCK_STREAM;
 	char *addr_mem;
 	struct sockaddr_in address;
-#if defined(AF_INET6)
+#if AF_INET6 && defined(AF_INET6)
 	struct sockaddr_in6 address6;
 #endif
 	int rc = SOCKET_ERROR;
@@ -1217,8 +1229,9 @@ int Socket_new(const char* addr, size_t addr_len, int port, SOCKET* sock)
 
 	FUNC_ENTRY;
 	*sock = SOCKET_ERROR;
+#if AF_INET6 && defined(AF_INET6)
 	memset(&address6, '\0', sizeof(address6));
-
+#endif
 	if (addr[0] == '[')
 	{
 		++addr;
@@ -1272,7 +1285,7 @@ int Socket_new(const char* addr, size_t addr_len, int port, SOCKET* sock)
 		if (res == NULL)
 			rc = SOCKET_ERROR;
 		else
-#if defined(AF_INET6)
+#if AF_INET6 && defined(AF_INET6)
 		if (res->ai_family == AF_INET6)
 		{
 			address6.sin6_port = htons(port);
@@ -1335,7 +1348,7 @@ int Socket_new(const char* addr, size_t addr_len, int port, SOCKET* sock)
 				/* this could complete immediately, even though we are non-blocking */
 				if (family == AF_INET)
 					rc = connect(*sock, (struct sockaddr*)&address, sizeof(address));
-	#if defined(AF_INET6)
+	#if AF_INET6 && defined(AF_INET6)
 				else
 					rc = connect(*sock, (struct sockaddr*)&address6, sizeof(address6));
 	#endif
@@ -1572,7 +1585,7 @@ int Socket_continueWrite(SOCKET socket)
 		curbuflen += pw->iovecs[i].iov_len;
 	}
 
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	rc = Socket_writev(socket, iovecs1, curbuf+1, &bytes);
 #if defined(SEND_MAX_LEN)
 	if (rc != SOCKET_ERROR && rc != EXT_SOCKET_RET_MESSAGE_TOO_LONG)
@@ -1640,7 +1653,7 @@ int Socket_abortWrite(SOCKET socket)
 #if defined(OPENSSL) || defined(MBEDTLS)
 	if (pw->ssl)
 	{
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 		rc = SSLSocket_abortWrite(pw);
 #endif
 		goto exit;
@@ -1734,7 +1747,7 @@ int Socket_continueWrites(SOCKET* sock, mutex_type mutex)
 #endif
 		{
 			*sock = socket;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			rc1 = rc;
 #else
 			rc1 = SOCKET_ERROR;
@@ -1792,7 +1805,7 @@ char* Socket_getaddrname(struct sockaddr* sa, SOCKET sock)
  */
 char* Socket_getpeer(SOCKET sock)
 {
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	return "unknown";
 #else
 	struct sockaddr_in6 sa;

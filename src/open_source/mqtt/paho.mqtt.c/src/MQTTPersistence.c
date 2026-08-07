@@ -236,7 +236,7 @@ int MQTTPersistence_restorePackets(Clients *c)
 				if (data_MQTTVersion == MQTTVERSION_5 && c->MQTTVersion < MQTTVERSION_5)
 				{
 					rc = MQTTCLIENT_PERSISTENCE_ERROR; /* can't restore version 5 data with a version 3 client */
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 					if (buffer != NULL)
 					{
 						free(buffer);
@@ -283,7 +283,7 @@ int MQTTPersistence_restorePackets(Clients *c)
 						if (!key)
 						{
 							rc = PAHO_MEMORY_ERROR;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 							publish->topic = NULL;
 							MQTTPacket_freePublish(publish);
 							if (buffer != NULL)
@@ -333,7 +333,7 @@ int MQTTPersistence_restorePackets(Clients *c)
 						if (!key)
 						{
 							rc = PAHO_MEMORY_ERROR;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 							free(pubrel);
 							if (buffer != NULL)
 							{
@@ -373,7 +373,7 @@ int MQTTPersistence_restorePackets(Clients *c)
 				free(msgkeys[i]);
 			i++;
 		}
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 		if (msgkeys)
 			free(msgkeys);
 #endif
@@ -382,7 +382,7 @@ int MQTTPersistence_restorePackets(Clients *c)
 		msgs_sent, msgs_rcvd, c->clientID);
 	MQTTPersistence_wrapMsgID(c);
 exit:
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	if (msgkeys != NULL)
 		free(msgkeys);
 #endif
@@ -445,8 +445,11 @@ void MQTTPersistence_insertInOrder(List* list, void* content, size_t size)
 		if ( ((Messages*)content)->msgid < ((Messages*)current->content)->msgid )
 			index = current;
 	}
-
+#if defined(WEAR_LITEOS_ADAPT)
+	_ListInsert(list, content, size, index);
+#else
 	ListInsert(list, content, size, index);
+#endif
 	FUNC_EXIT;
 }
 
@@ -879,7 +882,11 @@ static void MQTTPersistence_insertInSeqOrder(List* list, MQTTPersistence_qEntry*
 		if (qEntry->seqno < ((MQTTPersistence_qEntry*)current->content)->seqno)
 			index = current;
 	}
+#if defined(WEAR_LITEOS_ADAPT)
+	_ListInsert(list, qEntry, size, index);
+#else
 	ListInsert(list, qEntry, size, index);
+#endif
 	FUNC_EXIT;
 }
 

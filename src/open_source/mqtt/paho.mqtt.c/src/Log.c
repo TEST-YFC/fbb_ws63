@@ -39,7 +39,7 @@
 #include <string.h>
 
 #if !defined(_WIN32) && !defined(_WIN64)
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 #include <syslog.h>
 #include <sys/stat.h>
 #endif
@@ -58,7 +58,7 @@
 #include "atiny_mqtt_commu.h"
 #endif
 
-#if !defined(_WIN32) && !defined(_WIN64) && !defined(IOT_CONNECT)
+#if !defined(_WIN32) && !defined(_WIN64) && !defined(IOT_CONNECT) && !defined(WEAR_LITEOS_ADAPT)
 /**
  * _unlink mapping for linux
  */
@@ -72,7 +72,7 @@
 #if defined(IOT_LITEOS_ADAPT)
 #include "osal_debug.h"
 #endif
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 trace_settings_type trace_settings =
 {
 	TRACE_MINIMUM,
@@ -117,7 +117,7 @@ static int start_index = -1,
 static traceEntry* trace_queue = NULL;
 static int trace_queue_size = 0;
 
-#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 static FILE* trace_destination = NULL;	/**< flag to indicate if trace is to be sent to a stream */
 static char* trace_destination_name = NULL; /**< the name of the trace file */
 static char* trace_destination_backup_name = NULL; /**< the name of the backup trace file */
@@ -127,7 +127,7 @@ static int max_lines_per_file = 1000; /**< maximum number of lines to write to o
 static enum LOG_LEVELS trace_output_level = INVALID_LEVEL;
 static Log_traceCallback* trace_callback = NULL;
 static traceEntry* Log_pretrace(void);
-#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 static char* Log_formatTraceEntry(traceEntry* cur_entry);
 static void Log_output(enum LOG_LEVELS log_level, const char *msg);
 static void Log_posttrace(enum LOG_LEVELS log_level, traceEntry* cur_entry);
@@ -144,7 +144,7 @@ struct timeval now_ts, last_ts;
 #else
 struct timeb now_ts, last_ts;
 #endif
-#if defined (IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined (IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 static char msg_buf[100];
 #else
 static char msg_buf[512];
@@ -160,7 +160,7 @@ static mutex_type log_mutex = &log_mutex_store;
 
 int Log_initialize(Log_nameValue* info)
 {
-#if defined (IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined (IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	(void)info;
 	return -1;
 #else
@@ -269,7 +269,7 @@ void Log_setTraceLevel(enum LOG_LEVELS level)
 
 void Log_terminate(void)
 {
-#if defined (IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined (IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	return;
 #else
 	free(trace_queue);
@@ -350,7 +350,7 @@ exit:
 	return cur_entry;
 }
 
-#if !defined (IOT_CONNECT) && !defined (IOT_LITEOS_ADAPT)
+#if !defined (IOT_CONNECT) && !defined (IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 static char* Log_formatTraceEntry(traceEntry* cur_entry)
 {
 	struct tm *timeinfo;
@@ -417,7 +417,7 @@ static void Log_output(enum LOG_LEVELS log_level, const char *msg)
 
 static void Log_posttrace(enum LOG_LEVELS log_level, traceEntry* cur_entry)
 {
-#if defined (IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined (IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	(void)log_level;
 	(void)cur_entry;
 #else
@@ -482,6 +482,8 @@ void Log(enum LOG_LEVELS log_level, int msgno, const char *format, ...)
 		atiny_printf("%s\n", msg_buf);
 #elif defined(IOT_LITEOS_ADAPT)
         osal_printk("%s\n", msg_buf);
+#elif defined(WEAR_LITEOS_ADAPT)
+		printf("%s\n", msg_buf);
 #else
 		Log_trace(log_level, msg_buf);
 #endif

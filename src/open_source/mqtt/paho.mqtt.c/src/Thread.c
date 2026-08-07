@@ -52,7 +52,7 @@
 #if defined(IOT_CONNECT)
 #include "atiny_mqtt_commu.h"
 #endif
-#if defined (IOT_LITEOS_ADAPT)
+#if defined (IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 #include "los_task.h"
 #define MQTT_TASK_PRIO  10
 #define MQTT_TASK_STACK_SIZE  0x1000
@@ -81,7 +81,7 @@ void Thread_start(thread_fn fn, void* parameter)
     CloseHandle(thread);
 #elif defined (IOT_CONNECT)
 
-#elif defined (IOT_LITEOS_ADAPT)
+#elif defined (IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
     TSK_INIT_PARAM_S app_task;
     /* create task for send_start_report */
     app_task.pfnTaskEntry = (TSK_ENTRY_FUNC)fn;
@@ -333,7 +333,11 @@ int Thread_wait_sem(sem_type sem, int timeout)
 			usleep(interval); /* microseconds - .1 of a second */
 		}
 	#elif defined (COMPAT_CMSIS)
+	#if defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+		rc = osSemaphoreAcquire(sem, LOS_MS2Tick(timeout));
+	#else
 		rc = osSemaphoreAcquire(sem, timeout);
+	#endif
 	#else
 		/* We have to use CLOCK_REALTIME rather than MONOTONIC for sem_timedwait interval.
 		 * Does this make it susceptible to system clock changes?
