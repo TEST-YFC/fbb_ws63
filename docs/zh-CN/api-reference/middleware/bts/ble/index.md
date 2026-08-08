@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 低功耗蓝牙
 
 BLE (Bluetooth Low Energy) 是 WS63 的低功耗蓝牙协议栈 API，基于 GATT (Generic Attribute Profile) 架构实现设备发现、连接管理和数据传输。

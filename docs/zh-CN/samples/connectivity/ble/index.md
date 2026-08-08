@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # BLE
 
 > GATT (Generic Attribute Profile) 模型、配对、数据通信

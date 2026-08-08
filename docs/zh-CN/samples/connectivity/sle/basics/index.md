@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 基础入门
 
 - [Hello SLE (SparkLink Low Energy)](./hello-connect.md)

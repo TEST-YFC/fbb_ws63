@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 星闪低功耗
 
 SLE (SparkLink Low Energy) 是星闪低功耗接入技术的协议栈 API，提供高速、低延迟的短距无线通信能力，支持 1M/2M/4M 带宽，最高空口速率 12 Mbps。
