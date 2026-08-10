@@ -103,30 +103,7 @@ flowchart TD
 
 调用关系：由 `pmp_sample_entry()` 调用，配置并锁定样例只读区域。
 
-## 11. 配置项说明
-
-在 SDK 根目录执行：
-
-```powershell
-fbb menuconfig ws63-liteos-app
-```
-
-进入以下菜单并启用 PMP Sample：
-
-```text
-Application
-  → Enable Sample.
-    → Enable the Sample of peripheral.
-      → Support PMP Sample.
-```
-
-启用后进入 `PMP Sample Configuration`。首次运行建议关闭 `Trigger a protected write for exception verification.`，先完成不会触发异常的安全验证。
-
-需要验证写保护时，再启用该选项并重新编译、烧录。此模式会故意触发 Store Access Fault，验证完成后应关闭该选项并恢复正常固件。
-
-PMP 驱动组件已包含在 `ws63-liteos-app` 中，不需要修改 app 的组件列表。但平台现有 SRAM 条目会优先覆盖样例缓冲区，因此需要先按下述步骤修改本地 `pmp_cfg.c`。
-
-### 配置样例保护区
+## 11. 配置样例保护区
 
 > 以下修改只用于验证 PMP 配置方法。实际项目应根据自身内存布局、PMP 条目占用情况和安全策略重新选择边界及条目号。
 
@@ -238,13 +215,34 @@ Remove-Item src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak
 
 恢复源文件后，再通过 menuconfig 关闭 `Support PMP Sample.`，执行一次 clean 构建并重新烧录。不要直接使用 `git restore` 还原该文件，以免覆盖用户在同一文件中的其他本地修改。
 
-## 12. 使用方法
+## 12. 配置项说明
+
+完成样例保护区配置后，在 SDK 根目录执行：
+
+```powershell
+fbb menuconfig ws63-liteos-app
+```
+
+进入以下菜单并启用 PMP Sample：
+
+```text
+Application
+  → Enable Sample.
+    → Enable the Sample of peripheral.
+      → Support PMP Sample.
+```
+
+启用后进入 `PMP Sample Configuration`。首次运行建议关闭 `Trigger a protected write for exception verification.`，先完成不会触发异常的安全验证。
+
+需要验证写保护时，再启用该选项并重新编译、烧录。此模式会故意触发 Store Access Fault，验证完成后应关闭该选项并恢复正常固件。
+
+## 13. 使用方法
 
 ### 环境准备
 
  - 准备 WS63 开发板、USB 数据线和可用串口。
  - 完成 HiSpark FBB 构建环境和 WS63 SDK 配置。
- - 按“配置项说明”修改本地 PMP 保护边界，再使用 menuconfig 启用 PMP Sample。
+ - 按“配置样例保护区”替换或修改本地 `pmp_cfg.c`，再按“配置项说明”使用 menuconfig 启用 PMP Sample。
 
 ### 编译
 
@@ -263,7 +261,7 @@ fbb flash ws63-liteos-app --port <device_port> --baud 2000000 --json-summary
 fbb monitor --port <device_port>
 ```
 
-## 13. 输入输出示例
+## 14. 输入输出示例
 
 ### 输入
 
