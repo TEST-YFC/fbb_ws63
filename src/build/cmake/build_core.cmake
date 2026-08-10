@@ -144,6 +144,12 @@ macro(cfbb_build_epilogue)
             list(APPEND RAM_COMPONENT "${FBB_PROJECT_COMPONENT_NAME}")
             add_subdirectory("${CMAKE_SOURCE_DIR}/main"
                              "${CMAKE_BINARY_DIR}/_fbb_project_main")
+            if(TARGET "${FBB_PROJECT_COMPONENT_NAME}" AND
+                    FBB_EXTERNAL_COMPONENT_TARGETS)
+                target_link_libraries(
+                    ${FBB_PROJECT_COMPONENT_NAME} PRIVATE
+                    ${FBB_EXTERNAL_COMPONENT_TARGETS})
+            endif()
         endif()
         if(_FBB_LEGACY_COMPONENT_SCAN)
             # v1 compatibility only: legacy projects had no Lockfile plan.
