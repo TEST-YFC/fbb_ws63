@@ -5,7 +5,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
 BUILD_CORE = ROOT / "src/build/cmake/build_core.cmake"
-DRIVERS_CMAKE = ROOT / "src/drivers/CMakeLists.txt"
 
 
 def test_build_core_consumes_exact_cli_generated_cmake():
@@ -25,8 +24,8 @@ def test_build_core_consumes_exact_cli_generated_cmake():
     assert normalize < include < main < final_link
 
 
-def test_sdk_targets_exist_before_external_plan_is_loaded():
-    """Generated plans may link declared SDK components such as gpio."""
+def test_sdk_tree_exists_before_external_plan_is_loaded():
+    """Generated external targets may consume the SDK's public interfaces."""
     text = BUILD_CORE.read_text(encoding="utf-8")
 
     sdk_tree = text.index(
@@ -35,23 +34,18 @@ def test_sdk_targets_exist_before_external_plan_is_loaded():
     assert sdk_tree < include
 
 
-def test_rom_driver_exposes_stable_public_sdk_component_target():
-    """A Runtime manifest must not depend on a chip-specific ROM target."""
-    text = DRIVERS_CMAKE.read_text(encoding="utf-8")
+def test_external_targets_inherit_existing_sdk_public_interfaces():
+    """Reuse build_component's compile contract without relinking drivers."""
+    text = BUILD_CORE.read_text(encoding="utf-8")
 
-    assert '"pinctrl_rom" IN_LIST ROM_COMPONENT' in text
-    assert "TARGET pinctrl_rom" in text
-    assert "add_library(pinctrl INTERFACE)" in text
-    assert "target_link_libraries(pinctrl INTERFACE pinctrl_rom)" in text
-    assert "pinctrl_rom INCLUDE_DIRECTORIES" in text
-
-
-def test_public_sdk_driver_targets_propagate_existing_header_closure():
-    text = DRIVERS_CMAKE.read_text(encoding="utf-8")
-
-    assert "gpio INCLUDE_DIRECTORIES" in text
-    assert "target_include_directories(gpio INTERFACE" in text
-    assert "pinctrl INTERFACE ${_fbb_pinctrl_includes}" in text
+    include = text.index('include("$ENV{FBB_COMPONENTS_CMAKE}")')
+    inherit = text.index(
+        "${_fbb_external_target} PRIVATE ${TARGETS_INTERFACES})")
+    final_link = text.index(
+        "${TARGET_NAME} PRIVATE ${FBB_EXTERNAL_COMPONENT_TARGETS})")
+    assert include < inherit < final_link
+    assert "gpio" not in text[include:final_link]
+    assert "pinctrl" not in text[include:final_link]
 
 
 def test_v2_plan_precedes_legacy_out_of_tree_component_scan():
