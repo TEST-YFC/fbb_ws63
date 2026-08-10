@@ -109,16 +109,34 @@ flowchart TD
 
 修改前建议先备份平台配置文件。在 SDK 根目录执行：
 
+Windows PowerShell：
+
 ```powershell
 Copy-Item src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c `
     src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak
 ```
 
+Linux/macOS Shell：
+
+```bash
+cp src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c \
+    src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak
+```
+
 本 Sample 提供了基于当前 SDK 平台文件制作的完整参考配置。备份完成后，可以直接复制替换：
+
+Windows PowerShell：
 
 ```powershell
 Copy-Item src/application/samples/peripheral/pmp/reference/pmp_cfg.c `
     src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c -Force
+```
+
+Linux/macOS Shell：
+
+```bash
+cp -f src/application/samples/peripheral/pmp/reference/pmp_cfg.c \
+    src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c
 ```
 
 参考文件不会被 Sample 的 `CMakeLists.txt` 编译，只有复制到平台目录后才会生效。如果当前 SDK 中的平台 `pmp_cfg.c` 已被其他功能修改，不要直接覆盖，应对照下面四处改动手动合入。
@@ -207,10 +225,20 @@ extern volatile uint8_t g_pmp_sample_buffer[];
 
 参考文件不使用 `CONFIG_SAMPLE_SUPPORT_PMP` 条件编译。关闭 menuconfig 中的 `Support PMP Sample.` 只会停止编译 Sample，不能还原已经替换的平台配置。验证完成后，必须使用前面生成的备份恢复 `pmp_cfg.c`。在 SDK 根目录执行：
 
+Windows PowerShell：
+
 ```powershell
 Copy-Item src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak `
     src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c -Force
 Remove-Item src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak
+```
+
+Linux/macOS Shell：
+
+```bash
+cp -f src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak \
+    src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c
+rm src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak
 ```
 
 恢复源文件后，再通过 menuconfig 关闭 `Support PMP Sample.`，执行一次 clean 构建并重新烧录。不要直接使用 `git restore` 还原该文件，以免覆盖用户在同一文件中的其他本地修改。
@@ -219,7 +247,7 @@ Remove-Item src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak
 
 完成样例保护区配置后，在 SDK 根目录执行：
 
-```powershell
+```shell
 fbb menuconfig ws63-liteos-app
 ```
 
@@ -248,7 +276,7 @@ Application
 
 修改 PMP Sample 配置后执行 clean 构建，确保平台 PMP 条目和 Sample 使用同一份配置：
 
-```powershell
+```shell
 fbb build --clean ws63-liteos-app
 ```
 
@@ -256,7 +284,7 @@ fbb build --clean ws63-liteos-app
 
 将固件烧录到 WS63 开发板，然后打开串口监视器：
 
-```powershell
+```shell
 fbb flash ws63-liteos-app --port <device_port> --baud 2000000 --json-summary
 fbb monitor --port <device_port>
 ```
