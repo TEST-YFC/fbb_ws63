@@ -127,6 +127,15 @@ PMP 驱动组件已包含在 `ws63-liteos-app` 中，不需要修改 app 的组�
 
 > 以下修改只用于验证 PMP 配置方法。实际项目应根据自身内存布局、PMP 条目占用情况和安全策略重新选择边界及条目号。
 
+修改前建议先备份平台配置文件。在 SDK 根目录执行：
+
+```powershell
+Copy-Item src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c `
+    src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak
+```
+
+以下步骤均修改 `src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c`。代码中的 `CONFIG_SAMPLE_SUPPORT_PMP` 条件编译用于保证：启用 Sample 时采用临时保护区配置，关闭 Sample 时恢复平台原有配置。
+
 1. 在 `pmp_cfg.c` 的头文件引用后声明 Sample 使用的条目和缓冲区：
 
 ```c
@@ -179,7 +188,14 @@ extern volatile uint8_t g_pmp_sample_buffer[];
         .conf.pmp_attr = PMP_ATTR_WRITEBACK_RALLOCATE,
     },
 #else
-    /* 保留原 REGION_RAM_3 配置。 */
+    {
+        .idx = REGION_RAM_3, // sram text end --- radar start
+        .addr = (uint32_t)RADAR_SENSOR_RX_MEM_START,
+        .conf.rwx_permission = PMPCFG_RW_EXECUTE,
+        .conf.addr_match = PMPCFG_ADDR_MATCH_TOR,
+        .conf.lock = true,
+        .conf.pmp_attr = PMP_ATTR_WRITEBACK_RALLOCATE,
+    },
 #endif
 ```
 
@@ -195,6 +211,27 @@ extern volatile uint8_t g_pmp_sample_buffer[];
 ```
 
 配置后，样例缓冲区前 32 字节对应条目 8，且不会先被更低编号的宽范围 SRAM 条目命中。Sample 随后调用 `uapi_pmp_config()` 将该条目配置为只读并锁定。
+
+### 验证完成后还原
+
+如果只需要恢复固件原有行为，不必立即删除上述条件编译代码：
+
+1. 执行 `fbb menuconfig ws63-liteos-app`。
+2. 进入 `Application → Enable Sample. → Enable the Sample of peripheral.`，关闭 `Support PMP Sample.`。
+3. 保存配置并执行 `fbb build --clean ws63-liteos-app`。
+4. 重新烧录固件。
+
+关闭 `Support PMP Sample.` 后，`CONFIG_SAMPLE_SUPPORT_PMP` 不再生效，`pmp_cfg.c` 会自动选择 `#else` 中原有的 `REGION_RAM_3` 配置，Sample 入口和缓冲区也不会参与编译。
+
+如果还需要将 `pmp_cfg.c` 源文件恢复到修改前的状态，可以使用前面生成的备份。在 SDK 根目录执行：
+
+```powershell
+Copy-Item src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak `
+    src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c -Force
+Remove-Item src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak
+```
+
+恢复源文件后，再关闭 `Support PMP Sample.` 并执行一次 clean 构建。不要直接使用 `git restore` 还原该文件，以免覆盖用户在同一文件中的其他本地修改。
 
 ## 12. 使用方法
 
