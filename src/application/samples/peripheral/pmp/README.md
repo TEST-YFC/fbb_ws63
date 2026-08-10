@@ -78,7 +78,7 @@ flowchart TD
 | `pmp_sample.c` | 实现 PMP 内存保护 Sample | 定义样例缓冲区、配置只读条目、验证内存访问并可选触发故障 |
 | `Kconfig` | 提供故障测试开关 | 控制是否尝试写入受保护区域 |
 | `CMakeLists.txt` | 配置 Sample 编译源 | 将 `pmp_sample.c` 加入 peripheral sample |
-| `reference/pmp_cfg.c` | 完整平台配置参考文件 | 可临时替换 WS63 平台的 `pmp_cfg.c`，其中侵入式新增内容均受 `CONFIG_SAMPLE_SUPPORT_PMP` 控制 |
+| `reference/pmp_cfg.c` | 完整平台配置参考文件 | 可临时替换 WS63 平台的 `pmp_cfg.c`，直接建立 Sample 所需的 PMP 边界 |
 | `pmp_cfg.c` | 用户侧平台保护配置 | 验证前按本文说明为样例缓冲区拆分 SRAM TOR 边界；本 Sample 不修改该文件 |
 
 ## 10. 核心函数/类说明
@@ -167,35 +167,28 @@ REGION_RAM_3_AFTER_PMP_SAMPLE  : g_pmp_sample_buffer + 32 → RADAR_SENSOR_RX_ME
 
 PMP 地址匹配按条目编号从低到高进行，首次匹配的条目决定权限。因此不能只新增条目 8 而保留一个更低编号、覆盖整个 SRAM 的条目；必须先把原 SRAM 范围拆开。启动阶段中间条目使用 `PMPCFG_RW_NEXECUTE` 且 `lock = false`，Sample 随后调用 `uapi_pmp_config()` 将同一条目改为 `PMPCFG_READ_ONLY_NEXECUTE` 且 `lock = true`。锁定后，处理器复位前不能再次修改。
 
-下面列出参考文件中的四处代码，便于用户学习或手动合入。所有新增内容都由 `CONFIG_SAMPLE_SUPPORT_PMP` 控制：启用 Sample 时采用临时保护区配置，关闭 Sample 时采用平台原有配置。
+下面列出参考文件中的四处代码，便于用户学习或手动合入。参考文件是专用于 PMP Sample 的侵入式配置，复制后会直接替代平台原有的 `REGION_RAM_3` 布局。
 
 1. 在 `pmp_cfg.c` 的头文件引用后声明 Sample 使用的条目和缓冲区：
 
 ```c
-#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
 #define PMP_SAMPLE_REGION_INDEX 8U
 #define PMP_SAMPLE_PROTECTED_SIZE 32U
 
 extern volatile uint8_t g_pmp_sample_buffer[];
-#endif
 ```
 
 2. 将原来的 `REGION_RAM_3` 拆分为样例前、样例保护区和样例后三个连续 TOR 条目：
 
 ```c
-#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
     REGION_RAM_3_BEFORE_PMP_SAMPLE,
     REGION_PMP_SAMPLE = PMP_SAMPLE_REGION_INDEX,
     REGION_RAM_3_AFTER_PMP_SAMPLE,
-#else
-    REGION_RAM_3,
-#endif
 ```
 
 3. 在 `g_region_attr` 中，将原 `REGION_RAM_3` 配置替换为以下三个条目。中间条目必须保持未锁定，供 Sample 调用 `uapi_pmp_config()` 将其改为只读并锁定：
 
 ```c
-#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
     {
         .idx = REGION_RAM_3_BEFORE_PMP_SAMPLE,
         .addr = 0,
@@ -220,43 +213,22 @@ extern volatile uint8_t g_pmp_sample_buffer[];
         .conf.lock = true,
         .conf.pmp_attr = PMP_ATTR_WRITEBACK_RALLOCATE,
     },
-#else
-    {
-        .idx = REGION_RAM_3, // sram text end --- radar start
-        .addr = (uint32_t)RADAR_SENSOR_RX_MEM_START,
-        .conf.rwx_permission = PMPCFG_RW_EXECUTE,
-        .conf.addr_match = PMPCFG_ADDR_MATCH_TOR,
-        .conf.lock = true,
-        .conf.pmp_attr = PMP_ATTR_WRITEBACK_RALLOCATE,
-    },
-#endif
 ```
 
 4. 在 `pmp_region_cfg()` 中设置前两个 TOR 上边界：
 
 ```c
-#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
     g_region_attr[REGION_RAM_3_BEFORE_PMP_SAMPLE].addr =
         (uint32_t)(uintptr_t)g_pmp_sample_buffer;
     g_region_attr[REGION_PMP_SAMPLE].addr =
         (uint32_t)(uintptr_t)&g_pmp_sample_buffer[PMP_SAMPLE_PROTECTED_SIZE];
-#endif
 ```
 
 配置后，样例缓冲区前 32 字节对应条目 8，且不会先被更低编号的宽范围 SRAM 条目命中。Sample 随后调用 `uapi_pmp_config()` 将该条目配置为只读并锁定。
 
 ### 验证完成后还原
 
-如果只需要恢复固件原有行为，不必立即删除上述条件编译代码：
-
-1. 执行 `fbb menuconfig ws63-liteos-app`。
-2. 进入 `Application → Enable Sample. → Enable the Sample of peripheral.`，关闭 `Support PMP Sample.`。
-3. 保存配置并执行 `fbb build --clean ws63-liteos-app`。
-4. 重新烧录固件。
-
-关闭 `Support PMP Sample.` 后，`CONFIG_SAMPLE_SUPPORT_PMP` 不再生效，`pmp_cfg.c` 会自动选择 `#else` 中原有的 `REGION_RAM_3` 配置，Sample 入口和缓冲区也不会参与编译。
-
-如果还需要将 `pmp_cfg.c` 源文件恢复到修改前的状态，可以使用前面生成的备份。在 SDK 根目录执行：
+参考文件不使用 `CONFIG_SAMPLE_SUPPORT_PMP` 条件编译。关闭 menuconfig 中的 `Support PMP Sample.` 只会停止编译 Sample，不能还原已经替换的平台配置。验证完成后，必须使用前面生成的备份恢复 `pmp_cfg.c`。在 SDK 根目录执行：
 
 ```powershell
 Copy-Item src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak `
@@ -264,7 +236,7 @@ Copy-Item src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak `
 Remove-Item src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak
 ```
 
-恢复源文件后，再关闭 `Support PMP Sample.` 并执行一次 clean 构建。不要直接使用 `git restore` 还原该文件，以免覆盖用户在同一文件中的其他本地修改。
+恢复源文件后，再通过 menuconfig 关闭 `Support PMP Sample.`，执行一次 clean 构建并重新烧录。不要直接使用 `git restore` 还原该文件，以免覆盖用户在同一文件中的其他本地修改。
 
 ## 12. 使用方法
 
