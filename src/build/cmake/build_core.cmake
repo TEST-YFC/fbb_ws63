@@ -132,6 +132,17 @@ macro(cfbb_build_epilogue)
         endif()
         file(TO_CMAKE_PATH "$ENV{FBB_PROJECT_DIR}" FBB_PROJECT_DIR)
         include("$ENV{FBB_COMPONENTS_CMAKE}")
+        # External targets are generated outside build_component(), so give
+        # them the same SDK public headers, definitions and compile options
+        # that an SDK-owned component receives. The SDK's existing
+        # RAM_COMPONENT/ROM_COMPONENT closure remains responsible for linking
+        # driver implementations into the final image.
+        foreach(_fbb_external_target IN LISTS FBB_EXTERNAL_COMPONENT_TARGETS)
+            if(TARGET ${_fbb_external_target})
+                target_link_libraries(
+                    ${_fbb_external_target} PRIVATE ${TARGETS_INTERFACES})
+            endif()
+        endforeach()
     endif()
 
     # Out-of-tree projects additionally register their own main target. The
