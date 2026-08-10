@@ -1,132 +1,97 @@
-# PMP 代码区保护
+# PMP 内存保护
 
-> 使用技术：RISC-V PMP（Physical Memory Protection，物理内存保护）、读/写/执行权限、访问异常
+> 使用技术：RISC-V PMP（Physical Memory Protection，物理内存保护）、TOR 地址匹配、访问权限、故障验证
 
-本案例验证 WS63 启动阶段配置的 PMP 代码区保护：读取代码区可以成功；开启故障测试后写入代码区会触发 Store Access Fault。
+本案例在 WS63 上划分一段 64 字节对齐缓冲区，将前 32 字节配置为只读区域，后 32 字节保持可写，并验证 PMP 对内存访问权限的控制。
 
 ## 学习目标
 
-- 理解 PMP 的基本作用和读、写、执行权限
-- 验证平台代码区的读取权限和写保护
-- 区分正常验证与故障验证两种运行结果
+- 使用 `uapi_pmp_config()` 配置 PMP 条目
+- 理解 TOR 模式的地址边界
+- 验证受保护区域可读、相邻未保护区域可写
+- 通过可选的非法写入验证 Store Access Fault
 
 ## 基本概念
 
-### PMP
+PMP 是 RISC-V 处理器提供的物理内存保护机制，可以为物理地址范围配置读、写和执行权限。CPU 访问不符合权限的地址时，硬件会触发访问异常。
 
-PMP 是 RISC-V 处理器提供的硬件内存保护机制。软件可以为一段物理地址配置读（R）、写（W）和执行（X）权限。CPU 每次访问受保护地址时都会检查权限；访问不符合规则时，硬件直接触发异常。
-
-WS63 在系统启动阶段调用 `uapi_pmp_config()` 配置代码区、数据区和外设地址空间。本案例不重复改写这些平台保护条目，而是访问样例函数所在的代码区，验证已经生效的保护策略。
-
-### 允许访问与非法访问
-
-代码运行需要读取和执行指令，因此受保护代码区允许读取和执行。写入代码区不符合权限规则，会触发 Store Access Fault。异常证明写操作被 PMP 拦截；它不是普通函数返回值，板端可能停止运行或复位。
-
-### 锁定
-
-PMP 条目可以设置 Lock 位。条目锁定后，在处理器复位前不能再次修改，适合保护启动代码和关键配置。启用锁定前必须确认地址范围和权限正确，否则错误配置也会一直保持到复位。
+本案例使用 TOR（Top of Range）模式。当前 PMP 条目的地址是不包含在保护范围内的上边界，前一个条目的地址构成下边界。WS63 平台配置会在启用本案例时为样例缓冲区拆分 SRAM 条目，避免低编号条目提前覆盖样例区域。
 
 ## 涉及 API
 
-| API | 用途 | 本案例中的位置 |
-|-----|------|----------------|
-| `uapi_pmp_config()` | 配置 PMP 条目的地址范围和访问权限 | WS63 平台启动阶段调用 |
+| API | 用途 |
+|-----|------|
+| `uapi_pmp_config()` | 配置一个或多个 PMP 条目的边界、权限、匹配模式及 Lock 位 |
 
-样例代码位于 `application/samples/peripheral/pmp/pmp_sample.c`。它取得 `pmp_sample_entry()` 的地址，先读取一个字节；只有开启故障测试时才尝试写入该地址。
+## 案例流程
 
-## 案例说明
-
-默认配置只执行安全检查：
-
-```text
-取得样例函数地址 → 读取代码区 → 输出正常启动日志
+```mermaid
+flowchart TD
+    A["划分受保护和未保护内存"] --> B["配置并锁定只读 PMP 条目"]
+    B --> C["读取受保护区域"]
+    C --> D["写入并回读未保护区域"]
+    D --> E{"启用故障测试？"}
+    E -- "否" --> F["跳过非法写入"]
+    E -- "是" --> G["写入受保护区域"]
+    G --> H["触发 Store Access Fault"]
 ```
 
-开启 `Trigger a protected write for exception verification.` 后执行故障检查：
+默认模式只执行不会触发异常的安全验证。故障模式会有意写入受保护区域，板端可能停止运行或复位，仅用于验证 PMP 写保护。
 
-```text
-取得样例函数地址 → 读取代码区 → 尝试写入代码区 → PMP 触发访问异常
+## 配置案例
+
+在 SDK 根目录执行：
+
+```powershell
+fbb menuconfig ws63-liteos-app
 ```
 
-故障检查会有意触发异常，只用于验证保护是否生效，不应在普通功能固件中开启。
-
-## 案例操作指导
-
-### 配置样例
-
-打开 `ws63-liteos-app` 的 Kconfig UI，进入：
+进入以下菜单启用 PMP Sample：
 
 ```text
 Application
   → Enable Sample.
-    → Enable the Sample of Peripheral.
+    → Enable the Sample of peripheral.
       → Support PMP Sample.
 ```
 
-首次验证保持以下选项关闭：
+首次运行保持 `PMP Sample Configuration → Trigger a protected write for exception verification.` 关闭。需要验证异常时再启用该选项，并在验证完成后关闭。
 
-```text
-PMP Sample Configuration
-  → Trigger a protected write for exception verification.
-```
+PMP 驱动和 WS63 平台 PMP 配置已包含在 `ws63-liteos-app` 中，不需要额外修改组件列表。
 
-保存配置后构建并烧录：
+## 编译和运行
+
+修改 PMP Sample 配置后执行 clean 构建，确保平台 PMP 条目和 Sample 使用同一份配置：
 
 ```powershell
 fbb build --clean ws63-liteos-app
 fbb flash ws63-liteos-app --port <device_port> --baud 2000000 --json-summary
+fbb monitor --port <device_port>
 ```
 
-### 正常验证
-
-串口输出如下，地址和首字节会随固件变化：
+## 正常输出
 
 ```text
-[pmp] platform code protection check: address=0x34c658
-[pmp] protected code read succeeded: 0x28
-[pmp] fault test disabled; normal startup continues
+[pmp] protected region: <start_address> - <end_address>
+[pmp] unprotected region: <start_address> - <end_address>
+[pmp] initial values: protected=0x11, unprotected=0x33
+[pmp] first 32 bytes configured as read-only
+[pmp] protected read succeeded: 0x11
+[pmp] unprotected write succeeded: 0x22
+[pmp] fault test disabled; protected write skipped
 ```
 
-这组日志证明代码区可读，且系统能够继续运行。
+## 故障验证输出
 
-### 故障验证
-
-重新打开 Kconfig UI，启用 `Trigger a protected write for exception verification.`，再构建和烧录。实板输出如下：
+启用故障测试后，出现 Store Access Fault 表示 PMP 成功拦截非法写入：
 
 ```text
-[pmp] platform code protection check: address=0x34c658
-[pmp] protected code read succeeded: 0x28
-[pmp] triggering code write; a store access fault is expected
-Store/AMO access fault
-PMP access fault
+[pmp] triggering protected write; a store access fault is expected
+<Store Access Fault 日志>
 ```
 
-出现 `Store/AMO access fault` 和 `PMP access fault`，说明写操作被硬件保护拦截。完成测试后应在 Kconfig UI 中关闭故障选项并重新烧录正常固件。
+如果继续输出以下日志，说明写保护未生效，应检查 PMP 条目边界和权限：
 
-## 关键配置
-
-| 配置项 | 默认值 | 说明 |
-|--------|--------|------|
-| `CONFIG_SAMPLE_SUPPORT_PMP` | `n` | 启用 PMP 样例 |
-| `CONFIG_PMP_SAMPLE_TRIGGER_FAULT` | `n` | 尝试写受保护代码区，会有意触发异常 |
-
-## 代码详解
-
-样例以自身入口函数地址作为平台代码区中的已知地址：
-
-```c
-volatile uint8_t *code_address =
-    (volatile uint8_t *)(uintptr_t)pmp_sample_entry;
-
-osal_printk("[pmp] protected code read succeeded: 0x%02x\r\n",
-            code_address[0]);
+```text
+[pmp] ERROR: protected write was not blocked
 ```
-
-故障测试通过 Kconfig 宏隔离，默认固件不会执行非法写操作：
-
-```c
-#if defined(CONFIG_PMP_SAMPLE_TRIGGER_FAULT)
-    code_address[0] = PMP_SAMPLE_FAULT_VALUE;
-#endif
-```
-

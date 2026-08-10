@@ -1,52 +1,46 @@
-# RTC 时间基准
+# RTC 软件定时器
 
-> 使用技术：RTC 支撑的系统时间基准、单调计时、周期任务
+> 使用技术：RTC 初始化、硬件适配、软件定时器、超时回调
 
-本案例读取 WS63 的系统时间基准，等待设定周期后再次读取时间，计算并输出实际经过的毫秒数。
+本案例使用 WS63 的 `uapi_rtc_*` 接口创建 RTC 软件定时器。定时器到期后在 RTC 中断上下文执行回调，任务检查回调次数和透传参数，以验证 RTC 定时功能。
 
 ## 学习目标
 
-- 理解 RTC、单调时间和日历时间的区别
-- 使用 `uapi_systick_get_ms()` 读取毫秒时间基准
-- 比较配置周期与实际经过时间
-
-## 基本概念
-
-### RTC
-
-RTC（Real-Time Clock，实时时钟）是持续计数的硬件时钟。它可以为系统提供稳定的时间基准，也可以在支持的低功耗场景中承担定时和唤醒功能。
-
-### 单调时间与日历时间
-
-单调时间表示设备启动后持续经过了多久，只会向前增加，适合计算超时和两个事件之间的间隔。日历时间表示年、月、日、时、分、秒，通常还需要设置初始日期或通过网络校时。
-
-本案例验证的是 RTC 支撑的单调时间基准，不设置日历日期，也不验证深度睡眠唤醒。
-
-### 延时与时间测量
-
-`osal_msleep()` 让当前任务至少等待指定时间，但任务恢复还会受到系统调度影响。因此实际经过时间可能比配置值略大。样例在延时前后读取时间并相减，可以直接观察这部分差异。
+- 使用 `uapi_rtc_init()` 初始化 RTC 驱动
+- 使用 `uapi_rtc_adapter()` 适配 RTC 硬件和中断
+- 使用 `uapi_rtc_create()` 创建 RTC 软件定时器
+- 使用 `uapi_rtc_start()` 启动一次性定时并接收超时回调
+- 使用 `uapi_rtc_stop()`、`uapi_rtc_delete()` 和 `uapi_rtc_deinit()` 释放资源
 
 ## 涉及 API
 
 | API | 用途 |
 |-----|------|
-| `uapi_systick_init()` | 初始化系统时间基准接口 |
-| `uapi_systick_get_ms()` | 读取启动后的毫秒计数 |
-| `osal_msleep()` | 让样例任务等待配置的周期 |
+| `uapi_rtc_init()` | 初始化 RTC 驱动 |
+| `uapi_rtc_adapter()` | 适配底层 RTC、注册中断 |
+| `uapi_rtc_create()` | 创建 RTC 软件定时器并返回句柄 |
+| `uapi_rtc_start()` | 设置超时时间、回调和回调参数并启动定时器 |
+| `uapi_rtc_stop()` | 停止 RTC 软件定时器 |
+| `uapi_rtc_delete()` | 删除 RTC 软件定时器 |
+| `uapi_rtc_get_max_ms()` | 获取支持的最大超时时间 |
+| `uapi_rtc_int_cnt_record_get()` | 获取 RTC 中断累计次数 |
+| `uapi_rtc_deinit()` | 去初始化 RTC 驱动 |
 
-## 案例说明
-
-样例创建独立任务，并按以下流程循环运行：
+## 案例流程
 
 ```text
-读取开始时间 → 等待配置周期 → 读取结束时间 → 输出时间差
+初始化 RTC
+  → 适配 RTC_0 和 RTC_0_IRQN
+  → 创建软件定时器
+  → 启动一次性定时器
+  → RTC 中断回调记录次数及透传参数
+  → 重复验证 3 次
+  → 停止、删除并去初始化 RTC
 ```
 
-默认周期为 5000 ms。它用于验证运行期间的连续计时，不代表日历时钟、硬件闹钟或低功耗唤醒功能。
+RTC 回调运行在中断上下文中，因此案例只在回调内更新 `volatile` 变量，不进行阻塞等待或复杂处理。日志输出和验证工作由任务完成。
 
-## 案例操作指导
-
-### 配置样例
+## 配置案例
 
 打开 `ws63-liteos-app` 的 Kconfig UI，进入：
 
@@ -57,45 +51,33 @@ Application
       → Support RTC Sample.
 ```
 
-在 `RTC Sample Configuration` 中可修改 `RTC sample period in milliseconds.`，保存配置后构建并烧录：
+启用 RTC sample 时会自动选择 `DRIVER_SUPPORT_RTC`。在 `RTC Sample Configuration` 中可修改 `RTC sampling period in milliseconds.`，取值范围为 100～60000 ms，默认值为 1000 ms。
+
+当前 `ws63-liteos-app` 配置默认未包含 RTC 组件。编译前需要在 `build/config/target_config/ws63/config.py` 的 `ws63-liteos-app` 配置中，将 `rtc_unified`、`hal_rtc_unified` 和 `rtc_unified_port` 加入 `ram_component`；也可以将组件集合 `rtc_unified` 加入 `ram_component_set`。
+
+配置完成后构建并烧录：
 
 ```powershell
 fbb build --clean ws63-liteos-app
 fbb flash ws63-liteos-app --port <device_port> --baud 2000000 --json-summary
 ```
 
-### 运行结果
+## 预期输出
 
-默认 5000 ms 周期下，实板连续输出：
+默认周期为 1000 ms，预期输出类似：
 
 ```text
-[rtc] time base ready: start=...
-[rtc] period #1 elapsed=5000ms
-[rtc] period #2 elapsed=5010ms
+[rtc] ready: period=1000ms max=...ms samples=3
+[rtc] sample #1 callback received, irq_count=1
+[rtc] sample #2 callback received, irq_count=2
+[rtc] sample #3 callback received, irq_count=3
+[rtc] verification passed: callbacks=3
 ```
-
-`period` 序号持续增加，且 `elapsed` 接近 5000 ms，说明时间基准和周期任务均正常工作。实际值可因任务调度略大于配置值。
 
 ## 关键配置
 
 | 配置项 | 默认值 | 范围 | 说明 |
 |--------|--------|------|------|
-| `CONFIG_SAMPLE_SUPPORT_RTC` | `n` | `y/n` | 启用 RTC 时间基准样例 |
-| `CONFIG_RTC_SAMPLE_PERIOD_MS` | `5000` | 100～60000 ms | 每次时间测量的等待周期 |
-
-## 代码详解
-
-任务用两次时间读数计算实际经过时间：
-
-```c
-uint64_t start_ms = uapi_systick_get_ms();
-uint64_t end_ms;
-
-(void)osal_msleep(CONFIG_RTC_SAMPLE_PERIOD_MS);
-end_ms = uapi_systick_get_ms();
-osal_printk("[rtc] period #%u elapsed=%llums\r\n",
-            period_count, end_ms - start_ms);
-```
-
-这段代码运行在样例任务中，可以阻塞等待。若业务需要硬件闹钟或深度睡眠唤醒，应使用目标芯片支持的 RTC/低功耗接口另行验证。
-
+| `CONFIG_SAMPLE_SUPPORT_RTC` | `n` | `y/n` | 启用 RTC 软件定时器案例 |
+| `CONFIG_DRIVER_SUPPORT_RTC` | 由案例选择 | `y/n` | 启用 RTC 驱动 |
+| `CONFIG_RTC_SAMPLE_PERIOD_MS` | `1000` | 100～60000 ms | 每次 RTC 定时的超时时间 |
