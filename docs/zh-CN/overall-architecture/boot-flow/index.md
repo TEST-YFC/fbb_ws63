@@ -1,41 +1,62 @@
 # 启动流程
 
-WS63 的启动需要区分两层：
+WS63 有两条用途不同的 Boot 链路：
 
-- **镜像启动链**：Boot ROM (Read-Only Memory) 、SSB (Secure Secondary Boot) 、FlashBoot、App 之间的加载、校验和跳转关系。
-- **App 初始化链**：App 从 `reset_vector` 进入 `main()`，完成 LiteOS (Huawei LiteOS)、硬件、系统任务和业务入口初始化。
+- **正常上电启动链**：Boot ROM (Read-Only Memory) → SSB (Secure Secondary Boot) → FlashBoot → App。
+- **下载与烧录链**：BurnTool 打断正常启动后，由 Boot ROM 将 LoaderBoot 加载到 RAM，LoaderBoot 再完成镜像和 EFUSE (Electronic Fuse) 数据的烧写。
 
-## 镜像与安全启动链
+App 启动后，还会继续完成 LiteOS (Huawei LiteOS)、硬件、系统服务和业务入口初始化。LoaderBoot 只参与下载与烧录，不属于正常上电启动链。
 
-正常启动的逻辑链路如下。安全校验是否启用以及具体校验策略由产品安全配置决定。
+## Boot 组件职责
+
+| 组件或镜像 | 主要职责 | 开发边界 |
+|------------|----------|----------|
+| Boot ROM | 芯片固化的第一阶段启动代码和根信任入口；进入正常启动或下载流程 | 芯片固化，普通开发者不可修改 |
+| SSB | 执行早期安全启动并引导后续启动阶段 | 具体源码可能不随 SDK 交付 |
+| FlashBoot | 初始化启动所需硬件，处理升级状态，校验 App，必要时执行恢复，最后跳转到 App | SDK 提供源码，修改后需要完整验证启动、升级和恢复流程 |
+| FlashBoot backup | 主 FlashBoot 异常时使用的恢复副本；运行后可将备份内容恢复到主分区 | 不作为独立应用开发入口 |
+| LoaderBoot | 在 RAM 中运行并与 BurnTool 交互，接收烧写命令和数据 | 通常不需要二次开发，也不参与正常上电启动 |
+| App / imageA | LiteOS 主应用镜像，包含平台初始化、系统任务和产品业务组件 | 普通应用开发的主要修改范围 |
+
+安全校验是否启用以及具体校验策略由产品安全配置决定。Boot ROM、SSB 和部分预编译安全组件属于芯片或交付件边界，本文只描述开发者可观察的职责。
+
+## 正常上电启动链
 
 ```mermaid
 flowchart LR
     ROM["Boot ROM<br/>芯片固化"] --> SSB["SSB<br/>早期安全启动"]
-    SSB --> FB["FlashBoot<br/>Flash/镜像校验与恢复"]
-    FB --> APP["App<br/>ws63-liteos-app"]
+    SSB --> CHECK["校验并选择<br/>FlashBoot"]
+    CHECK --> FB["主 FlashBoot"]
+    CHECK -. 主镜像异常 .-> FBBK["FlashBoot backup"]
+    FB --> UPG["检查升级状态"]
+    FBBK --> UPG
+    UPG --> VERIFY["校验 App"]
+    VERIFY --> RECOVER["若当前运行 backup<br/>恢复主 FlashBoot"]
+    RECOVER --> APP["App / imageA"]
     APP --> LITEOS["LiteOS<br/>系统与业务任务"]
-
-    SSB -. 主 FlashBoot 异常 .-> FBBK["FlashBoot backup"]
-    FBBK --> APP
-    FB -. 升级/恢复数据 .-> FOTA["FOTA data"]
+    UPG -. 使用升级数据 .-> FOTA["FOTA data"]
 ```
 
-| 镜像或区域 | 作用 | 是否为普通应用入口 |
-|------------|------|:------------------:|
-| Boot ROM | 芯片固化的第一阶段启动代码和根信任入口，普通开发者不可修改 | 否 |
-| Root public key | 安全启动根公钥数据 | 否 |
-| SSB | 早期安全启动镜像；具体源码可能不随 SDK 交付 | 否 |
-| FlashBoot | 初始化启动所需硬件，校验 App，处理 App 升级恢复，最后跳转到 App | 否 |
-| FlashBoot backup | FlashBoot 主镜像异常时的恢复副本 | 否 |
-| LoaderBoot | 烧录和产线下载使用的临时引导镜像，不是正常上电启动中的应用阶段 | 否 |
-| App / imageA | LiteOS 主应用镜像，包含平台初始化、系统任务和产品业务组件 | 是 |
-| FOTA (Firmware Over-The-Air) data | OTA (Over-The-Air) 下载或恢复使用的数据区域 | 否 |
-| NV (Non-Volatile) / Customer factory | 运行参数、出厂配置和持久化数据 | 否 |
+当前默认分区同时保留主 FlashBoot 和 `FlashBoot backup`。如果前级启动阶段无法使用主 FlashBoot，则进入备份镜像；备份镜像运行时会将备份分区恢复到主分区，然后继续引导 App。
 
-分区地址和大小见 [Flash 与 RAM](../memory-layout/index.md)。烧录包会组合多个镜像、NV 和分区表；`.fwpkg` 不是单独的 App 二进制。
+App 默认使用 `imageA` 分区，升级数据放在 `FOTA data` 分区，这不等同于默认启用 App A/B 双镜像。只有产品显式启用 A/B 升级配置时，FlashBoot 才会按当前运行区域选择和映射 App 镜像。
 
-> Boot ROM、SSB 和部分预编译安全组件属于芯片或交付件边界。文档只描述开发者可观察的启动职责，不把未公开实现写成可修改源码。
+分区地址和大小见 [Flash 与 RAM](../memory-layout/index.md)。最终 `.fwpkg` 会组合 SSB、FlashBoot、App、NV (Non-Volatile) 和分区参数等内容，不是单独的 App 二进制。
+
+## 下载与烧录链
+
+```mermaid
+flowchart LR
+    TOOL["BurnTool<br/>选择固件包并发起烧录"] --> ROM["Boot ROM<br/>进入下载流程"]
+    ROM -->|加载到 RAM 并跳转| LOADER["LoaderBoot"]
+    TOOL <-->|命令与数据| LOADER
+    LOADER --> FLASH["写入 Flash<br/>SSB / FlashBoot / App / NV 等"]
+    LOADER --> EFUSE["按配置烧写 EFUSE"]
+```
+
+BurnTool 通过串口等通道打断正常启动并发起下载。Boot ROM 先接收和校验 LoaderBoot，再将其加载到 RAM 运行；LoaderBoot 初始化通信、Flash 和 EFUSE 后进入命令循环，按照固件包和烧写配置完成后续操作。
+
+LoaderBoot 是临时下载环境，不会常驻在正常启动链中。具体的工具安装、固件包选择、串口配置和烧写步骤见 [BurnTool 使用指南](../../tools/BurnToolUserGuide/BurnToolUserGuide.md)。
 
 ## App 初始化流程
 

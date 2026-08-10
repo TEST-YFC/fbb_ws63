@@ -57,12 +57,6 @@ hide:
 
     AT 命令的配置和使用。
 
--   [**Boot**](boot/index.md)
-
-    ---
-
-    Boot API 参考和移植应用开发。
-
 -   [**软件移植**](porting/index.md)
 
     ---
