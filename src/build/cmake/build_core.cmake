@@ -16,22 +16,6 @@
 #   project(${CHIP}_CFBB C ASM CXX)
 #   cfbb_build_epilogue()
 
-# SDK modules use this generic hook to contribute an optional target to the
-# current image. The module remains responsible for activation, validation,
-# sources, headers and platform dependencies.
-function(fbb_register_image_extension target_name)
-    if(NOT TARGET "${target_name}")
-        message(FATAL_ERROR
-            "Image extension target does not exist: ${target_name}")
-    endif()
-    get_property(_fbb_image_extensions GLOBAL
-        PROPERTY FBB_IMAGE_EXTENSION_TARGETS)
-    list(APPEND _fbb_image_extensions "${target_name}")
-    list(REMOVE_DUPLICATES _fbb_image_extensions)
-    set_property(GLOBAL PROPERTY FBB_IMAGE_EXTENSION_TARGETS
-        "${_fbb_image_extensions}")
-endfunction()
-
 # --------------------------------------------------------------------
 # Prologue - runs before project(); sets up compile env, platform name,
 # kconfig helpers, and includes the foundational cmake modules.
@@ -179,12 +163,6 @@ macro(cfbb_build_epilogue)
         # their public interfaces were registered from the exact plan.
         target_link_libraries(
             ${TARGET_NAME} PRIVATE ${FBB_EXTERNAL_COMPONENT_TARGETS})
-    endif()
-    get_property(_fbb_image_extensions GLOBAL
-        PROPERTY FBB_IMAGE_EXTENSION_TARGETS)
-    if(_fbb_image_extensions)
-        target_link_libraries(
-            ${TARGET_NAME} PRIVATE ${_fbb_image_extensions})
     endif()
     endif() # FBB project image
     # Refresh the linker's notion of all components after project additions.
