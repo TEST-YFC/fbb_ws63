@@ -13,12 +13,10 @@
 #include "pmp_cfg.h"
 
 /* PMP Sample invasive changes: reserve entry 8 for the first 32 bytes of the sample buffer. */
-#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
 #define PMP_SAMPLE_REGION_INDEX 8U
 #define PMP_SAMPLE_PROTECTED_SIZE 32U
 
 extern volatile uint8_t g_pmp_sample_buffer[];
-#endif
 
 typedef enum {
     REGION_GAP_ROM_ITCM,
@@ -29,13 +27,9 @@ typedef enum {
 #ifndef __NON_OS__
     REGION_RAM_1,         // wifi pkt ram & sram
     REGION_RAM_2,         // sram text
-#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
     REGION_RAM_3_BEFORE_PMP_SAMPLE,
     REGION_PMP_SAMPLE = PMP_SAMPLE_REGION_INDEX,
     REGION_RAM_3_AFTER_PMP_SAMPLE,
-#else
-    REGION_RAM_3,         // sram
-#endif
     REGION_RAM_4,         // radar
     REGION_RAM_5,         // sram other
     REGION_GAP_PKE_ROM,
@@ -113,7 +107,6 @@ static pmp_conf_t g_region_attr[REGION_MAX_NUM] = {
         .conf.pmp_attr = PMP_ATTR_WRITEBACK_RALLOCATE,
     },
     {
-#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
         /*
          * SAMPLE CHANGE: split the original SRAM rule so a lower-index rule
          * cannot match the sample buffer before entry 8.
@@ -135,9 +128,6 @@ static pmp_conf_t g_region_attr[REGION_MAX_NUM] = {
     },
     {
         .idx = REGION_RAM_3_AFTER_PMP_SAMPLE,
-#else
-        .idx = REGION_RAM_3, // sram text end --- radar start
-#endif
         .addr = (uint32_t)RADAR_SENSOR_RX_MEM_START,
         .conf.rwx_permission = PMPCFG_RW_EXECUTE,
         .conf.addr_match = PMPCFG_ADDR_MATCH_TOR,
@@ -195,7 +185,6 @@ STATIC void pmp_region_cfg(void)
 #ifndef __NON_OS__
     g_region_attr[REGION_RAM_1].addr = (uint32_t)&__sram_text_begin__;
     g_region_attr[REGION_RAM_2].addr = (uint32_t)&__sram_text_end__ & ~0x1F; // 0x1F: 32字节对齐
-#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
     /*
      * SAMPLE CHANGE: fill the TOR boundaries after the linker determines
      * the address of the sample buffer.
@@ -203,7 +192,6 @@ STATIC void pmp_region_cfg(void)
     g_region_attr[REGION_RAM_3_BEFORE_PMP_SAMPLE].addr = (uint32_t)(uintptr_t)g_pmp_sample_buffer;
     g_region_attr[REGION_PMP_SAMPLE].addr =
         (uint32_t)(uintptr_t)&g_pmp_sample_buffer[PMP_SAMPLE_PROTECTED_SIZE];
-#endif
 #endif
 }
 
