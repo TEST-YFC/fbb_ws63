@@ -21,13 +21,7 @@ typedef enum {
 #ifndef __NON_OS__
     REGION_RAM_1,         // wifi pkt ram & sram
     REGION_RAM_2,         // sram text
-#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
-    REGION_RAM_3_BEFORE_PMP_SAMPLE,
-    REGION_PMP_SAMPLE = PMP_SAMPLE_REGION_INDEX,
-    REGION_RAM_3_AFTER_PMP_SAMPLE,
-#else
     REGION_RAM_3,         // sram
-#endif
     REGION_RAM_4,         // radar
     REGION_RAM_5,         // sram other
     REGION_GAP_PKE_ROM,
@@ -105,31 +99,7 @@ static pmp_conf_t g_region_attr[REGION_MAX_NUM] = {
         .conf.pmp_attr = PMP_ATTR_WRITEBACK_RALLOCATE,
     },
     {
-#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
-        /*
-         * Split the original SRAM rule so the lower-index rule cannot cover the sample buffer first.
-         * 拆分原 SRAM 条目，避免低编号条目优先覆盖样例缓冲区。
-         */
-        .idx = REGION_RAM_3_BEFORE_PMP_SAMPLE,
-        .addr = (uint32_t)0x0,
-        .conf.rwx_permission = PMPCFG_RW_EXECUTE,
-        .conf.addr_match = PMPCFG_ADDR_MATCH_TOR,
-        .conf.lock = true,
-        .conf.pmp_attr = PMP_ATTR_WRITEBACK_RWALLOCATE,
-    },
-    {
-        .idx = REGION_PMP_SAMPLE,
-        .addr = (uint32_t)0x0,
-        .conf.rwx_permission = PMPCFG_RW_NEXECUTE,
-        .conf.addr_match = PMPCFG_ADDR_MATCH_TOR,
-        .conf.lock = false,
-        .conf.pmp_attr = PMP_ATTR_WRITEBACK_RWALLOCATE,
-    },
-    {
-        .idx = REGION_RAM_3_AFTER_PMP_SAMPLE,
-#else
         .idx = REGION_RAM_3, // sram text end --- radar start
-#endif
         .addr = (uint32_t)RADAR_SENSOR_RX_MEM_START,
         .conf.rwx_permission = PMPCFG_RW_EXECUTE,
         .conf.addr_match = PMPCFG_ADDR_MATCH_TOR,
@@ -187,15 +157,6 @@ STATIC void pmp_region_cfg(void)
 #ifndef __NON_OS__
     g_region_attr[REGION_RAM_1].addr = (uint32_t)&__sram_text_begin__;
     g_region_attr[REGION_RAM_2].addr = (uint32_t)&__sram_text_end__ & ~0x1F; // 0x1F: 32字节对齐
-#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
-    /*
-     * Fill the TOR lower and upper boundaries after the linker determines the sample buffer address.
-     * 链接器确定样例缓冲区地址后，再填入 TOR 的下边界和上边界。
-     */
-    g_region_attr[REGION_RAM_3_BEFORE_PMP_SAMPLE].addr = (uint32_t)(uintptr_t)g_pmp_sample_buffer;
-    g_region_attr[REGION_PMP_SAMPLE].addr =
-        (uint32_t)(uintptr_t)&g_pmp_sample_buffer[PMP_SAMPLE_PROTECTED_SIZE];
-#endif
 #endif
 }
 
@@ -210,3 +171,4 @@ void pmp_enable(void)
     uapi_pmp_config(g_region_attr, REGION_MAX_NUM);
 #endif
 }
+

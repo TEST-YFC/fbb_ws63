@@ -6,10 +6,12 @@
 
 #include <stdint.h>
 #include "drv_pmp.h"
-#include "pmp_cfg.h"
 #include "soc_osal.h"
 #include "app_init.h"
 
+#define PMP_SAMPLE_REGION_INDEX           8U
+#define PMP_SAMPLE_PROTECTED_SIZE         32U
+#define PMP_SAMPLE_BUFFER_SIZE            64U
 #define PMP_SAMPLE_PROTECTED_INIT_VALUE 0x11U
 #define PMP_SAMPLE_UNPROTECTED_INIT_VALUE 0x33U
 #define PMP_SAMPLE_UNPROTECTED_TEST_VALUE 0x22U
