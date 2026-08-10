@@ -15,7 +15,7 @@
 
 PMP 是 RISC-V 处理器提供的物理内存保护机制，可以为物理地址范围配置读、写和执行权限。CPU 访问不符合权限的地址时，硬件会触发访问异常。
 
-本案例使用 TOR（Top of Range）模式。当前 PMP 条目的地址是不包含在保护范围内的上边界，前一个条目的地址构成下边界。WS63 平台配置会在启用本案例时为样例缓冲区拆分 SRAM 条目，避免低编号条目提前覆盖样例区域。
+本案例使用 TOR（Top of Range）模式。当前 PMP 条目的地址是不包含在保护范围内的上边界，前一个条目的地址构成下边界。WS63 默认平台配置没有为样例缓冲区预留独立边界，验证前需要由用户在本地拆分 SRAM 条目，避免低编号条目提前覆盖样例区域。
 
 ## 涉及 API
 
@@ -57,7 +57,7 @@ Application
 
 首次运行保持 `PMP Sample Configuration → Trigger a protected write for exception verification.` 关闭。需要验证异常时再启用该选项，并在验证完成后关闭。
 
-PMP 驱动和 WS63 平台 PMP 配置已包含在 `ws63-liteos-app` 中，不需要额外修改组件列表。
+PMP 驱动已包含在 `ws63-liteos-app` 中，不需要额外修改组件列表。平台保护边界的具体修改方法见 `application/samples/peripheral/pmp/README.md` 中的“配置样例保护区”。本 Sample 不修改公共的 `pmp_cfg.c/.h`；用户应根据自身内存布局和 PMP 条目规划完成本地配置。
 
 ## 编译和运行
 

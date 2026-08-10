@@ -22,7 +22,7 @@
  - 本示例仅适用于 WS63 LiteOS 应用目标。
  - PMP 条目使用 Lock 位锁定后，处理器复位前不能再次修改。
  - 故障测试会有意触发 Store Access Fault，系统可能停止运行或复位，只应在验证环境中启用。
- - Sample 使用 PMP 条目 8，并依赖 WS63 平台 PMP 配置为样例缓冲区预留对应的 TOR 边界。
+ - Sample 使用 PMP 条目 8；`ws63-liteos-app` 默认没有为样例缓冲区预留独立的 TOR 边界，验证前需要按本文说明修改本地平台配置。
 
 ## 5. 关键词
 
@@ -52,13 +52,13 @@ application/samples/peripheral/pmp/
 
 配置入口：`application/samples/peripheral/pmp/Kconfig`
 
-平台 PMP 配置：`drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c`
+用户保护配置：`drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c`
 
 ## 8. 整体流程
 
 ```mermaid
 flowchart TD
-    A["划分受保护和未保护内存"] --> B["配置并锁定只读 PMP 条目"]
+    A["按 README 修改平台保护边界"] --> B["Sample 配置并锁定只读 PMP 条目"]
     B --> C["读取受保护区域"]
     C --> D["写入并回读未保护区域"]
     D --> E{"启用故障测试？"}
@@ -76,8 +76,7 @@ flowchart TD
 | `pmp_sample.c` | 实现 PMP 内存保护 Sample | 定义样例缓冲区、配置只读条目、验证内存访问并可选触发故障 |
 | `Kconfig` | 提供故障测试开关 | 控制是否尝试写入受保护区域 |
 | `CMakeLists.txt` | 配置 Sample 编译源 | 将 `pmp_sample.c` 加入 peripheral sample |
-| `pmp_cfg.h` | 定义样例 PMP 参数 | 定义条目号、保护区大小和缓冲区大小 |
-| `pmp_cfg.c` | 配置 WS63 平台 PMP 边界 | 为样例缓冲区拆分 SRAM TOR 条目并预留条目 8 |
+| `pmp_cfg.c` | 用户侧平台保护配置 | 验证前按本文说明为样例缓冲区拆分 SRAM TOR 边界；本 Sample 不修改该文件 |
 
 ## 10. 核心函数/类说明
 
@@ -122,7 +121,80 @@ Application
 
 需要验证写保护时，再启用该选项并重新编译、烧录。此模式会故意触发 Store Access Fault，验证完成后应关闭该选项并恢复正常固件。
 
-PMP 驱动组件和 WS63 平台 PMP 配置已包含在 `ws63-liteos-app` 中，不需要额外修改 app 的组件列表。
+PMP 驱动组件已包含在 `ws63-liteos-app` 中，不需要修改 app 的组件列表。但平台现有 SRAM 条目会优先覆盖样例缓冲区，因此需要先按下述步骤修改本地 `pmp_cfg.c`。
+
+### 配置样例保护区
+
+> 以下修改只用于验证 PMP 配置方法。实际项目应根据自身内存布局、PMP 条目占用情况和安全策略重新选择边界及条目号。
+
+1. 在 `pmp_cfg.c` 的头文件引用后声明 Sample 使用的条目和缓冲区：
+
+```c
+#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
+#define PMP_SAMPLE_REGION_INDEX 8U
+#define PMP_SAMPLE_PROTECTED_SIZE 32U
+
+extern volatile uint8_t g_pmp_sample_buffer[];
+#endif
+```
+
+2. 将原来的 `REGION_RAM_3` 拆分为样例前、样例保护区和样例后三个连续 TOR 条目：
+
+```c
+#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
+    REGION_RAM_3_BEFORE_PMP_SAMPLE,
+    REGION_PMP_SAMPLE = PMP_SAMPLE_REGION_INDEX,
+    REGION_RAM_3_AFTER_PMP_SAMPLE,
+#else
+    REGION_RAM_3,
+#endif
+```
+
+3. 在 `g_region_attr` 中，将原 `REGION_RAM_3` 配置替换为以下三个条目。中间条目必须保持未锁定，供 Sample 调用 `uapi_pmp_config()` 将其改为只读并锁定：
+
+```c
+#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
+    {
+        .idx = REGION_RAM_3_BEFORE_PMP_SAMPLE,
+        .addr = 0,
+        .conf.rwx_permission = PMPCFG_RW_EXECUTE,
+        .conf.addr_match = PMPCFG_ADDR_MATCH_TOR,
+        .conf.lock = true,
+        .conf.pmp_attr = PMP_ATTR_WRITEBACK_RWALLOCATE,
+    },
+    {
+        .idx = REGION_PMP_SAMPLE,
+        .addr = 0,
+        .conf.rwx_permission = PMPCFG_RW_NEXECUTE,
+        .conf.addr_match = PMPCFG_ADDR_MATCH_TOR,
+        .conf.lock = false,
+        .conf.pmp_attr = PMP_ATTR_WRITEBACK_RWALLOCATE,
+    },
+    {
+        .idx = REGION_RAM_3_AFTER_PMP_SAMPLE,
+        .addr = (uint32_t)RADAR_SENSOR_RX_MEM_START,
+        .conf.rwx_permission = PMPCFG_RW_EXECUTE,
+        .conf.addr_match = PMPCFG_ADDR_MATCH_TOR,
+        .conf.lock = true,
+        .conf.pmp_attr = PMP_ATTR_WRITEBACK_RALLOCATE,
+    },
+#else
+    /* 保留原 REGION_RAM_3 配置。 */
+#endif
+```
+
+4. 在 `pmp_region_cfg()` 中设置前两个 TOR 上边界：
+
+```c
+#if defined(CONFIG_SAMPLE_SUPPORT_PMP)
+    g_region_attr[REGION_RAM_3_BEFORE_PMP_SAMPLE].addr =
+        (uint32_t)(uintptr_t)g_pmp_sample_buffer;
+    g_region_attr[REGION_PMP_SAMPLE].addr =
+        (uint32_t)(uintptr_t)&g_pmp_sample_buffer[PMP_SAMPLE_PROTECTED_SIZE];
+#endif
+```
+
+配置后，样例缓冲区前 32 字节对应条目 8，且不会先被更低编号的宽范围 SRAM 条目命中。Sample 随后调用 `uapi_pmp_config()` 将该条目配置为只读并锁定。
 
 ## 12. 使用方法
 
@@ -130,7 +202,7 @@ PMP 驱动组件和 WS63 平台 PMP 配置已包含在 `ws63-liteos-app` 中，�
 
  - 准备 WS63 开发板、USB 数据线和可用串口。
  - 完成 HiSpark FBB 构建环境和 WS63 SDK 配置。
- - 按“配置项说明”使用 menuconfig 启用 PMP Sample，并选择安全验证或故障验证模式。
+ - 按“配置项说明”修改本地 PMP 保护边界，再使用 menuconfig 启用 PMP Sample。
 
 ### 编译
 
