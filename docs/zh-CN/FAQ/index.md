@@ -11,9 +11,15 @@ hide:
 
 ---
 
-- [编译与环境](compilation/index.md)
+- [编译与环境](build-environment/build-environment.md)
 
-    编译、开发环境配置等常见问题。
+    SDK 路径、工具链（Ninja / CMake / ccache）、HiSpark Studio 编译、串口等常见问题。
+
+---
+
+- [软件](software/software.md)
+
+    系统死机/看门狗/死锁、Wi-Fi/BLE/SLE 无线通信、外设、射频测试与产线测试等常见问题。
 
 ---
 

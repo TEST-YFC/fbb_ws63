@@ -342,7 +342,8 @@ nav:
       - BurnTool: zh-CN/tools/BurnToolUserGuide/BurnToolUserGuide.md
   - FAQ:
       - FAQ: zh-CN/FAQ/index.md
-      - 编译与环境: zh-CN/FAQ/compilation/index.md
+      - 编译与环境: zh-CN/FAQ/build-environment/build-environment.md
+      - 软件: zh-CN/FAQ/software/software.md
   - 其他:
       - 其他: zh-CN/others/index.md
       - 版本说明: zh-CN/others/versions/index.md
