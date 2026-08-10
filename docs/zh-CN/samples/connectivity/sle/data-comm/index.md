@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 数据通信
 
 - [UART (Universal Asynchronous Receiver/Transmitter) 透传](./uart-bridge.md)

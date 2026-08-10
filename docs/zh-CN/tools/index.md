@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 工具中心
 
 工具使用指南，包含IDE (Integrated Development Environment)插件、烧写工具。

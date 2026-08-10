@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 外设驱动
 
 > GPIO (General Purpose Input/Output)、UART (Universal Asynchronous Receiver/Transmitter)、SPI (Serial Peripheral Interface)、I2C (Inter-Integrated Circuit)、PWM (Pulse Width Modulation)、ADC (Analog-to-Digital Converter) 等常用外设接口

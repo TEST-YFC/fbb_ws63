@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 驱动
 
 - [ADC (Analog-to-Digital Converter)](adc/adc.md)

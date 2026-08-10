@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 蓝牙协议栈
 
 BTS (Bluetooth Subsystem) 是 WS63 蓝牙协议栈的总入口，包含低功耗蓝牙（BLE (Bluetooth Low Energy)）和经典蓝牙（BR/EDR）两套协议，覆盖数传、音频、组网等场景。

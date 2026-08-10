@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 中间件
 
 - [BTS (Bluetooth Subsystem)](bts/index.md) — 蓝牙协议栈（BLE (Bluetooth Low Energy) + BR (Basic Rate)）

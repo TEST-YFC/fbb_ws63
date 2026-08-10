@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 连接管理
 
 - [连接参数动态更新](./conn-param-tuning.md)

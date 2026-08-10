@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Wi-Fi
 
 WS63 Wi-Fi 协议栈 API，支持 802.11 b/g/n/ax，覆盖 STA (Station) 站点、SoftAP 热点、P2P (Peer-to-Peer) 直连等模式。

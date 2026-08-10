@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # OS 抽象层
 
 - [Atomic](atomic/atomic.md) — 原子操作

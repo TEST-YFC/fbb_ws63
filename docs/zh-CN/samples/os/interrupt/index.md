@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 中断处理
 
 > OSAL (Operating System Abstraction Layer) 硬件中断的申请、处理与释放

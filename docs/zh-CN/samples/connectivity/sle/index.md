@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # SLE
 
 > 星闪低延迟（SparkLink Low Energy）领域完整应用开发参考。

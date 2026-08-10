@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 无线连接
 
 > WS63 无线通信能力全覆盖：SLE（SparkLink Low Energy，星闪）、BLE（Bluetooth Low Energy，低功耗蓝牙）、BR (Basic Rate)（经典蓝牙）、Wi-Fi 6、Radar（雷达）

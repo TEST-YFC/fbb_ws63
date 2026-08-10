@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # 系统服务
 
 > NV (Non-Volatile) 持久化存储、OTA (Over-The-Air) 固件升级

@@ -1,5 +1,5 @@
 # 继承基础配置
-INHERIT: tools/mkdocs_base.yml
+INHERIT: mkdocs_base.yml
 site_name: WS63 开发者中心
 site_url: https://docs.hisilicon.com/projects/fbb_ws63/master/
 
@@ -7,8 +7,8 @@ site_description: Documentation for the HiSilicon WS63 platform
 site_author: ws63 community
 
 repo_name: 前往GitCode编辑
-repo_url: https://gitcode.com/HiSpark/fbb_ws63/tree/master/docs
-edit_uri: edit/main/docs/
+repo_url: https://gitcode.com/HiSpark/fbb_ws63/tree/master/docs/zh-CN/
+edit_uri: edit/master/docs
 
 # 语言配置
 plugins:
@@ -27,6 +27,8 @@ plugins:
         - zh
 
 extra:
+  # 反馈链接
+  feedback_url: https://gitcode.com/HiSpark/fbb_ws63/issues
   # 版本下拉框配置
   version_selector:
     repo_path: fbb_ws63
@@ -310,6 +312,30 @@ nav:
           - Semaphore: zh-CN/api-reference/osal/semaphore/semaphore.md
           - String: zh-CN/api-reference/osal/string/string.md
           - Time: zh-CN/api-reference/osal/time/time.md
+  - 硬件指南:
+      - 硬件指南: zh-CN/hardware-guide/index.md
+      - 芯片手册:
+          - 芯片手册: zh-CN/hardware-guide/datasheet/index.md
+          - 产品概述: zh-CN/hardware-guide/datasheet/product-overview/product-overview.md
+          - 系统: zh-CN/hardware-guide/datasheet/system/system.md
+          - QSPI Flash 控制器: zh-CN/hardware-guide/datasheet/qspi-flash-controller/qspi-flash-controller.md
+          - WiFi - BLE & SLE 系统: zh-CN/hardware-guide/datasheet/wifi-ble-sle/wifi-ble-sle.md
+          - 安全系统: zh-CN/hardware-guide/datasheet/security/security.md
+          - 外围设备:
+              - 外围设备: zh-CN/hardware-guide/datasheet/peripherals/index.md
+              - IO MUX: zh-CN/hardware-guide/datasheet/peripherals/io-mux.md
+              - GPIO: zh-CN/hardware-guide/datasheet/peripherals/GPIO.md
+              - UART: zh-CN/hardware-guide/datasheet/peripherals/UART.md
+              - I2C: zh-CN/hardware-guide/datasheet/peripherals/I2C.md
+              - SPI: zh-CN/hardware-guide/datasheet/peripherals/SPI.md
+              - PWM: zh-CN/hardware-guide/datasheet/peripherals/PWM.md
+              - Tsensor: zh-CN/hardware-guide/datasheet/peripherals/Tsensor.md
+              - I2S: zh-CN/hardware-guide/datasheet/peripherals/I2S.md
+              - QSPI: zh-CN/hardware-guide/datasheet/peripherals/QSPI.md
+              - DMA: zh-CN/hardware-guide/datasheet/peripherals/DMA.md
+              - ADC: zh-CN/hardware-guide/datasheet/peripherals/ADC.md
+          - JTAG: zh-CN/hardware-guide/datasheet/JTAG/JTAG.md
+          - 缩略语: zh-CN/hardware-guide/datasheet/abbreviations/abbreviations.md
   - 工具中心:
       - 工具中心索引: zh-CN/tools/index.md
       - HiSpark插件: zh-CN/tools/HiSparkStudioforVSCodeUserGuide/HiSparkStudioforVSCodeUserGuide.md

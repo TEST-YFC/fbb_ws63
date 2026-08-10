@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Security 安全
 
 - [cipher](cipher/cipher.md)
