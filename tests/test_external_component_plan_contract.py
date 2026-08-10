@@ -5,6 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
 BUILD_CORE = ROOT / "src/build/cmake/build_core.cmake"
+DRIVERS_CMAKE = ROOT / "src/drivers/CMakeLists.txt"
 
 
 def test_build_core_consumes_exact_cli_generated_cmake():
@@ -34,6 +35,25 @@ def test_sdk_targets_exist_before_external_plan_is_loaded():
     assert sdk_tree < include
 
 
+def test_rom_driver_exposes_stable_public_sdk_component_target():
+    """A Runtime manifest must not depend on a chip-specific ROM target."""
+    text = DRIVERS_CMAKE.read_text(encoding="utf-8")
+
+    assert '"pinctrl_rom" IN_LIST ROM_COMPONENT' in text
+    assert "TARGET pinctrl_rom" in text
+    assert "add_library(pinctrl INTERFACE)" in text
+    assert "target_link_libraries(pinctrl INTERFACE pinctrl_rom)" in text
+    assert "pinctrl_rom INCLUDE_DIRECTORIES" in text
+
+
+def test_public_sdk_driver_targets_propagate_existing_header_closure():
+    text = DRIVERS_CMAKE.read_text(encoding="utf-8")
+
+    assert "gpio INCLUDE_DIRECTORIES" in text
+    assert "target_include_directories(gpio INTERFACE" in text
+    assert "pinctrl INTERFACE ${_fbb_pinctrl_includes}" in text
+
+
 def test_v2_plan_precedes_legacy_out_of_tree_component_scan():
     text = BUILD_CORE.read_text(encoding="utf-8")
 
@@ -47,6 +67,18 @@ def test_v2_plan_precedes_legacy_out_of_tree_component_scan():
         'include("$ENV{FBB_COMPONENTS_CMAKE}")', plan_branch
     ) < text.index(
         'add_subdirectory("${CMAKE_SOURCE_DIR}/main"')
+
+
+def test_project_main_consumes_external_component_public_interfaces():
+    text = BUILD_CORE.read_text(encoding="utf-8")
+
+    main = text.index('add_subdirectory("${CMAKE_SOURCE_DIR}/main"')
+    main_link = text.index(
+        "${FBB_PROJECT_COMPONENT_NAME} PRIVATE\n"
+        "                    ${FBB_EXTERNAL_COMPONENT_TARGETS})")
+    final_link = text.index(
+        "${TARGET_NAME} PRIVATE ${FBB_EXTERNAL_COMPONENT_TARGETS})")
+    assert main < main_link < final_link
 
 
 def test_plan_is_isolated_to_requested_project_image():
