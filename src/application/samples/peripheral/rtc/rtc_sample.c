@@ -45,62 +45,76 @@ static bool rtc_sample_wait_callback(uint32_t expected_count)
     return g_rtc_callback_count >= expected_count;
 }
 
-static int rtc_sample_task(void *data)
+static errcode_t rtc_sample_init(rtc_handle_t *rtc)
 {
-    rtc_handle_t rtc = NULL;
-    errcode_t ret;
-    uint32_t passed_callbacks = 0U;
-    uint32_t irq_count_before;
-
-    unused(data);
-
-    ret = uapi_rtc_init();
+    errcode_t ret = uapi_rtc_init();
     if (ret != ERRCODE_SUCC) {
         osal_printk("[rtc] uapi_rtc_init failed: 0x%x\r\n", ret);
-        return (int)ret;
+        return ret;
     }
 
     ret = uapi_rtc_adapter(RTC_0, RTC_0_IRQN, RTC_SAMPLE_IRQ_PRIORITY);
     if (ret != ERRCODE_SUCC) {
         osal_printk("[rtc] uapi_rtc_adapter failed: 0x%x\r\n", ret);
         (void)uapi_rtc_deinit();
-        return (int)ret;
+        return ret;
     }
 
-    ret = uapi_rtc_create(RTC_0, &rtc);
+    ret = uapi_rtc_create(RTC_0, rtc);
     if (ret != ERRCODE_SUCC) {
         osal_printk("[rtc] uapi_rtc_create failed: 0x%x\r\n", ret);
         (void)uapi_rtc_deinit();
+        return ret;
+    }
+    return ERRCODE_SUCC;
+}
+
+static bool rtc_sample_verify_once(rtc_handle_t rtc, uint32_t sample, uint32_t irq_count_before)
+{
+    errcode_t ret = uapi_rtc_start(rtc, CONFIG_RTC_SAMPLE_PERIOD_MS,
+                                   rtc_sample_timeout_callback, (uintptr_t)sample);
+    if (ret != ERRCODE_SUCC) {
+        osal_printk("[rtc] sample #%u start failed: 0x%x\r\n", sample, ret);
+        return false;
+    }
+
+    if (!rtc_sample_wait_callback(sample)) {
+        osal_printk("[rtc] sample #%u timeout\r\n", sample);
+        (void)uapi_rtc_stop(rtc);
+        return false;
+    }
+
+    if (g_rtc_callback_data != sample) {
+        osal_printk("[rtc] sample #%u data mismatch: actual=%u\r\n", sample, g_rtc_callback_data);
+        return false;
+    }
+
+    osal_printk("[rtc] sample #%u callback received, irq_count=%u\r\n", sample,
+                uapi_rtc_int_cnt_record_get(RTC_0) - irq_count_before);
+    return true;
+}
+
+static int rtc_sample_task(void *data)
+{
+    rtc_handle_t rtc = NULL;
+    uint32_t passed_callbacks = 0U;
+    uint32_t irq_count_before;
+    errcode_t ret;
+
+    unused(data);
+    ret = rtc_sample_init(&rtc);
+    if (ret != ERRCODE_SUCC) {
         return (int)ret;
     }
 
     irq_count_before = uapi_rtc_int_cnt_record_get(RTC_0);
     osal_printk("[rtc] ready: period=%ums max=%ums samples=%u\r\n",
                 CONFIG_RTC_SAMPLE_PERIOD_MS, uapi_rtc_get_max_ms(), RTC_SAMPLE_EXPECTED_CALLBACKS);
-
     for (uint32_t sample = 1U; sample <= RTC_SAMPLE_EXPECTED_CALLBACKS; sample++) {
-        ret = uapi_rtc_start(rtc, CONFIG_RTC_SAMPLE_PERIOD_MS,
-                             rtc_sample_timeout_callback, (uintptr_t)sample);
-        if (ret != ERRCODE_SUCC) {
-            osal_printk("[rtc] sample #%u start failed: 0x%x\r\n", sample, ret);
+        if (!rtc_sample_verify_once(rtc, sample, irq_count_before)) {
             break;
         }
-
-        if (!rtc_sample_wait_callback(sample)) {
-            osal_printk("[rtc] sample #%u timeout\r\n", sample);
-            (void)uapi_rtc_stop(rtc);
-            break;
-        }
-
-        if (g_rtc_callback_data != sample) {
-            osal_printk("[rtc] sample #%u data mismatch: actual=%u\r\n",
-                        sample, g_rtc_callback_data);
-            break;
-        }
-
         passed_callbacks++;
-        osal_printk("[rtc] sample #%u callback received, irq_count=%u\r\n",
-                    sample, uapi_rtc_int_cnt_record_get(RTC_0) - irq_count_before);
     }
 
     (void)uapi_rtc_stop(rtc);
