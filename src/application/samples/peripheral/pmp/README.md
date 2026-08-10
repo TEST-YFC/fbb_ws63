@@ -38,10 +38,12 @@ PMP, Physical Memory Protection, TOR, read-only memory, access permission, fault
 
 ```text
 application/samples/peripheral/pmp/
-├── README.md
 ├── CMakeLists.txt
 ├── Kconfig
-└── pmp_sample.c
+├── README.md
+├── pmp_sample.c
+└── reference/
+    └── pmp_cfg.c
 ```
 
 ## 7. 入口文件
@@ -76,6 +78,7 @@ flowchart TD
 | `pmp_sample.c` | 实现 PMP 内存保护 Sample | 定义样例缓冲区、配置只读条目、验证内存访问并可选触发故障 |
 | `Kconfig` | 提供故障测试开关 | 控制是否尝试写入受保护区域 |
 | `CMakeLists.txt` | 配置 Sample 编译源 | 将 `pmp_sample.c` 加入 peripheral sample |
+| `reference/pmp_cfg.c` | 完整平台配置参考文件 | 可临时替换 WS63 平台的 `pmp_cfg.c`，其中侵入式新增内容均受 `CONFIG_SAMPLE_SUPPORT_PMP` 控制 |
 | `pmp_cfg.c` | 用户侧平台保护配置 | 验证前按本文说明为样例缓冲区拆分 SRAM TOR 边界；本 Sample 不修改该文件 |
 
 ## 10. 核心函数/类说明
@@ -134,7 +137,37 @@ Copy-Item src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c `
     src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c.pmp_sample.bak
 ```
 
-以下步骤均修改 `src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c`。代码中的 `CONFIG_SAMPLE_SUPPORT_PMP` 条件编译用于保证：启用 Sample 时采用临时保护区配置，关闭 Sample 时恢复平台原有配置。
+本 Sample 提供了基于当前 SDK 平台文件制作的完整参考配置。备份完成后，可以直接复制替换：
+
+```powershell
+Copy-Item src/application/samples/peripheral/pmp/reference/pmp_cfg.c `
+    src/drivers/chips/ws63/porting/arch/riscv/pmp_cfg.c -Force
+```
+
+参考文件不会被 Sample 的 `CMakeLists.txt` 编译，只有复制到平台目录后才会生效。如果当前 SDK 中的平台 `pmp_cfg.c` 已被其他功能修改，不要直接覆盖，应对照下面四处改动手动合入。
+
+### 侵入式新增内容说明
+
+参考文件对平台 PMP 配置做了四处临时扩展：
+
+| 新增内容 | 含义 |
+|----------|------|
+| 声明条目 8、32 字节保护长度和 Sample 缓冲区 | 让平台启动阶段能够使用链接器最终确定的缓冲区地址 |
+| 将原 `REGION_RAM_3` 拆成三个连续条目 | 在原 SRAM 范围中切出一段独立区域，避免范围更大的低编号条目先匹配该地址 |
+| 将中间条目设置为可读写但不锁定 | 平台先建立正确的 TOR 边界，随后允许 Sample 再把它改成只读；如果平台提前锁定，Sample 将无法修改 |
+| 在 `pmp_region_cfg()` 中填写缓冲区起止地址 | 静态数组初始化时地址尚未由链接器最终确定，因此在运行期配置函数中填写边界 |
+
+TOR 条目 `N` 保护的范围为“条目 `N-1` 的地址”到“条目 `N` 的地址”，即左闭右开区间 `[pmpaddr[N-1], pmpaddr[N])`。本例形成的三个范围是：
+
+```text
+REGION_RAM_3_BEFORE_PMP_SAMPLE : 原 SRAM 起点 → g_pmp_sample_buffer
+REGION_PMP_SAMPLE              : g_pmp_sample_buffer → g_pmp_sample_buffer + 32
+REGION_RAM_3_AFTER_PMP_SAMPLE  : g_pmp_sample_buffer + 32 → RADAR_SENSOR_RX_MEM_START
+```
+
+PMP 地址匹配按条目编号从低到高进行，首次匹配的条目决定权限。因此不能只新增条目 8 而保留一个更低编号、覆盖整个 SRAM 的条目；必须先把原 SRAM 范围拆开。启动阶段中间条目使用 `PMPCFG_RW_NEXECUTE` 且 `lock = false`，Sample 随后调用 `uapi_pmp_config()` 将同一条目改为 `PMPCFG_READ_ONLY_NEXECUTE` 且 `lock = true`。锁定后，处理器复位前不能再次修改。
+
+下面列出参考文件中的四处代码，便于用户学习或手动合入。所有新增内容都由 `CONFIG_SAMPLE_SUPPORT_PMP` 控制：启用 Sample 时采用临时保护区配置，关闭 Sample 时采用平台原有配置。
 
 1. 在 `pmp_cfg.c` 的头文件引用后声明 Sample 使用的条目和缓冲区：
 
