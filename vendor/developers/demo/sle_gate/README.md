@@ -16,10 +16,10 @@
 
 ### 软件参考资料
 
-- [设备驱动开发指南](../../../../docs/zh-CN/guides/peripherals/device-driver/index.md)
+- [设备驱动开发指南](../../../../docs/zh-CN/guides/peripherals/index.md)
 - [开发板 IO 复用关系表](../../../../docs/zh-CN/hardware-guide/datasheet/peripherals/io-mux.md)
 - [lwIP 开发指南](../../../../docs/zh-CN/guides/network/lwip/index.md)
-- [软件开发指南](../../../../docs/zh-CN/guides/sdk-development/software-development/index.md)
+- [软件开发指南](../../../../docs/zh-CN/guides/sdk-development/index.md)
 
 ### 参考头文件
 

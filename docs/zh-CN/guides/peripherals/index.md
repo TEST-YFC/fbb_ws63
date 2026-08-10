@@ -1,11 +1,19 @@
 ---
-title: 外设驱动开发指南
+title: 设备驱动开发
 ---
 
-# 外设驱动
+# 设备驱动开发
 
-本栏目提供 WS63 设备驱动的工作原理、开发流程、接口使用方法和注意事项。
+了解 WS63 设备驱动的工作原理，并按典型场景完成驱动开发。
 
-## 指南
+## 完整指南
 
-- [设备驱动开发指南](device-driver/index.md)
+- [设备驱动开发指南](manual/index.md)
+
+## 参考案例
+
+- [外设驱动案例](../../samples/peripherals/index.md)
+
+## API 参考
+
+- [驱动 API](../../api-reference/driver/index.md)

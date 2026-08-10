@@ -34,7 +34,7 @@ WS63 是面向 IoT 场景的嵌入式 Wi-Fi SoC，设备端通常没有键盘/�
 | BLE 配网完整流程示例 | `src/application/samples/wifi_test/ble_wifi_cfg_sample/` |
 | WS63 错误码定义 | `src/include/errcode.h` |
 | Wi-Fi STA API | `src/middleware/services/wifi_service/` |
-| 软件开发指南 | `docs/zh-CN/guides/sdk-development/software-development/index.md` |
+| 软件开发指南 | `docs/zh-CN/guides/sdk-development/index.md` |
 
 ---
 
