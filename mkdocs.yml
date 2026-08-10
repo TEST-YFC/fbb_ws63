@@ -65,8 +65,94 @@ nav:
       - 快速入门: zh-CN/get-started/index.md
       - 使用 CLI 完成第一次开发: zh-CN/get-started/cli/index.md
       - 使用 VS Code 完成第一次开发: zh-CN/get-started/vscode/index.md
+  - 开发指南:
+      - 开发指南: zh-CN/guides/index.md
+      - SDK 开发:
+          - SDK 开发: zh-CN/guides/sdk-development/index.md
+          - 软件开发: zh-CN/guides/sdk-development/software-development/index.md
+      - 无线连接:
+          - 无线连接: zh-CN/guides/connectivity/index.md
+          - Matter: zh-CN/guides/connectivity/matter/index.md
+      - 网络协议:
+          - 网络协议: zh-CN/guides/network/index.md
+          - lwIP: zh-CN/guides/network/lwip/index.md
+          - MQTT: zh-CN/guides/network/mqtt/index.md
+          - CoAP: zh-CN/guides/network/coap/index.md
+          - HTTP: zh-CN/guides/network/http/index.md
+      - 操作系统:
+          - 操作系统: zh-CN/guides/os/index.md
+          - LiteOS: zh-CN/guides/os/liteos/index.md
+          - 死机问题定位: zh-CN/guides/os/crash-debugging/index.md
+      - 外设驱动:
+          - 外设驱动: zh-CN/guides/peripherals/index.md
+          - 设备驱动开发: zh-CN/guides/peripherals/device-driver/index.md
+      - 安全:
+          - 安全: zh-CN/guides/security/index.md
+          - 安全软件开发: zh-CN/guides/security/crypto/index.md
+          - TLS/DTLS: zh-CN/guides/security/tls/index.md
+      - 系统服务:
+          - 系统服务: zh-CN/guides/system/index.md
+          - cJSON: zh-CN/guides/system/cjson/index.md
+          - NV 存储: zh-CN/guides/system/nv/index.md
+          - 文件系统: zh-CN/guides/system/filesystem/index.md
+      - 命令接口:
+          - 命令接口: zh-CN/guides/commands/index.md
+          - AT 命令: zh-CN/guides/commands/at/index.md
+      - Boot:
+          - Boot: zh-CN/guides/boot/index.md
+          - Boot API 开发参考: zh-CN/guides/boot/api-reference/index.md
+          - Boot 移植应用: zh-CN/guides/boot/porting/index.md
+      - 软件移植:
+          - 软件移植: zh-CN/guides/porting/index.md
+          - 第三方软件移植: zh-CN/guides/porting/third-party/index.md
+      - 测试与验证:
+          - 测试与验证: zh-CN/guides/testing/index.md
+          - 射频测试: zh-CN/guides/testing/rf/index.md
   - 参考案例:
-      - 参考案例: zh-CN/samples/index.md
+      - 开发指南:
+      - 开发指南: zh-CN/guides/index.md
+      - SDK 开发:
+          - SDK 开发: zh-CN/guides/sdk-development/index.md
+          - 软件开发: zh-CN/guides/sdk-development/software-development/index.md
+      - 无线连接:
+          - 无线连接: zh-CN/guides/connectivity/index.md
+          - Matter: zh-CN/guides/connectivity/matter/index.md
+      - 网络协议:
+          - 网络协议: zh-CN/guides/network/index.md
+          - lwIP: zh-CN/guides/network/lwip/index.md
+          - MQTT: zh-CN/guides/network/mqtt/index.md
+          - CoAP: zh-CN/guides/network/coap/index.md
+          - HTTP: zh-CN/guides/network/http/index.md
+      - 操作系统:
+          - 操作系统: zh-CN/guides/os/index.md
+          - LiteOS: zh-CN/guides/os/liteos/index.md
+          - 死机问题定位: zh-CN/guides/os/crash-debugging/index.md
+      - 外设驱动:
+          - 外设驱动: zh-CN/guides/peripherals/index.md
+          - 设备驱动开发: zh-CN/guides/peripherals/device-driver/index.md
+      - 安全:
+          - 安全: zh-CN/guides/security/index.md
+          - 安全软件开发: zh-CN/guides/security/crypto/index.md
+          - TLS/DTLS: zh-CN/guides/security/tls/index.md
+      - 系统服务:
+          - 系统服务: zh-CN/guides/system/index.md
+          - cJSON: zh-CN/guides/system/cjson/index.md
+          - NV 存储: zh-CN/guides/system/nv/index.md
+          - 文件系统: zh-CN/guides/system/filesystem/index.md
+      - 命令接口:
+          - 命令接口: zh-CN/guides/commands/index.md
+          - AT 命令: zh-CN/guides/commands/at/index.md
+      - Boot:
+          - Boot: zh-CN/guides/boot/index.md
+          - Boot API 开发参考: zh-CN/guides/boot/api-reference/index.md
+          - Boot 移植应用: zh-CN/guides/boot/porting/index.md
+      - 软件移植:
+          - 软件移植: zh-CN/guides/porting/index.md
+          - 第三方软件移植: zh-CN/guides/porting/third-party/index.md
+      - 测试与验证:
+          - 测试与验证: zh-CN/guides/testing/index.md
+          - 射频测试: zh-CN/guides/testing/rf/index.md
+  - 参考案例: zh-CN/samples/index.md
       - 无线连接:
           - 无线连接: zh-CN/samples/connectivity/index.md
           - SLE:
