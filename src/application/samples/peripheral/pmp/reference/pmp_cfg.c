@@ -11,12 +11,9 @@
 #include "partition_resource_id.h"
 #include "drv_pmp.h"
 #include "pmp_cfg.h"
+#include "../../../../../../application/samples/peripheral/pmp/pmp_sample.h"
 
 /* PMP Sample invasive changes: reserve entry 8 for the first 32 bytes of the sample buffer. */
-#define PMP_SAMPLE_REGION_INDEX 8U
-#define PMP_SAMPLE_PROTECTED_SIZE 32U
-
-extern volatile uint8_t g_pmp_sample_buffer[];
 
 typedef enum {
     REGION_GAP_ROM_ITCM,

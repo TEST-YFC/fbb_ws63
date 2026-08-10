@@ -41,6 +41,7 @@ application/samples/peripheral/pmp/
 ├── CMakeLists.txt
 ├── Kconfig
 ├── README.md
+├── pmp_sample.h
 ├── pmp_sample.c
 └── reference/
     └── pmp_cfg.c
@@ -76,6 +77,7 @@ flowchart TD
 | 文件 | 作用 | 主要内容 |
 |------|------|----------|
 | `pmp_sample.c` | 实现 PMP 内存保护 Sample | 定义样例缓冲区、配置只读条目、验证内存访问并可选触发故障 |
+| `pmp_sample.h` | 共享 Sample 配置和声明 | 定义条目号、保护长度、缓冲区长度，并声明样例缓冲区 |
 | `Kconfig` | 提供故障测试开关 | 控制是否尝试写入受保护区域 |
 | `CMakeLists.txt` | 配置 Sample 编译源 | 将 `pmp_sample.c` 加入 peripheral sample |
 | `reference/pmp_cfg.c` | 完整平台配置参考文件 | 可临时替换 WS63 平台的 `pmp_cfg.c`，直接建立 Sample 所需的 PMP 边界 |
@@ -164,13 +166,10 @@ PMP 地址匹配按条目编号从低到高进行，首次匹配的条目决定�
 
 下面列出参考文件中的四处代码，便于用户学习或手动合入。参考文件是专用于 PMP Sample 的侵入式配置，复制后会直接替代平台原有的 `REGION_RAM_3` 布局。
 
-1. 在 `pmp_cfg.c` 的头文件引用后声明 Sample 使用的条目和缓冲区：
+1. 引用 `pmp_sample.h`，复用 Sample 的条目号、保护长度和缓冲区声明：
 
 ```c
-#define PMP_SAMPLE_REGION_INDEX 8U
-#define PMP_SAMPLE_PROTECTED_SIZE 32U
-
-extern volatile uint8_t g_pmp_sample_buffer[];
+#include "../../../../../../application/samples/peripheral/pmp/pmp_sample.h"
 ```
 
 2. 将原来的 `REGION_RAM_3` 拆分为样例前、样例保护区和样例后三个连续 TOR 条目：
