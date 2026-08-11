@@ -123,16 +123,47 @@ macro(cfbb_build_epilogue)
         endif()
     endforeach()
 
-    # Out-of-tree: the user's project lives outside the SDK tree. Load its
-    # main/ component and any components/ subdirs, and register the main
-    # component name in RAM_COMPONENT so build_component() actually emits it.
+    if("$ENV{FBB_PROJECT_TARGET}" STREQUAL "" OR "$ENV{FBB_PROJECT_TARGET}" STREQUAL "${BIN_NAME}")
+    if(NOT "$ENV{FBB_COMPONENTS_CMAKE}" STREQUAL "")
+        if(NOT EXISTS "$ENV{FBB_COMPONENTS_CMAKE}")
+            message(FATAL_ERROR
+                "FBB_COMPONENTS_CMAKE was provided but does not exist: "
+                "$ENV{FBB_COMPONENTS_CMAKE}")
+        endif()
+        file(TO_CMAKE_PATH "$ENV{FBB_PROJECT_DIR}" FBB_PROJECT_DIR)
+        include("$ENV{FBB_COMPONENTS_CMAKE}")
+        # External targets are generated outside build_component(), so give
+        # them the same SDK public headers, definitions and compile options
+        # that an SDK-owned component receives. The SDK's existing
+        # RAM_COMPONENT/ROM_COMPONENT closure remains responsible for linking
+        # driver implementations into the final image.
+        foreach(_fbb_external_target IN LISTS FBB_EXTERNAL_COMPONENT_TARGETS)
+            if(TARGET ${_fbb_external_target})
+                target_link_libraries(
+                    ${_fbb_external_target} PRIVATE ${TARGETS_INTERFACES})
+            endif()
+        endforeach()
+    endif()
+
+    # Out-of-tree projects additionally register their own main target. The
+    # directory scan remains a v1-only fallback when no exact plan exists.
     if(FBB_OUT_OF_TREE)
+        if("$ENV{FBB_COMPONENTS_CMAKE}" STREQUAL "")
+            set(_FBB_LEGACY_COMPONENT_SCAN TRUE)
+        endif()
         if(EXISTS "${CMAKE_SOURCE_DIR}/main/CMakeLists.txt")
             list(APPEND RAM_COMPONENT "${FBB_PROJECT_COMPONENT_NAME}")
             add_subdirectory("${CMAKE_SOURCE_DIR}/main"
                              "${CMAKE_BINARY_DIR}/_fbb_project_main")
+            if(TARGET "${FBB_PROJECT_COMPONENT_NAME}" AND
+                    FBB_EXTERNAL_COMPONENT_TARGETS)
+                target_link_libraries(
+                    ${FBB_PROJECT_COMPONENT_NAME} PRIVATE
+                    ${FBB_EXTERNAL_COMPONENT_TARGETS})
+            endif()
         endif()
-        if(EXISTS "${CMAKE_SOURCE_DIR}/components")
+        if(_FBB_LEGACY_COMPONENT_SCAN)
+            # v1 compatibility only: legacy projects had no Lockfile plan.
             file(GLOB _proj_comps RELATIVE "${CMAKE_SOURCE_DIR}/components"
                  "${CMAKE_SOURCE_DIR}/components/*")
             foreach(_pc ${_proj_comps})
@@ -143,9 +174,16 @@ macro(cfbb_build_epilogue)
                 endif()
             endforeach()
         endif()
-        # Refresh the linker's notion of all components after appending project's.
-        set(TARGET_COMPONENT "${RAM_COMPONENT}" "${ROM_COMPONENT}")
     endif()
+    if(FBB_EXTERNAL_COMPONENT_TARGETS)
+        # Keep external static libraries after the target that references them;
+        # their public interfaces were registered from the exact plan.
+        target_link_libraries(
+            ${TARGET_NAME} PRIVATE ${FBB_EXTERNAL_COMPONENT_TARGETS})
+    endif()
+    endif() # FBB project image
+    # Refresh the linker's notion of all components after project additions.
+    set(TARGET_COMPONENT "${RAM_COMPONENT}" "${ROM_COMPONENT}")
 
     include("${CMAKE_DIR}/open_source.cmake")
     include("${CMAKE_DIR}/middleware/hwsec_c.cmake")
