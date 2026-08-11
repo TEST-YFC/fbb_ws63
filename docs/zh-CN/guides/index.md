@@ -57,13 +57,13 @@ hide:
 
     AT 命令的配置和使用。
 
--   [**软件移植**](porting/index.md)
+-   [**软件移植**](open-source/index.md)
 
     ---
 
     第三方软件接入和构建适配。
 
--   [**测试与验证**](testing/index.md)
+-   [**测试与验证**](test/index.md)
 
     ---
 

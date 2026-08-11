@@ -92,10 +92,10 @@ nav:
           - NV 存储: zh-CN/guides/system/nv/index.md
           - 文件系统: zh-CN/guides/system/filesystem/index.md
       - AT 命令: zh-CN/guides/commands/index.md
-      - 第三方软件移植: zh-CN/guides/porting/index.md
+      - 第三方软件移植: zh-CN/guides/open-source/index.md
       - 测试与验证:
-          - 测试与验证: zh-CN/guides/testing/index.md
-          - 射频测试: zh-CN/guides/testing/rf/index.md
+          - 测试与验证: zh-CN/guides/test/index.md
+          - 射频测试: zh-CN/guides/test/rf/index.md
   - 参考案例:
       - 开发指南:
       - 开发指南: zh-CN/guides/index.md

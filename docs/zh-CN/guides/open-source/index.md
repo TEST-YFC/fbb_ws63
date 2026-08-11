@@ -20,18 +20,18 @@ WS63V100的SDK使用CMake作为构建工具，因此建议使用CMake进行第�
 
 以移植cjson为例（SDK已集成该组件，可以参考对应文件的修改），移植的步骤如下：
 
-1.  将第三方组件放置于“opensource”目录下（例如：opensource/cjson/cjson，新增一层路径便于对文件路径处理）。
-2.  在“opensource”目录下，找到本层级的CMakeLists.txt，在该文件内新增一行
+1.  将第三方组件放置于 `src/open_source/` 目录下（例如：`src/open_source/cjson/cjson`，新增一层路径便于对文件路径处理）。
+2.  在 `src/open_source/` 目录下，找到本层级的CMakeLists.txt，在该文件内新增一行
 
     ```
     add_subdirectory_if_exist(cjson)
     ```
 
-    即可将对应的“opensource/cjson”路径新增到编译框架中。
+    即可将对应的 `src/open_source/cjson` 路径新增到编译框架中。
 
     ![](figures/zh-cn_image_0000001936531002.png)
 
-3.  对新增组件内部opensource/cjson路径的CMakeList.txt进行修改（可参考已有的第三方组件）。
+3.  对新增组件内部 `src/open_source/cjson` 路径的CMakeLists.txt进行修改（可参考已有的第三方组件）。
 
     设置组件名称：
 
@@ -85,13 +85,13 @@ WS63V100的SDK使用CMake作为构建工具，因此建议使用CMake进行第�
 
 用户可参考标准CMakeLists.txt的开发流程，对SDK进行定制化修改。
 
-若在三方组件中已有CMakeLists.txt可进行调用，也可以opensource路径下的CMakeLists.txt将文件夹直接add\_subdirectory\_if\_exits\(xxx\)，来进行编译
+若在三方组件中已有CMakeLists.txt可进行调用，也可以在 `src/open_source/` 路径下的CMakeLists.txt中将文件夹直接通过add\_subdirectory\_if\_exist\(xxx\)加入编译。
 
 ## 头文件引用问题<a name="ZH-CN_TOPIC_0000001788306644"></a>
 
 当用户在开发过程中需要引用新增第三方组件的头文件时，可以在第三方组件的CMakeLists.txt中指定公共的头文件。
 
-例如，需要引用cjson组件下的“cJSON.h”（实际上已全文件引用，仅作参考），则需要在opensource/cjson中的CMakeLists.txt增加：
+例如，需要引用cjson组件下的“cJSON.h”（实际上已全文件引用，仅作参考），则需要在 `src/open_source/cjson` 中的CMakeLists.txt增加：
 
 ```
 set （PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/cjson/cJSON.h）
