@@ -50,6 +50,10 @@ if(DEFINED CONFIG_SAMPLE_SUPPORT_PINCTRL)
     add_subdirectory_if_exist(pinctrl)
 endif()
 
+if(DEFINED CONFIG_SAMPLE_SUPPORT_PMP)
+    add_subdirectory_if_exist(pmp)
+endif()
+
 if(DEFINED CONFIG_SAMPLE_SUPPORT_QDEC)
     add_subdirectory_if_exist(qdec)
 endif()
