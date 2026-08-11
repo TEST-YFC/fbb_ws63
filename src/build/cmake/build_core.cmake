@@ -107,9 +107,14 @@ macro(cfbb_build_epilogue)
         build_rom_callback()
     endif()
 
-    set(KCONFIG_PATH "${ROOT_DIR}/build/config/target_config/${CHIP}/menuconfig/${CORE}/${BUILD_TARGET_NAME}.config")
-    if(EXISTS ${KCONFIG_PATH})
-        KCONFIG_GET_PARAMS(${KCONFIG_PATH})
+    if(NOT "$ENV{FBB_KCONFIG_CONFIG}" STREQUAL "" AND
+            "$ENV{FBB_PROJECT_TARGET}" STREQUAL "${BIN_NAME}")
+        file(TO_CMAKE_PATH "$ENV{FBB_KCONFIG_CONFIG}" KCONFIG_PATH)
+    else()
+        set(KCONFIG_PATH "${ROOT_DIR}/build/config/target_config/${CHIP}/menuconfig/${CORE}/${BUILD_TARGET_NAME}.config")
+    endif()
+    if(EXISTS "${KCONFIG_PATH}")
+        KCONFIG_GET_PARAMS("${KCONFIG_PATH}")
         set(USE_KCONFIG True)
     endif()
 
@@ -133,14 +138,22 @@ macro(cfbb_build_epilogue)
         file(TO_CMAKE_PATH "$ENV{FBB_PROJECT_DIR}" FBB_PROJECT_DIR)
         include("$ENV{FBB_COMPONENTS_CMAKE}")
         # External targets are generated outside build_component(), so give
-        # them the same SDK public headers, definitions and compile options
-        # that an SDK-owned component receives. The SDK's existing
-        # RAM_COMPONENT/ROM_COMPONENT closure remains responsible for linking
-        # driver implementations into the final image.
+        # them the public interfaces of the SDK components enabled for this
+        # image. Rebuild the list in this directory: TARGETS_INTERFACES is set
+        # inside component subdirectories and is therefore not a reliable
+        # image-wide closure here. External targets are linked explicitly and
+        # intentionally stay outside RAM_COMPONENT.
+        set(_fbb_sdk_interfaces)
+        foreach(_fbb_sdk_component IN LISTS RAM_COMPONENT ROM_COMPONENT)
+            if(TARGET "${_fbb_sdk_component}_interface")
+                list(APPEND _fbb_sdk_interfaces
+                     "${_fbb_sdk_component}_interface")
+            endif()
+        endforeach()
         foreach(_fbb_external_target IN LISTS FBB_EXTERNAL_COMPONENT_TARGETS)
             if(TARGET ${_fbb_external_target})
                 target_link_libraries(
-                    ${_fbb_external_target} PRIVATE ${TARGETS_INTERFACES})
+                    ${_fbb_external_target} PRIVATE ${_fbb_sdk_interfaces})
             endif()
         endforeach()
     endif()
