@@ -1,4 +1,4 @@
-# 编译与环境
+# 编译
 
 本页收集编译与环境搭建过程中常见的报错与解决方案，涵盖 SDK 路径、工具链（Ninja / CMake / ccache / 工具链）、HiSpark Studio 编译、串口等问题。
 
@@ -59,16 +59,6 @@ SDK 存放路径过长时，编译时相关文件无法找到，或编译过程�
 
 ---
 
-## 路径失效（调试 / 栈分析 / 镜像分析）
-
-导入工程路径问题导致的调试、栈分析、镜像分析等默认路径失效。
-
-**解决方案：** 修改默认的 `debug_elf` 路径。
-
-![修改默认 debug_elf 路径](figures/44.png)
-
----
-
 ## 编译报错「Kconfig header saved to XXX」
 
 编译报错 `Kconfig header saved to XXX`，并在 SDK 根目录下的 `build.log` 文件中搜索 `error` 出现类似 `FAILED：xxx.c  ccache` 的字段。
@@ -113,16 +103,6 @@ ccache.exe -s
     解析 elf 时没有管理员权限。
 
 **解决方案：** 用管理员权限打开 VS Code 再次进行编译。
-
----
-
-## 按照《星闪实验指导手册》搭建 windows 环境无法正常编译
-
-按照《星闪实验指导手册》搭建 windows 环境结果是无法正常编译的，报错如下：
-
-![windows 环境编译报错](figures/image11.png)
-
-**解决方案地址：** <https://developers.hisilicon.com/postDetail?tid=0201181900555191016>
 
 ---
 
@@ -186,14 +166,6 @@ ModuleNotFoundError: No module named 'utils.build_utils'
 
 ---
 
-## 看不出什么问题（无明确报错）
-
-![问题截图](figures/image16.png)
-
-**解决方案：** 参考附件「日志获取 V3」，获取日志，再根据日志保存内容在 FAQ 中寻找对应的问题解决方法。
-
----
-
 ## riscv-linux-musl-gcc.exe: error: createprocess: no such file or directory
 
 编译过程中报 `riscv-linux-musl-gcc.exe: error: createprocess: no such file or directory` 等字样：
@@ -219,16 +191,6 @@ HiSparkStudio 在编译过程，插件已经安装，但是打开系统配置时
 在 HiSpark 编译 WS63 代码时，碰到一个 `ninja: fatal: CreateProcess: The parameter is incorrect. (is the command line too long?)` 的错误：
 
 ![ninja CreateProcess 参数错误](figures/image19.png)
-
-**解决方案地址：** <https://developers.hisilicon.com/postDetail?tid=0293178336810316019>
-
----
-
-## 开发板串口 COM10 显示 Com0 open fail
-
-开发板串口为 COM10，但是终端显示：`Com0 open fail, please check com is busy or not exist`，设备管理器中也没办法更改串口为 COM0：
-
-![串口 COM0 打开失败](figures/image20.png)
 
 **解决方案地址：** <https://developers.hisilicon.com/postDetail?tid=0293178336810316019>
 
