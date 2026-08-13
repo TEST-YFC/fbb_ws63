@@ -26,8 +26,6 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef LOSCFG_KERNEL_DYNLOAD
-
 #include <rthw.h>
 
 #include "rtthread.h"
@@ -35,6 +33,9 @@
 #include "dlmodule.h"
 #include "dlelf.h"
 #include "los_printf.h"
+
+#if defined(LOSCFG_KERNEL_DYNLOAD) && !defined(LOSCFG_COMPAT_POSIX)
+
 #include "los_ld_elflib.h"
 
 void *dlopen(const char *filename, int flag)
@@ -42,7 +43,7 @@ void *dlopen(const char *filename, int flag)
     void *ret = NULL;
     RT_UNUSED(flag);
 
-#if defined(LOSCFG_KERNEL_DYNLOAD) && defined(LOSCFG_DYNLOAD_DYN_FROM_FS)
+#ifdef LOSCFG_DYNLOAD_DYN_FROM_FS
     ret = LOS_SoLoad((CHAR *)filename);
 #else
     (void)filename;
@@ -53,27 +54,15 @@ void *dlopen(const char *filename, int flag)
 
 int dlclose(void *handle)
 {
-#ifdef LOSCFG_KERNEL_DYNLOAD
     return LOS_ModuleUnload(handle);
-#else
-    RT_UNUSED(handle);
-    PRINTK("Dynamic loading is not supported.\n");
-    return -RT_ERROR;
-#endif
 }
 
 void *dlsym(void *handle, const char *symbol)
 {
-    void *ret = NULL;
-#ifdef LOSCFG_KERNEL_DYNLOAD
-    ret = LOS_FindSymByName(handle, (CHAR *)symbol);
-#else
-    RT_UNUSED(handle);
-    RT_UNUSED(symbol);
-    PRINTK("Dynamic loading is not supported.\n");
-#endif
-    return ret;
+    return LOS_FindSymByName(handle, (CHAR *)symbol);
 }
+
+#endif /* LOSCFG_KERNEL_DYNLOAD && !LOSCFG_COMPAT_POSIX */
 
 struct rt_dlmodule *dlmodule_load(const char* pgname)
 {
@@ -106,4 +95,3 @@ rt_ubase_t dlmodule_symbol_find(const char *sym_str)
     RT_UNUSED(sym_str);
     return RT_EOK;
 }
-#endif
