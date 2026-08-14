@@ -72,7 +72,7 @@ typedef struct
 	START_TIME_TYPE lastTouch;		    /**> used for retry and expiry */
 	char nextMessageType;	/**> PUBREC, PUBREL, PUBCOMP */
 	int len;				/**> length of the whole structure+data */
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	int retryTime;
 #endif
 } Messages;
@@ -171,7 +171,7 @@ typedef struct
 	int connect_sent;               /**< the current number of outbound messages on reconnect that we've sent */
 	List* messageQueue;             /**< inbound complete but undelivered messages */
 	List* outboundQueue;            /**< outbound queued messages */
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	int retryMsgs;              	/**< retry end but not waitForCompletion*/
 #endif
 	unsigned int qentry_seqno;

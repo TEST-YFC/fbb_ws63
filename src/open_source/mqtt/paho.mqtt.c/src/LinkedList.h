@@ -78,8 +78,11 @@ List* ListInitialize(void);
 
 ListElement* ListAppend(List* aList, void* content, size_t size);
 void ListAppendNoMalloc(List* aList, void* content, ListElement* newel, size_t size);
+#if defined(WEAR_LITEOS_ADAPT)
+ListElement* _ListInsert(List* aList, void* content, size_t size, ListElement* index);
+#else
 ListElement* ListInsert(List* aList, void* content, size_t size, ListElement* index);
-
+#endif
 int ListRemove(List* aList, void* content);
 int ListRemoveItem(List* aList, void* content, int(*callback)(void*, void*));
 void* ListDetachHead(List* aList);
@@ -94,7 +97,11 @@ int ListDetach(List* aList, void* content);
 int ListDetachItem(List* aList, void* content, int(*callback)(void*, void*));
 
 void ListFree(List* aList);
+#if defined(WEAR_LITEOS_ADAPT)
+void _ListEmpty(List* aList);
+#else
 void ListEmpty(List* aList);
+#endif
 void ListFreeNoContent(List* aList);
 
 ListElement* ListNextElement(List* aList, ListElement** pos);

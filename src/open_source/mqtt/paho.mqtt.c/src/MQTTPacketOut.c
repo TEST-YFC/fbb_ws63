@@ -292,14 +292,14 @@ void* MQTTPacket_suback(int MQTTVersion, unsigned char aHeader, char* data, size
 	Suback* pack = NULL;
 	char* curdata = data;
 	char* enddata = &data[datalen];
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	int ret = -1;
 #endif
 
 	FUNC_ENTRY;
 	if ((pack = malloc(sizeof(Suback))) == NULL)
 		goto exit;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	ret = memset_s(pack, sizeof(Suback), 0, sizeof(Suback));
 	if (ret != 0)
 	{
@@ -334,7 +334,7 @@ void* MQTTPacket_suback(int MQTTVersion, unsigned char aHeader, char* data, size
 		}
 	}
 	pack->qoss = ListInitialize();
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	if (pack->qoss == NULL)
 	{
 		if (pack->properties.array != NULL)
@@ -352,7 +352,7 @@ void* MQTTPacket_suback(int MQTTVersion, unsigned char aHeader, char* data, size
 		newint = malloc(sizeof(unsigned int));
 		if (newint == NULL)
 		{
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			if (pack->qoss != NULL)
 				ListFree(pack->qoss);
 #endif
@@ -368,7 +368,7 @@ void* MQTTPacket_suback(int MQTTVersion, unsigned char aHeader, char* data, size
 	}
 	if (pack->qoss->count == 0)
 	{
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		ListFree(pack->qoss);
 		if (pack->properties.array)
 			free(pack->properties.array);
@@ -479,7 +479,7 @@ void* MQTTPacket_unsuback(int MQTTVersion, unsigned char aHeader, char* data, si
 			goto exit;
 		}
 		pack->reasonCodes = ListInitialize();
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		if (pack->reasonCodes == NULL)
 		{
 			if (pack->properties.array != NULL)
@@ -496,7 +496,7 @@ void* MQTTPacket_unsuback(int MQTTVersion, unsigned char aHeader, char* data, si
 			newrc = malloc(sizeof(enum MQTTReasonCodes));
 			if (newrc == NULL)
 			{
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 				if (pack->reasonCodes != NULL)
 					ListFree(pack->reasonCodes);
 #endif

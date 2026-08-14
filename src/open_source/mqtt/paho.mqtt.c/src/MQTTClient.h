@@ -656,7 +656,7 @@ typedef struct
 #define MQTT_SSL_VERSION_TLS_1_1 2
 #define MQTT_SSL_VERSION_TLS_1_2 3
 
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 typedef struct
 {
 	const unsigned char* body;            /**< string of cert in PEM format */
@@ -792,7 +792,7 @@ typedef struct
 	 */
 	unsigned int protos_len;
 
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	/** CA Certification */
 	const cert_string* los_trustStore;
 	/** client Certification */
@@ -809,6 +809,8 @@ typedef struct
 
 #if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 #define MQTTClient_SSLOptions_initializer { {'M', 'Q', 'T', 'S'}, 5, NULL, NULL, NULL, NULL, NULL, 1, MQTT_SSL_VERSION_DEFAULT, 0, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL, 0 }
+#elif defined(WEAR_LITEOS_ADAPT)
+#define MQTTClient_SSLOptions_initializer { {'M', 'Q', 'T', 'S'}, 5, NULL, NULL, NULL, NULL, NULL, 0, MQTT_SSL_VERSION_DEFAULT, 0, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL, 0 }
 #else
 #define MQTTClient_SSLOptions_initializer { {'M', 'Q', 'T', 'S'}, 5, NULL, NULL, NULL, NULL, NULL, 1, MQTT_SSL_VERSION_DEFAULT, 0, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0 }
 #endif
@@ -1010,7 +1012,7 @@ typedef struct
 	const char* httpsProxy;
 } MQTTClient_connectOptions;
 
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 /** Initializer for connect options for MQTT 3.1.1 non-WebSocket connections */
 #define MQTTClient_connectOptions_initializer { {'M', 'Q', 'T', 'C'}, 8, 60, 1, 0, NULL, NULL, NULL, 30, 0, NULL,\
 0, NULL, MQTTVERSION_DEFAULT, {NULL, 0, 0}, {0, NULL}, -1, 0, NULL, NULL, NULL}
@@ -1121,7 +1123,7 @@ LIBMQTT_API int MQTTClient_disconnect5(MQTTClient handle, int timeout, enum MQTT
   */
 LIBMQTT_API int MQTTClient_isConnected(MQTTClient handle);
 
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 LIBMQTT_API int MQTTClient_getConnectState(MQTTClient handle);
 #endif
 /* Subscribe is synchronous.  QoS list parameter is changed on return to granted QoSs.

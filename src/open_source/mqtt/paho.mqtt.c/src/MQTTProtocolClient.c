@@ -177,7 +177,7 @@ int MQTTProtocol_startPublish(Clients* pubclient, Publish* publish, int qos, int
 	if (qos > 0)
 	{
 		*mm = MQTTProtocol_createMessage(publish, mm, qos, retained, 0);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		if (*mm != NULL)
 		{
 #endif
@@ -188,7 +188,7 @@ int MQTTProtocol_startPublish(Clients* pubclient, Publish* publish, int qos, int
 			qos12pub.topic = (*mm)->publish->topic;
 			qos12pub.properties = (*mm)->properties;
 			qos12pub.MQTTVersion = (*mm)->MQTTVersion;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		}
 		else
 		{
@@ -201,7 +201,7 @@ int MQTTProtocol_startPublish(Clients* pubclient, Publish* publish, int qos, int
 	rc = MQTTProtocol_startPublishCommon(pubclient, publish, qos, retained);
 	if (qos > 0)
 		memcpy((*mm)->publish->mask, publish->mask, sizeof((*mm)->publish->mask));
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 exit:
 #endif
 	FUNC_EXIT_RC(rc);
@@ -233,7 +233,7 @@ Messages* MQTTProtocol_createMessage(Publish* publish, Messages **mm, int qos, i
 		if ((m->publish = MQTTProtocol_storePublication(publish, &len1)) == NULL)
 		{
 			free(m);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			m = NULL;
 #endif
 			goto exit;
@@ -246,7 +246,7 @@ Messages* MQTTProtocol_createMessage(Publish* publish, Messages **mm, int qos, i
 			if ((m->publish->payload = malloc(m->publish->payloadlen)) == NULL)
 			{
 				free(m);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 				m = NULL;
 #endif
 				goto exit;
@@ -263,7 +263,7 @@ Messages* MQTTProtocol_createMessage(Publish* publish, Messages **mm, int qos, i
 	m->qos = qos;
 	m->retain = retained;
 	m->MQTTVersion = publish->MQTTVersion;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	m->retryTime = 0;
 #endif
 	if (m->MQTTVersion >= 5)
@@ -355,7 +355,7 @@ int MQTTProtocol_handlePublishes(void* pack, SOCKET sock)
 	FUNC_ENTRY;
 	client = (Clients*)(ListFindItem(bstate->clients, &sock, clientSocketCompare)->content);
 	clientid = client->clientID;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	Log(LOG_PROTOCOL, 11, NULL, sock, clientid, publish->msgId);
 #else
 	Log(LOG_PROTOCOL, 11, NULL, sock, clientid, publish->msgId, publish->header.bits.qos,
@@ -408,7 +408,12 @@ int MQTTProtocol_handlePublishes(void* pack, SOCKET sock)
 			MQTTProtocol_removePublication(msg->publish);
 			if (msg->MQTTVersion >= MQTTVERSION_5)
 				MQTTProperties_free(&msg->properties);
+
+#if defined(WEAR_LITEOS_ADAPT)
+			_ListInsert(client->inboundMsgs, m, sizeof(Messages) + len, listElem);
+#else
 			ListInsert(client->inboundMsgs, m, sizeof(Messages) + len, listElem);
+#endif
 			ListRemove(client->inboundMsgs, msg);
 			already_received = 1;
 		} else
@@ -736,7 +741,7 @@ void MQTTProtocol_keepalive(START_TIME_TYPE now)
 		Clients* client =	(Clients*)(current->content);
 		ListNextElement(bstate->clients, &current);
 
-		if (client->connected == 0 || client->keepAliveInterval == 0)
+		if (client == NULL || client->connected == 0 || client->keepAliveInterval == 0)
 			continue;
 
 		if (client->ping_outstanding == 1)
@@ -809,7 +814,7 @@ void MQTTProtocol_keepalive(START_TIME_TYPE now)
 	FUNC_EXIT;
 }
 
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 #define RETRYTIME 5
 static int MQTTProtocol_release(Clients* client, Messages* m)
 {
@@ -819,7 +824,7 @@ static int MQTTProtocol_release(Clients* client, Messages* m)
 		if (ListFindItem(client->outboundMsgs, &(m->msgid), messageIDCompare) != NULL)
 		{
 			#if !defined(NO_PERSISTENCE)
-				rc = MQTTPersistence_remove(client,
+				int rc = MQTTPersistence_remove(client,
 					(m->MQTTVersion >= MQTTVERSION_5) ? PERSISTENCE_V5_PUBLISH_SENT : PERSISTENCE_PUBLISH_SENT,
 					m->qos, m->msgid);
 			#endif
@@ -835,7 +840,9 @@ static int MQTTProtocol_release(Clients* client, Messages* m)
 	{
 		m->retryTime++;
 	}
+#if !defined(WEAR_LITEOS_ADAPT)
 exit:
+#endif
 	return ret;
 }
 #endif
@@ -851,7 +858,7 @@ static void MQTTProtocol_retries(START_TIME_TYPE now, Clients* client, int regar
 	ListElement* outcurrent = NULL;
 
 	FUNC_ENTRY;
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 	if (!regardless && client->retryInterval <= 0 && /* 0 or -ive retryInterval turns off retry except on reconnect */
 			client->connect_sent == client->connect_count)
 		goto exit;
@@ -868,7 +875,7 @@ static void MQTTProtocol_retries(START_TIME_TYPE now, Clients* client, int regar
 		Messages* m = (Messages*)(outcurrent->content);
 		if (regardless || MQTTTime_difftime(now, m->lastTouch) > (DIFF_TIME_TYPE)(max(client->retryInterval, 10) * 1000))
 		{
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 			if (MQTTProtocol_release(client, m) == 0)
 				goto exit;
 			Log(TRACE_MIN, -1, "%s, %d, msgid[%d]: retryTime = %d", __func__, __LINE__, m->msgid, m->retryTime);
@@ -998,7 +1005,7 @@ void MQTTProtocol_freeClient(Clients* client)
 	/* free up pending message lists here, and any other allocated data */
 	MQTTProtocol_freeMessageList(client->outboundMsgs);
 	MQTTProtocol_freeMessageList(client->inboundMsgs);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	if (client->messageQueue != NULL)
 		ListFree(client->messageQueue);
 	if (client->outboundQueue != NULL)
@@ -1008,18 +1015,18 @@ void MQTTProtocol_freeClient(Clients* client)
 	ListFree(client->outboundQueue);
 #endif
 
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	if (client->clientID != NULL)
 	{
 #endif
 		free(client->clientID);
 		client->clientID = NULL;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	}
 #endif
 	if (client->will)
 	{
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 		if (client->will->payload != NULL)
 			free(client->will->payload);
 		if (client->will->topic != NULL)
@@ -1103,7 +1110,7 @@ void MQTTProtocol_emptyMessageList(List* msgList)
 void MQTTProtocol_freeMessageList(List* msgList)
 {
 	FUNC_ENTRY;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
 	if (msgList != NULL)
 	{
 		MQTTProtocol_emptyMessageList(msgList);

@@ -30,7 +30,7 @@
 #include <mbedtls/x509.h>
 #include <mbedtls/net_sockets.h>
 #include <mbedtls/platform.h>
-#if !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 #include <ssl_misc.h>
 #endif
 
@@ -193,14 +193,14 @@ void SSLSocket_terminate(void)
 static int SSL_loadClientCrt(networkHandles* net, const MQTTClient_SSLOptions* opts)
 {
 	int rc;
-#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 	if (opts->keyStore != NULL && opts->privateKey != NULL)
 #else
 	if (opts->los_keyStore != NULL && opts->los_privateKey != NULL)
 #endif
 	{
 		/* parse client cert */
-#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 		rc = mbedtls_x509_crt_parse_file(&net->ctx->clicert, opts->keyStore);
 #else
 		rc = mbedtls_x509_crt_parse( &net->ctx->clicert, opts->los_keyStore->body, opts->los_keyStore->size );
@@ -212,7 +212,7 @@ static int SSL_loadClientCrt(networkHandles* net, const MQTTClient_SSLOptions* o
 		}
 
 		/* parse client key */
-#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 		rc = mbedtls_pk_parse_keyfile(&net->ctx->pkey, opts->privateKey, opts->privateKeyPassword);
 #else
 		if (opts->privateKeyPassword == NULL)
@@ -257,14 +257,14 @@ static int SSL_loadKey(networkHandles* net, const MQTTClient_SSLOptions* opts)
 		return rc;
 	}
 
-#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 	if (opts->trustStore != NULL)
 #else
 	if (opts->los_trustStore != NULL)
 #endif
 	{
 		/* parse CA file */
-#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
+#if !defined (IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 		rc = mbedtls_x509_crt_parse_file(&net->ctx->cacert, opts->trustStore);
 #else
 		rc = mbedtls_x509_crt_parse( &net->ctx->cacert, opts->los_trustStore->body, opts->los_trustStore->size );
@@ -299,7 +299,7 @@ static void SSL_setVersion(networkHandles* net, const MQTTClient_SSLOptions* opt
 	{
 	case MQTT_SSL_VERSION_DEFAULT:
 		break;
-#if !defined(IOT_LITEOS_ADAPT)
+#if !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
 	case MQTT_SSL_VERSION_TLS_1_0:
 		mbedtls_ssl_conf_min_version(&net->ctx->conf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_1);
 		mbedtls_ssl_conf_max_version(&net->ctx->conf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_1);
@@ -341,6 +341,13 @@ static int SSL_tlsInit(networkHandles* net, const MQTTClient_SSLOptions* opts)
 	mbedtls_x509_crt_init(&net->ctx->cacert);
 	mbedtls_x509_crt_init(&net->ctx->clicert);
 	mbedtls_pk_init(&net->ctx->pkey);
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(WEAR_LITEOS_ADAPT)
+    rc = psa_crypto_init();
+    if (rc != 0) {
+		Log(TRACE_PROTOCOL, -1, "Failed to initialize PSA Crypto implementation: %d\n", rc);
+        return rc;
+    }
+#endif
 #endif /* MBEDTLS_USE_CRT */
 	if ((rc = mbedtls_ctr_drbg_seed(
 			&net->ctx->ctr_drbg, mbedtls_entropy_func,
@@ -482,11 +489,7 @@ int SSLSocket_connect(SSL* ssl, int sock, const char* hostname, int verify, int 
 	{
 		/* handshake complete check server certificate */
 		Log(TRACE_MIN, -1, "ssl handshake complete.\n");
-#if !defined(IOT_LITEOS_ADAPT)
 		rc = 1;
-#else
-        rc = 0;
-#endif
 	} else {
 		rc = SSL_FATAL;
 		Log(TRACE_PROTOCOL, -1, "failed! mbedtls_ssl_handshake returned -0x%x\n", ret_state);
@@ -614,6 +617,9 @@ void SSLSocket_destroyContext(networkHandles* net)
 		mbedtls_x509_crt_free(&net->ctx->cacert);
 		mbedtls_x509_crt_free(&net->ctx->clicert);
 		mbedtls_pk_free(&net->ctx->pkey);
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(WEAR_LITEOS_ADAPT)
+		mbedtls_psa_crypto_free();
+#endif
 #endif
 		free(net->ctx);
 		net->ctx = NULL;
