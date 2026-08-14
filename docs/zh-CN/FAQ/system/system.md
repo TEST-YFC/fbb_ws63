@@ -1,22 +1,16 @@
-# 软件
-
-WS63 软件使用过程中常见的系统、无线通信、外设、射频与产线测试问题。
-
----
-
-## 系统问题
+# 系统问题
 
 WS63 系统异常（死机、看门狗挂死、死锁）的定位方法与系统异常信息导出方式。
 
 ---
 
-### 系统死机问题
+## 系统死机问题
 
 问题描述：【WS63】系统检测到异常（内存访问异常，指令异常等）后，会主动进行一系列异常接管的处理动作，例如打印异常发生时函数的调用栈信息、CPU现场信息、异常发生时正在运行的任务信息（包括任务名、任务号、堆栈大小等）等，并且这些信息会保存到Flash crash info区，死机信息保存后系统会自动重启。
 
 **解决方案：**
 
-#### 死机信息组成说明
+### 死机信息组成说明
 
 死机信息主要内容由以下几部分组成，如下表所示：
 
@@ -167,16 +161,16 @@ APP | traceback 83 -- sp addr= 0xa2dbc sp content= 0xa0e0b0
 APP|*****stack txt info end*****
 ```
 
-#### 死机信息详细说明
+### 死机信息详细说明
 
-##### CPU 异常信息
+#### CPU 异常信息
 
 挂死信息最开始，会直接打印挂死的直接原因信息，如下图所示，表示当前挂死是由于写地址异常，CPU 写到了一片 PMP 保护的区域导致挂死：
 
 Store/AMO access fault
 PMP access fault
 
-##### 详细任务信息
+#### 详细任务信息
 
 这一部分会打印运行在当前 CPU 上所有的任务以及其状态，可以协助用户对当前业务运行的状态有更精准的判断。一个典型的任务信息打印如下：
 
@@ -261,7 +255,7 @@ MaxStackPoint = TopOfStack + StackSize = 0x80d10768 （得到该任务栈最大�
 
 - 若 StackPoint > MaxStackPoint 或 StackPoint < TopOfStack，则说明该任务踩内存。
 
-##### 异常汇总信息
+#### 异常汇总信息
 
 异常汇总信息包括发生异常时的 task 名称、taskID、异常类型等。示例如下：
 
@@ -294,7 +288,7 @@ MaxStackPoint = TopOfStack + StackSize = 0x80d10768 （得到该任务栈最大�
   </tr>
 </table>
 
-##### CPU 寄存器信息
+#### CPU 寄存器信息
 
 CPU 给软件提供了方便调试的CSR，异常接管时软件会通过读取这些CSR 来识别出当前CPU 处于什么异常状态。主要如下三个CSR：mcause CSR(0x342)、ccause CSR(0xfc2)、mtval CSR(0x343)。其中 mcause CSR 是 RISCV 标准协议定义的 CSR；mtval CSR 是用来记录发生错误的地址或者指令。除了这三个 CSR，还打印了mepc 等协助开发人员定位死机位置的定位，示例如下：
 
@@ -345,7 +339,7 @@ CPU 给软件提供了方便调试的CSR，异常接管时软件会通过读取�
 
 ccause, mcause, mtval 这三个寄存器要结合起来看，判断CPU异常信息详情。这三个CSR的具体组合含义见下表：
 
-##### 取指地址不对齐异常
+#### 取指地址不对齐异常
 
 <table>
   <tr>
@@ -406,7 +400,7 @@ ccause, mcause, mtval 这三个寄存器要结合起来看，判断CPU异常信�
   </tr>
 </table>
 
-##### 非法指令
+#### 非法指令
 
 <table>
   <tr>
@@ -591,7 +585,7 @@ ccause, mcause, mtval 这三个寄存器要结合起来看，判断CPU异常信�
   </tr>
 </table>
 
-##### 函数调用栈信息
+#### 函数调用栈信息
 
 通过堆栈指针可以回溯函数调用栈，显示与异常相关的所有函数调用指令。用户可以根据函数调用栈检查异常发生时函数调用的上下文以方便定位。函数调用栈信息如下图所示。
 
@@ -605,7 +599,7 @@ ccause, mcause, mtval 这三个寄存器要结合起来看，判断CPU异常信�
 
 ws63-liteos-app.asm
 
-#### 定位步骤
+### 定位步骤
 
 **步骤 1** 确认系统重启前是否有系统异常信息打印，如果系统重启前没有任何异常打印信息，请测量芯片供电电压，确认是否存在电压跌落导致芯片复位。
 
@@ -619,7 +613,7 @@ ws63-liteos-app.asm
 
 **步骤 6** 如果挂死和业务场景无关且挂死点随机，并且结合代码分析预计不可能出现该异常，可考虑从硬件供电角度分析，测试芯片电压，是否确保了芯片供电 $3.3V \pm 10\%$ 。（多出现在上下电阶段）
 
-#### 常见 CPU 异常死机案例
+### 常见 CPU 异常死机案例
 
 - 例子一：挂死前串口有明显异常，结合串口打印分析  
 ![](figures/pdf_exception_uart_log.jpg)
@@ -657,13 +651,13 @@ ws63-liteos-app.asm
 
 ---
 
-### 看门狗挂死问题
+## 看门狗挂死问题
 
 问题描述：【WS63】某个任务或中断中运行时间过长、没有在规定的时间内进行喂狗，系统会认定为异常，系统会打印并保存运行任务信息，保存完成后自动重启。
 
 **解决方案：**
 
-#### 看门狗挂死说明
+### 看门狗挂死说明
 
 看门狗的默认超时时间是 15 秒，也可以在业务中通过 uapi_watchdog_set_time 接口修改。系统 CPU 如果空闲时，会自动在 IdleCore00 任务中做喂狗操作，防止看门狗超时。如果客户有特定业务需要长时间占用 CPU，需要在业务流程中定期调用 uapi_watchdog_kick 接口，主动做喂狗操作。
 
@@ -678,7 +672,7 @@ ws63-liteos-app.asm
 ![](figures/pdf_p24_watchdog.png)
 
 
-#### 定位步骤
+### 定位步骤
 
 如果在用户某业务场景出现看门狗挂死，可以按照以下步骤排查：
 
@@ -692,7 +686,7 @@ ws63-liteos-app.asm
 
 ---
 
-### 死锁问题
+## 死锁问题
 
 问题描述：【WS63】死锁问题表现为多个任务运行时互相等待对方释放锁，多个任务被锁阻塞无法被系统调度，死锁时系统不会出现异常，也不会打印异常信息，系统默认不开启死锁检测，所以系统不会自动重启。
 
@@ -731,15 +725,15 @@ SDK Version:1.10.T0
 ![](figures/pdf_p25_at_sysinfo.png)
 
 
-#### 死锁问题定位
+### 死锁问题定位
 
 此类问题主要是多任务场景下，业务模块使用互斥锁不合理造成死锁问题。
 
-##### 互斥锁说明
+#### 互斥锁说明
 
 多任务系统使用互斥锁达到资源互斥的目的，其他任务不能强行抢占任务已经占有的资源。使用互斥锁时，可能存在任务之间互相等对方释放资源的情况，从而造成死锁。死锁会使任务陷入无限循环等待，导致业务功能障碍。
 
-##### 互斥锁死锁检测机制
+#### 互斥锁死锁检测机制
 
 任务发生死锁后，无法得到调度，通过记录任务上次调度的时间，设置一个超时时间阈值，如果任务在这段时间内都没有得到调度，则怀疑该任务发生了死锁。
 
@@ -749,7 +743,7 @@ Debug ---> Enable a Debug Version ---> Enable Debug LiteOS Kernel Resource ---> 
 
 ---
 
-### 如何导出系统异常信息
+## 如何导出系统异常信息
 
 问题描述：【WS63】在某些场景下，由于未连接串口线，或者串口在系统异常时本身也出现异常，导致系统异常信息无法通过串口打印出来。
 
@@ -822,7 +816,7 @@ tcpip_thread 0x0026c980 0x11 5 Ready 0x1000 0x1c4
 APP| Last Crash info dump end----
 ```
 
-#### 系统异常信息导出
+### 系统异常信息导出
 
 如果串口或者 AT 命令不可用，无法通过AT+DUMP 查看挂死信息，还可以通过DebugKits 工具导出挂死日志。
 
@@ -836,7 +830,7 @@ APP| Last Crash info dump end----
 
 **步骤 5** 点击Read 按钮导出。
 
-#### 系统异常信息解析
+### 系统异常信息解析
 
 **步骤 1** 进入文件夹 build\config\target_config\ws63。确定该目录下有 crash_info.py 以及 crashinfo.bin 文件。
 
@@ -899,566 +893,3 @@ tcpip_thread 0x26c980 0x11 5 Ready 0x1000 0x1c4 0xa430e0 0xa422a0 0xffffffff 0x1
 ```
 
 ---
-
-## 无线通信
-
-WS63 Wi-Fi、BLE、SLE（星闪）无线通信场景下的常见问题。
-
-### Wi-Fi
-
----
-
-#### 扫描失败问题
-
-问题描述：【WS63】扫描过程中，"<SCAN RESULT>:"有扫描结果，但最终显示扫不到对应AP信息，或者"<SCAN RESULT>:"中无结果。
-
-**说明**
-
-有扫描结果指的是 "<SCAN RESULT>:" 中存在其他 ssid，不是指要关联的 AP 在 "<SCAN RESULT>:" 中。
-
-**解决方案：**
-
-##### 可能原因
-
-- AP 所在信道在非管制域信道范围内；
-
-- 周围环境存在超过32个AP信息，而要扫描的AP信号强度较弱；
-
-- STA 扫描时间太短;
-
-##### 定位步骤
-
-**步骤 1** 通过查看 "<SCAN RESULT>:" 中是否存在 ssid 等信息
-
-- 执行 AT+SCANRESULT 命令查看 "<SCAN RESULT>:" 是否存在 AP 信息，若未存在任何 AP 信息，查看日志是否有ERROR 类型日志，进而判断扫描异常阶段；若 "<SCAN RESULT>:" 中存在 AP 信息，进入步骤 2 分析；
-
-**说明**
-
-AT 命令详细介绍请参考《WS63V100 AT 命令使用指南》，检查 "<SCAN RESULT>:" 中 AP 数量
-
-**步骤 2** 根据信号强度排序，最多记录 32 个 AP，当要扫描的 AP 信号较弱时，可能被过滤，
-
-因此不会被上报"<SCAN RESULT>:"中。
-
-- 检查是否含有32个AP信息
-
-- 如果含有 32 个 AP 信息，执行 AT+SCANSSID 命令指定 SSID 扫描，观察是否能扫描到该 AP，若未能扫描到，进入步骤 3 分析；
-
-- 如果少于32个AP信息，则进入步骤3分析；
-
-**步骤 3** 检查 AP 所在信道是否在管制域范围
-
-- 如果 AP 为路由器，查看路由器配置界面，确定路由器所在信道；
-
-- 执行AT+STASTAT命令查看AP的"channel"信息。
-
-+STASTAT: <status>,<ssid>,<bssid>,<chn>,<rssi>
-
-若 AP 所处信道未在管制域范围内，可寻求开发人员定位；若 AP 所处信道在管制域范围内，则进入步骤 4 分析。
-
-**步骤 4** 抓包查看报文交互流程
-
-通过 Omnipeek 或 WireShark 等抓包软件抓包分析：
-
-1、抓取AP的beacon帧，确认AP是否工作正常。
-
-2、抓取STA的Probe Request报文，确认STA扫描请求是否正常。
-
-3、抓取AP的Probe Response报文，确认AP扫描响应是否正常。
-
-**步骤 5** 通过抓包分析，如果 STA 和 AP 报文交互正常还扫不到AP，确认是否STA 扫描时间太短；通过 wifi_sta_set_scan_policy 接口修改 scan_cnt(发送 Probe Request 报文次数)和 scan_time(两次 Probe Request 报文的间隔时间)，每个信道扫描总时间 (scan_cnt*scan_time) 建议不小于 102.4ms。
-
----
-
-#### 关联失败问题
-
-问题描述：【WS63】STA 关联 AP 失败，STA 没有收到关联响应或收到 AP 关联响应报文携带错误码、AP 去关联报文、AP 去认证报文。
-
-**解决方案：**
-
-##### 可能原因
-
-- 密码格式错误;
-
-- 被 AP 拉黑;
-
-##### 定位步骤
-
-**步骤 1** 检查扫描结果
-
-详情见 [扫描失败问题](#扫描失败问题) 故障定位指导，分析原因。
-
-**步骤 2** 检查 AP 端状态
-
-(1) 检查 AP 黑名单：登录 AP 配置界面，查看 AP 黑名单中是否有 STA 的 MAC 地址，若有，尝试将该 MAC 地址移除黑名单，重新尝试关联。
-
-**(2) 检查PMF状态：**
-
-登录 AP 配置界面，若 AP 为强制 PMF 加密方式，可尝试执行
-
-"AT+STARTSTA=1,1"命令，在起STA时，强制启动PMF尝试关联。
-
-**说明**
-
-AT 命令：AT+STARTSTA=[<protocol_mode>],[<pmf>]，其中<pmf>为管理帧保护策略，默认为1，表示 PMF 自适应，AT 命令详情使用请参考《WS63V100 AT 命令使用指南》
-
-**(3) 检查加密方式**
-
-- 若 AP 为 OPEN 方式，关联时不需要设置密钥；
-
-- 若 AP 为 WPA/WPA2/WPA3/WAPI/WEP 等加密方式，进入步骤 3 分析。
-
-**步骤 3** 检查密钥格式（AP 为 WPA/WPA2/WPA3/WAPI/WEP 等加密方式
-
-(1) 确定密钥长度，如WEP加密只支撑5/10/13/26位密钥长度；
-
-(2) 确定密钥是否含有特殊字符、大小写、以及中文字符;
-
-(3) 确定密钥类型是否正确，例如AP 配置为ASCII/HEX 类型，关联时使用
-
-HEX/ASCII 类型密钥;
-
-若检查以上内容无误，进入步骤 4 分析。
-
-**步骤 4** 检查报文交互流程
-
-场景一：AUTH 报文交互失败
-
-- 查看 AUTH 报文的 STATUS CODE，确定原因，如表 1 所示；
-
-表1-2 Status Code
-
-<table>
-  <tr>
-    <td>Status Code</td>
-    <td>Name</td>
-    <td>Meaning</td>
-  </tr>
-  <tr>
-    <td>0</td>
-    <td>SUCCESS</td>
-    <td>Successful</td>
-  </tr>
-  <tr>
-    <td>14</td>
-    <td>TRANSACTION_SEQUENCE_ERROR</td>
-    <td>Received an Authentication frame with authentication transaction sequence number out of expected sequence.</td>
-  </tr>
-  <tr>
-    <td>16</td>
-    <td>REJECTED_SEQUENCE_TIMEOUT</td>
-    <td>Authentication rejected due to timeout waiting for next frame in sequence.</td>
-  </tr>
-  <tr>
-    <td>30</td>
-    <td>REFUSED_TEMPORARILY</td>
-    <td>Association request rejected temporarily; try again later.</td>
-  </tr>
-  <tr>
-    <td>126</td>
-    <td>SAE_HASH_TO_ELEMENT</td>
-    <td>SAE authentication uses direct hashing, instead of looping, to obtain the PWE.</td>
-  </tr>
-</table>
-
-**说明**
-
-表 1 列出的 Status Code 为常见类型，完整的 Status Code 可查看 802.11 标准协议。
-
-场景二：ASSOC 报文交互失败
-
-- 查看 AP 回复的 Assoc Rsp 报文中的 status code，分析原因，详细 status code 参考表 1;
-
-### BLE
-
----
-
-#### 手机扫不到 BLE 广播信号
-
-问题描述：【WS63】使用 AT 命令配置 BLE 广播功能，配置完成后使用手机扫描 BLE 信号，扫不到配置的 BLE 信号：
-
-```ini
-[15:54:04.557]发→◇AT+BLEENABLE
-[15:54:04.559]收←◆AT+BLEENABLE
-[ACore] ble enable cbk in, event:b
-OK
-
-[15:54:07.908]发→◇AT+BLESETADDR=0, 0x112233445566
-[15:54:07.911]收←◆AT+BLESETADDR=0, 0x112233445566
-OK
-
-[15:54:10.658]发→◇AT+BLESETNAME=9, atcmdtest
-[15:54:10.662]收←◆AT+BLESETNAME=9, atcmdtest
-OK
-
-[15:54:16.450]发→◇AT+BLESETAPPEARANCE=961
-[15:54:16.454]收←◆AT+BLESETAPPEARANCE=961
-OK
-
-[15:54:18.419]发→◇AT+BLESETADVDATA=6, 0x112233445566, 0, 0, 1
-[15:54:18.423]收←◆AT+BLESETADVDATA=6, 0x112233445566, 0, 0, 1
-OK
-
-[15:54:20.475]发→◇AT+BLESETADVPAR=48, 48, 0, 0x112233445577, 0, 0x112233445566, 7, 0, 1, 0, 1
-[15:54:20.481]收←◆AT+BLESETADVPAR=48, 48, 0, 0x112233445577, 0, 0x112233445566, 7, 0, 1, 0, 1
-[ACore] ble set adv param min_interval:0x30, max interval:0x30, adv_type:0, duration:0
-[ACore] ble set adv param, own addr:0x11:**:**:**:55:77
-[ACore] ble set adv param, peer addr:0x11:**:**:**:55:66
-OK
-
-[15:54:23.547]发→◇AT+BLESTARTADV=1
-[15:54:23.552]收←◆AT+BLESTARTADV=1
-[ACore] gap ble start adv in, adv_id:1
-OK
-```
-
-**解决方案：**
-
-使用BLE抓包卡进行抓包，能够抓到BLE广播报文，但手机BLE扫描界面扫不到信号，大概率是手机无法解析广播数据。
-
-把 AT + BLESETADVDATA = 6,0x112233445566,0,0,1 改成 AT + BLESETADVDATA = 0,0,0,0,1，BLE 广播不带数据，手机就能扫到配置 BLE 信号。
-
-### SLE
-
----
-
-#### SLE 覆盖距离和连接距离不一致
-
-问题描述：【WS63】SLE 拉距测试，通讯距离空旷条件下 200 百米以上才会断开连接，重新连接就得到 100 米内才可连接上，连接距离远小于业务覆盖距离。
-
-**解决方案：**
-
-BLE 和 SLE 有 2 个功率配置：1 个是 NV 中的功率 TPC code，NV 中的功率控制除广播外的报文功率；另 1 个是广播报文发射功率，配置是通过 UAPI 接口或 AT 配置命令设置。NV 中配置 TPC Code 为 7，NV 中的发射功率是 20dbm，但广播报文发射功率配置为 10dbm，由于广播功率比 NV 中的功率小，导致连接距离比覆盖距离小。
-
-调整广播功率，保持和NV中的功率一致，连接距离和覆盖距离一致。
-
----
-
-#### SLE client 设置 MTU 到 520，实际最多只到 251
-
-sle 案例中，client 端设置 MTU 到 520，最后实际最多到 251 的情况，如下图：
-
-![MTU 实际值示意图](figures/image1.png)
-
-![MTU 设置示意图](figures/image2.png)
-
-**解决方案：**
-
-- server 端与 client 端设置的 MTU 需保持一致。建立连接配对后，Client 和 Server 端会对 MTU Size 进行交换，使用更小的 MTU Size 作为 MTU 大小。如果 Server 端没有设置 MTU 的话，默认为最小值。
-- 你可以在 Server `sle_pair_complete_cbk` 中设置一个 Server 的 `MTU Size = 520`，这样 Client 设置 520 后，MTU 就会是 520：
-
-```c
-ssap_exchange_info_t info = {0};
-info.mtu_size = 520;
-info.version = 1;
-ssaps_set_info(0, &info);
-```
-
-默认的 SLE Uart 案例没有设置 Server 端的 MTU Size，需要手动设置一下。
-
-原帖：<https://developers.hisilicon.com/postDetail?tid=02178214214394841015>
-
----
-
-#### server 端 notify/indicate，client 的 notification_cb 没有响应
-
-sle 案例中，sle 连接后，client 用 `ssapc_write_cmd` 发，server 可以收到；反过来用 `ssaps_notify_indicate` 发，client 的 `notification_cb` 没有响应的情况。
-
-**解决方案：**
-
-添加操作指示权限，如下图：
-
-![添加操作指示权限](figures/image3.png)
-
----
-
-#### sle 通信出现频繁断连重连现象
-
-![频繁断连重连现象](figures/image4.png)
-
-**解决方案：**
-
-- 服务端：加入销毁线程函数，防止重复创建线程，修改如下图：
-
-![服务端修改](figures/image5.png)
-
-- 客户端：修改如下图：
-
-![客户端修改](figures/image6.png)
-
----
-
-#### BS22 里 sle_uart 的低延时跑流不成功
-
-**解决方案：**
-
-- 修改 nv：
-
-![修改 nv](figures/image7.png)
-
-- phy 改小到 1M：
-
-![phy 改为 1M](figures/image8.png)
-
-- 数据长度改小到 30：
-
-![数据长度改为 30](figures/image9.png)
-
----
-
-#### WS63 服务端通过 indicate 给客户端发送没有反应
-
-![indicate 无响应](figures/image10.png)
-
----
-
-## 外设问题
-
-WS63 外设（UART、复位引脚等）使用过程中常见的通信异常问题。
-
----
-
-### UART 配置错误通信异常
-
-问题描述：【WS63】UART 初始化后，管脚配置是正确的，但 UART 还是无法正常通信。
-
-**解决方案：**
-
-检查UART配置是否正确，重点关注data_bits、stop_bits、parity配置，这3个配置一定要使用hal_uart_data_bit_t、hal_uart_stop_bit_t、hal_uart_parity_t枚举定义的值。
-
-注意：UART_DATA_BIT_8 枚举值是 3，不是 8；UART_STOP_BIT_1 枚举值是 0，不是 1。
-
-初始化时需要注意枚举变量是否设置正确。
-
-uart_line_config.baud_rate = baud_rate;
-
-uart_line_config.data_bits = UART_DATA_BIT_8;
-
-uart_line_config.parity = UART_PARITY_NONE;
-
-uart_line_config.stop_bits = UART_STOP_BIT_1;
-
----
-
-### reset 引脚电压过高无法重启
-
-问题描述：【WS63】模组通信串口断电后（单独抽拔 VCC），此时再上电接上 VCC，有时会无法正常启动。
-
-**解决方案：**
-
-模组通信串口断电后（拔掉 VCC），测的 power_on 的电压为 1.44V，此时有电流倒灌现象，power_on 复位要求 1.4V 故无法正常重新启动
-
-1、调测过程中，可以用power_on接地复位或者同时使整个串口断电来避免UART口倒灌；
-
-2、可以增大UART口的RX通路的上拉电阻（或者不加RX口的上拉）来减少倒灌的电压，但是要保证对端设备的TX有足够的上拉能力，实测RX口上拉电阻为2.2K时，power_on的
-
-倒灌电压有 1.25V 左右，当上拉电阻为 47K 时，power_on 的倒灌电压为 0.7V 左右，满足 power_on 的下电电压。
-
----
-
-### UART RX 无法通信
-
-问题描述：【WS63】模组 UART 与主板无法正常通信，发现 TX 能正常发送数据，RX 无法接受数据
-
-**解决方案：**
-
-出现此类问题，第一时间测量RX端异常通信时的波形，发现低电平有1.1V，而UART的低电平识别阈值为-0.3V-0.8V；芯片端低电平识别错误，故无法通信；
-
-1、在驱动能力足够的情况下去除 RX 处的上拉电阻，避免与主板的上拉电阻形成分压，造成芯片端的电压偏大。
-
-2、在无法去除上拉的情况下，增大RX端的上拉电阻的阻值。
-
----
-
-## 射频测试
-
-WS63 射频测试场景下的信令连接、OTA 优化、丢包分析与 BLE 功率校准等常见问题。
-
----
-
-### WiFi 信令测试无法与仪表建立连接
-
-问题描述：【WS63】使用 CMW500 仪表进行信令测试时，芯片与仪表无法建立连接或者 TX 信息无法解调；
-
-**解决方案：**
-
-**一、信令连接指令：**
-
-```text
-AT+STARTSTA
-AT+SCAN
-AT + SCANRESULT
-AT+CONN="CMW-AP", "test123456" // "仪表 ID", "仪表密码"; 若仪表无密码, 则只输 "仪表 ID"
-AT + DHCP = wlan0, 1
-```
-
-**二、仪表配置：**
-
-1、standard 中选择 11ax
-
-![](figures/pdf_wifi_standard_11ax.jpg)
-
-2、config 中勾选Support of DSSS，并选择 DSSS 1Mbps  
-![](figures/pdf_wifi_dsss.jpg)
-
-![](figures/pdf_p41_supported_rates.png)
-
-
-3、config 中 Trigger RX Format 选择 HE_SU Bursts
-
-![](figures/pdf_wifi_trigger_rx.jpg)
-
-4、Packet Generator 中 PG1 PG2 PG3 全部勾选
-
-![](figures/pdf_wifi_packet_generator.jpg)
-
-5、Packet Generator 中 interval 设置成 20，Size 设置成 1472  
-![](figures/pdf_wifi_pg_interval.jpg)  
-5、WLAN 打开
-
-![](figures/pdf_wifi_wlan_config.jpg)
-
-**三、解析信号**
-
-![](figures/pdf_wifi_tx_power.jpg)
-
----
-
-### OTA 测试中通过更改仪表配置来优化 TIS 值
-
-问题描述: 【WS63】OTA 测试时，在不改变板级状态的条件下，可以通过更改仪表配置或者自动化设置来优化提升 TIS 值吗？
-
-**解决方案：**
-
-仪表自动化配置：
-
-INTERVAL: 下行配置建议≥1ms
-
-PAYLOAD SIZE: 下行配置建议设置 500
-
-DTM信令测试
-
-FRAME COUNT: 下行配置建议≥500
-
-CELL POWER: 11b 建议-60db
-
-11g/n 建议-50db
-
-11ax 建议-40db
-
----
-
-### 信令测试 RX 强信号场景下出现丢包
-
-问题描述：【WS63】Wi-Fi 11b 信令测试过程中，发现在-40dbm 的强信号下，都会有丢包。
-
-**解决方案：**
-
-在排除环境干扰的情况下，BLE 广播会影响WIFI 的丢包，强信号下会有大概 2% 左右的丢包。
-
-通过软件控制来关闭 BLE 广播会避免此类情况，另外，不关闭的情况下，有 2% 左右的丢包，对极限灵敏度的影响较小。
-
----
-
-### 如何进行 BLE 信令测试
-
-问题描述: 【WS63】如何使用 CMW500 进行 BLE 信令测试。
-
-**解决方案：**
-
-BLE射频测试CMW500操作
-
-1、搭建环境：
-①DTM测试需要独立的HCI固件
-②DUT串口直接连接到仪表上
-
-2、配置基础选项  
-仍选择BLE测试  
-在配置界面依次如下选择
-
-![](figures/pdf_ble_config.jpg)  
-注：如果使用USB转TTL串口小板连接仪表，仪表需要安装对应的驱动，否则仪表无法识别断开
-
-**BLE射频测试CMW500操作DTM信令测试**
-
-3、Connect Check反馈 LE comm test passed后可开始进行TX、RX测试
-
-![](figures/pdf_ble_connect_check.jpg)
-
-4、点击RF Settings在下方配置TX测试参数，或在Cofing中设置
-
-![](figures/pdf_ble_rf_settings.jpg)
-
-![](figures/pdf_ble_rf_tx_power.jpg)
-
----
-
-### BLE 测试功率值偏差太大问题
-
-问题描述：【WS63】BLE 测试中，校准正常，但有时候BLE 功率值偏差太大（目标功率 6，实测只有 3 点几），是什么原因？
-
-**解决方案：**
-
-上电时未接负载或者仪表会导致上电初始化时射频匹配阻抗不是 $50\Omega$ ，因此造成功率偏差较大，
-
-所以在测试 BLE 功率时，必须确保模组或芯片上电时已经接好 50Ω 负载或者仪表，此时 BLE 功率波动在 ±2db 以内。
-
----
-
-## 产线测试
-
-WS63 生产测试（产线）中的温补参数、产测上位机调试与板载天线功率校准等常见问题。
-
----
-
-### 温补参数写入后没有生效
-
-问题描述：【WS63】测试温补频偏参数时，按照手册测试得出数据后写入 nv 中，写入成功，读取正常。但是测试显示补偿前和补偿后没有变化；例如
-
-补偿前用 cwm500 测得频偏 14ppm, 补偿后重启测得频偏还是 14ppm。
-
-**解决方案：**
-
-执行AT+CCPRIV=wlan0,set_mfg_debug_mode,1，产线版本默认不支持频偏温补功能，测试高低温频偏温补功能时，需要配置该命令进入调试模式；同时使用上位机测试频偏时（非产测生产，仅用作研发测试），也需要将此命令加入到flow当中。
-
-![](figures/pdf_wifi_freq_offset.jpg)
-
-可以参考交付件里《WS63V100 软件开发指南》中 2.6 章节的内容，常用就是 target_power 是不同协议速率下的目标功率，limit_power 是按照信道划分的限制功率。
-
----
-
-### 极致汇仪如何开启 debug
-
-问题描述：【WS63】使用极致汇仪产测软件遇到测试 Fail 时，如何使用极致汇仪的 debug 功能来查看下发指令及回显是否正确呢？
-
-**解决方案：**
-
-**步骤 1** 向极致汇仪申请对应极致汇仪仪表型号、SN 号、及对应芯片型号（例如，73，63，53）的产测上位机的 debug key，将该 key 放到极致汇仪上位机的根目录下即可
-
-**步骤 2** 修改极致汇仪上位机根目录下的 debug.ini 文件，将 print_send 和 print_receive 修改成 1 后保存。
-
-![](figures/pdf_tool_debug_ini.jpg)
-
-**步骤 3** 重启上位机即可。
-
----
-
-### 板载天线的模组在生产时如何校准
-
-问题描述：【WS63】板载天线的模组在生产时如何进行较为准确的功率校准。
-
-**解决方案：**
-
-**步骤 1** 将贴片完成模组的随机抽取 5pcs 作为金板，将其板载天线断开后，焊接同轴线缆进行功率校准。
-
-**步骤 2** 功率校准完成后，进行功率复测，将产线上会用到的信道进行功率测试，记录基准值。
-
-**步骤 3** 将5pcs模组的板载天线重新焊接回去，然后放入产线生产工装内进行产线工装整体的线损校准，记录测量值，
-
-**步骤 4** 基准值减去测量值得到测试信道在工装上的功率误差，计算 5pcs 模组功率误差平均值。
-
-**步骤 5** 将功率误差补到产线工装上后进行生产测试，产测过程中可抽测模组验证功率校准是否准确。
-
-下图可做参考：
-
-![](figures/pdf_p47_allboard.png)
