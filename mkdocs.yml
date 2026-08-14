@@ -25,6 +25,10 @@ plugins:
   - search:
       lang:
         - zh
+#   - exclude:
+#         glob:
+#           - "zh-CN/software/*"
+#           - "zh-CN/docker/*"
 
 extra:
   # 反馈链接
@@ -342,7 +346,13 @@ nav:
       - BurnTool: zh-CN/tools/BurnToolUserGuide/BurnToolUserGuide.md
   - FAQ:
       - FAQ: zh-CN/FAQ/index.md
-      - 编译与环境: zh-CN/FAQ/compilation/index.md
+      - 编译: zh-CN/FAQ/compile/compile.md
+      - 环境: zh-CN/FAQ/environment/environment.md
+      - 系统: zh-CN/FAQ/system/system.md
+      - 无线通信: zh-CN/FAQ/wireless/wireless.md
+      - 外设: zh-CN/FAQ/peripherals/peripherals.md
+      - 射频测试: zh-CN/FAQ/rf-testing/rf-testing.md
+      - 产线测试: zh-CN/FAQ/production-testing/production-testing.md
   - 其他:
       - 其他: zh-CN/others/index.md
       - 版本说明: zh-CN/others/versions/index.md

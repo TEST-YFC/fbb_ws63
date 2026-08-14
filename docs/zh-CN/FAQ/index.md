@@ -5,15 +5,49 @@ hide:
 
 # 常见问题
 
-开发过程中常见的报错与解答。
-
 ## 快速导航
 
 ---
 
-- [编译与环境](compilation/index.md)
+- [编译](compile/compile.md)
 
-    编译、开发环境配置等常见问题。
+    编译过程中的常见报错：SDK 路径、Kconfig、Ninja / CMake / ccache、工程编译慢等。
+
+---
+
+- [环境](environment/environment.md)
+
+    环境搭建、工具配置、调试路径失效、串口连接等常见问题。
+
+---
+
+- [系统](system/system.md)
+
+    死机、看门狗挂死、死锁及系统异常信息导出与解析。
+
+---
+
+- [无线通信](wireless/wireless.md)
+
+    Wi-Fi 扫描/关联、BLE 广播、SLE（星闪）连接与通信等常见问题。
+
+---
+
+- [外设](peripherals/peripherals.md)
+
+    UART 配置、复位引脚、RX 通信等外设使用问题。
+
+---
+
+- [射频测试](rf-testing/rf-testing.md)
+
+    信令测试仪表连接、OTA 优化、丢包分析与 BLE 功率校准。
+
+---
+
+- [产线测试](production-testing/production-testing.md)
+
+    温补参数、产测上位机调试与板载天线功率校准。
 
 ---
 
