@@ -29,9 +29,12 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
+
 #include "los_typedef.h"
 #include "los_hwi.h"
 #include "los_printf.h"
+#include "los_task.h"
+#include "los_exc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +53,6 @@ extern "C" {
 #if (configUSE_MALLOC_FAILED_HOOK == 1)
 extern void vApplicationMallocFailedHook(void);
 #endif
-#define portYIELD()
 /* Type definitions. */
 #define portCHAR char
 #define portFLOAT float
@@ -62,6 +64,10 @@ extern void vApplicationMallocFailedHook(void);
 #define portBASE_TYPE            int32_t
 #define portUBASE_TYPE           uint32_t
 #define portMAX_DELAY            (TickType_t) 0xffffffffUL
+/* 由目标 tick 频率统一换算毫秒，避免 SDK 假定 1 tick 恒等于 1 ms。 */
+#ifndef portTICK_PERIOD_MS
+#define portTICK_PERIOD_MS       ((TickType_t) (1000 / configTICK_RATE_HZ))
+#endif
 
 typedef portSTACK_TYPE StackType_t;
 typedef INT32 BaseType_t;
@@ -83,31 +89,28 @@ typedef UINT32 TickType_t;
 #define portDISABLE_INTERRUPTS()                                   LOS_IntLock()
 #define portENABLE_INTERRUPTS()                                    LOS_IntUnLock()
 
-extern size_t xCriticalNesting;
-#define portENTER_CRITICAL()      \
-    do {                          \
-        portDISABLE_INTERRUPTS(); \
-        xCriticalNesting++;       \
-    } while (0)
+extern void vPortEnterCritical(void);
+extern void vPortExitCritical(void);
+extern void vPortYieldFromISR(BaseType_t xHigherPriorityTaskWoken);
 
-#define portEXIT_CRITICAL()          \
-    do {                             \
-        xCriticalNesting--;          \
-        if ( xCriticalNesting == 0 )  \
-        {                            \
-            portENABLE_INTERRUPTS(); \
-        }                            \
-    } while (0)
+#define portENTER_CRITICAL() vPortEnterCritical()
+#define portEXIT_CRITICAL()  vPortExitCritical()
 
 #ifndef configASSERT
-#define configASSERT(x)    if (!(x)) { PRINTK("\nAssertion failed in %s:%d\n", __FILE__, __LINE__); }
+#define configASSERT(x)                                                        \
+    do {                                                                       \
+        if (!(x)) {                                                            \
+            LOS_Panic("FreeRTOS assertion failed in %s:%d\n", __FILE__, __LINE__); \
+        }                                                                      \
+    } while (0)
 #endif
 
-#ifndef portYIELD
-#define portYIELD()        LOS_TaskYield()
-#endif
+#define portYIELD() LOS_TaskYield()
 
-extern UINT8 g_taskUsed;
+#define portYIELD_FROM_ISR(xHigherPriorityTaskWoken) vPortYieldFromISR(xHigherPriorityTaskWoken)
+#define portEND_SWITCHING_ISR(xSwitchRequired) portYIELD_FROM_ISR(xSwitchRequired)
+
+extern UINT32 g_taskUsed;
 
 #ifdef __cplusplus
 }

@@ -25,6 +25,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /* Standard includes. */
 #include <stdlib.h>
 #include <string.h>
@@ -33,17 +34,19 @@
 #include "los_task.h"
 #include "los_task_base.h"
 #include "los_task_pri.h"
+#include "los_event.h"
 #include "los_spinlock.h"
 #include "los_stackinfo_pri.h"
 #include "los_mp_pri.h"
-#include "los_swtmr.h"
-#include "los_swtmr_pri.h"
+#include "los_sched_pri.h"
+#include "securec.h"
 
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "timers.h"
 #include "stack_macros.h"
+#include "freertos_compat_pri.h"
 
 #ifndef configINITIAL_TICK_COUNT
     #define configINITIAL_TICK_COUNT    0
@@ -61,18 +64,21 @@
 /* Other file private variables. --------------------------------*/
 PRIVILEGED_DATA static volatile BaseType_t xNumOfOverflows = (BaseType_t) 0;
 PRIVILEGED_DATA static volatile TickType_t xTickCount = (TickType_t) configINITIAL_TICK_COUNT;
-size_t xCriticalNesting = (size_t)0xaaaaaaaa;
+PRIVILEGED_DATA static volatile UBaseType_t uxSchedulerSuspended = 0;
 
 /*
  * 用于适配liteos的tskTCB
  */
 typedef struct tskTaskControlBlock {
     UINT32 taskId;
+        UBaseType_t uxBasePriority;
+    uint8_t ucStaticallyAllocated;
+    uint8_t ucKernelOwned;
     #if (configUSE_APPLICATION_TASK_TAG == 1)
         TaskHookFunction_t pxTaskTag;
     #endif
     #if (configUSE_TASK_NOTIFICATIONS == 1)
-        UINT16 swtmrId;
+                EVENT_CB_S notifyEvent;
         volatile uint32_t ulNotifiedValue[configTASK_NOTIFICATION_ARRAY_ENTRIES];
         volatile uint8_t ucNotifyState[configTASK_NOTIFICATION_ARRAY_ENTRIES];
     #endif
@@ -85,9 +91,22 @@ typedef struct tskTaskControlBlock {
 } tskTCB;
 typedef tskTCB TCB_t;
 
+#if (configSUPPORT_STATIC_ALLOCATION == 1)
+/* 在编译期阻止 StaticTask_t 容量不足导致调用者内存越界。 */
+typedef char StaticTaskBufferSizeCheck[(sizeof(StaticTask_t) >= sizeof(tskTCB)) ? 1 : -1];
+#endif
+
+#define TASK_NOTIFY_WAKE_BIT 0x1U
+
 #if (LOSCFG_BASE_CORE_TSK_LIMIT >= 1)
     portDONT_DISCARD PRIVILEGED_DATA TCB_t *volatile pxCurrentTCBs[LOSCFG_BASE_CORE_TSK_LIMIT] = {0};
     #define pxCurrentTCB    xTaskGetCurrentTaskHandle()
+#endif
+
+#if (INCLUDE_xTaskGetIdleTaskHandle == 1)
+/* 为 LiteOS 内核创建的 idle task 提供生命周期稳定的 FreeRTOS 句柄。 */
+static TCB_t g_idleTaskTCB;
+static BOOL g_idleTaskTCBInitialized;
 #endif
 
 /* spinlock for freertos task module, only available on SMP mode */
@@ -96,6 +115,32 @@ LITE_OS_SEC_BSS  SPIN_LOCK_INIT(g_fr_taskSpin);
 
 #define FR_TASK_LOCK(state)       LOS_SpinLockSave(&g_fr_taskSpin, &(state))
 #define FR_TASK_UNLOCK(state)     LOS_SpinUnlockRestore(&g_fr_taskSpin, (state))
+
+/*
+ * FreeRTOS 与 LiteOS 的优先级方向相反：
+ *   FreeRTOS: 数值越大优先级越高，0 = 最低(idle)，范围 0 ~ (configMAX_PRIORITIES-1)
+ *   LiteOS  : 数值越小优先级越高，0 = 最高，范围 LOS_TASK_PRIORITY_HIGHEST(0) ~ LOS_TASK_PRIORITY_LOWEST(31)
+ * 这里把 FreeRTOS 优先级映射到 LiteOS 的低端(数值大)区间，保持"高优先级"语义一致。
+ */
+static inline UINT16 PrioFR2LOS(UBaseType_t frPrio)
+{
+    if (frPrio >= configMAX_PRIORITIES) {
+        frPrio = configMAX_PRIORITIES - 1;
+    }
+    return (UINT16)(LOS_TASK_PRIORITY_LOWEST - frPrio);
+}
+
+static inline UBaseType_t PrioLOS2FR(UINT16 losPrio)
+{
+    if (losPrio > LOS_TASK_PRIORITY_LOWEST) {
+        losPrio = LOS_TASK_PRIORITY_LOWEST;
+    }
+    if (losPrio < (LOS_TASK_PRIORITY_LOWEST - (configMAX_PRIORITIES - 1))) {
+        /* 内核里比 FreeRTOS 可表达范围更高的优先级(如系统任务)，钳到最高可表达值 */
+        return (UBaseType_t)(configMAX_PRIORITIES - 1);
+    }
+    return (UBaseType_t)(LOS_TASK_PRIORITY_LOWEST - losPrio);
+}
 
 static eTaskState xTaskStatusAdapter(UINT16 taskStatus)
 {
@@ -122,10 +167,29 @@ static eTaskState xTaskStatusAdapter(UINT16 taskStatus)
     return eInvalid;
 }
 
+static UBaseType_t prvStackHighWaterMark(const LosTaskCB *taskCB)
+{
+    UINT32 peakUsed = 0;
+    UINTPTR stackBottom;
+
+    if (taskCB == NULL) {
+        return 0;
+    }
+    stackBottom = TRUNCATE(((UINTPTR)taskCB->topOfStack + taskCB->stackSize),
+                           LOSCFG_STACK_POINT_ALIGN_SIZE);
+    if ((OsStackWaterLineGet((const UINTPTR *)stackBottom,
+                             (const UINTPTR *)taskCB->topOfStack, &peakUsed) != LOS_OK) ||
+        (peakUsed > taskCB->stackSize)) {
+        return 0;
+    }
+    /* 将 LiteOS 峰值已用字节数换算为 FreeRTOS 要求的历史最小剩余栈元素数。 */
+    return (UBaseType_t)((taskCB->stackSize - peakUsed) / sizeof(StackType_t));
+}
+
 static BaseType_t xTaskMapTaskId(TaskHandle_t xtask, UINT32 taskId)
 {
     UINT32 intSave;
-    if (taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) {
+        if (taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) {
         return errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
     }
     FR_TASK_LOCK(intSave);
@@ -139,7 +203,7 @@ TaskHandle_t xTaskGetCurrentTaskHandle(void)
     TaskHandle_t xReturn;
     UINT32 intSave;
     UINT32 taskId = LOS_CurTaskIDGet();
-    if (taskId > LOSCFG_BASE_CORE_TSK_LIMIT) {
+    if (taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) {
         return NULL;
     }
     FR_TASK_LOCK(intSave);
@@ -148,6 +212,94 @@ TaskHandle_t xTaskGetCurrentTaskHandle(void)
 
     return xReturn;
 }
+
+#if (INCLUDE_xTaskGetIdleTaskHandle == 1)
+static TaskHandle_t prvGetIdleTaskHandle(void)
+{
+    if (LOS_TaskIsScheduled() != TRUE) {
+        return NULL;
+    }
+
+    UINT32 taskId = OsGetIdleTaskId();
+    if ((taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) ||
+        ((OS_TCB_FROM_TID(taskId)->taskStatus & OS_TASK_STATUS_UNUSED) != 0U)) {
+        return NULL;
+    }
+
+    UINT32 intSave;
+    FR_TASK_LOCK(intSave);
+    TaskHandle_t taskHandle = pxCurrentTCBs[taskId];
+    if (taskHandle == NULL) {
+        if (g_idleTaskTCBInitialized == FALSE) {
+            if (memset_s(&g_idleTaskTCB, sizeof(g_idleTaskTCB), 0, sizeof(g_idleTaskTCB)) != EOK) {
+                FR_TASK_UNLOCK(intSave);
+                return NULL;
+            }
+            g_idleTaskTCB.taskId = taskId;
+            g_idleTaskTCB.uxBasePriority = tskIDLE_PRIORITY;
+            g_idleTaskTCB.ucKernelOwned = pdTRUE;
+            g_idleTaskTCBInitialized = TRUE;
+        }
+        pxCurrentTCBs[taskId] = &g_idleTaskTCB;
+        taskHandle = &g_idleTaskTCB;
+    }
+    FR_TASK_UNLOCK(intSave);
+    return taskHandle;
+}
+
+#if (configNUMBER_OF_CORES == 1)
+TaskHandle_t xTaskGetIdleTaskHandle(void)
+{
+    return prvGetIdleTaskHandle();
+}
+#endif
+
+TaskHandle_t xTaskGetIdleTaskHandleForCore(BaseType_t xCoreID)
+{
+    return (xCoreID == 0) ? prvGetIdleTaskHandle() : NULL;
+}
+#endif
+
+TaskHandle_t xTaskGetHandleByKernelTaskId(UINT32 taskId)
+{
+    TaskHandle_t xReturn;
+    UINT32 intSave;
+
+    if (taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) {
+        return NULL;
+    }
+    /* 为互斥量持有者查询提供 LiteOS task ID 到 FreeRTOS 句柄的稳定映射。 */
+    FR_TASK_LOCK(intSave);
+    xReturn = pxCurrentTCBs[taskId];
+    FR_TASK_UNLOCK(intSave);
+    return xReturn;
+}
+
+#if (INCLUDE_xTaskGetHandle == 1)
+TaskHandle_t xTaskGetHandle(const char *pcNameToQuery)
+{
+    if (pcNameToQuery == NULL) {
+        return NULL;
+    }
+
+    UINT32 intSave;
+    TaskHandle_t result = NULL;
+    FR_TASK_LOCK(intSave);
+    for (UINT32 taskId = 0; taskId < LOSCFG_BASE_CORE_TSK_LIMIT; taskId++) {
+        TaskHandle_t handle = pxCurrentTCBs[taskId];
+        LosTaskCB *taskCB = OS_TCB_FROM_TID(taskId);
+        if ((handle == NULL) || ((taskCB->taskStatus & OS_TASK_STATUS_UNUSED) != 0U)) {
+            continue;
+        }
+        if ((taskCB->taskName != NULL) && (strcmp(taskCB->taskName, pcNameToQuery) == 0)) {
+            result = handle;
+            break;
+        }
+    }
+    FR_TASK_UNLOCK(intSave);
+    return result;
+}
+#endif
 
 eTaskState eTaskGetState(TaskHandle_t xTask)
 {
@@ -159,6 +311,101 @@ eTaskState eTaskGetState(TaskHandle_t xTask)
     }
     const LosTaskCB *taskCB =  OS_TCB_FROM_TID(taskId);
     return xTaskStatusAdapter(taskCB->taskStatus);
+}
+
+BaseType_t xTaskGetSchedulerState(void)
+{
+    if (LOS_TaskIsScheduled() != TRUE) {
+        return taskSCHEDULER_NOT_STARTED;
+    }
+    return (uxSchedulerSuspended > 0U) ? taskSCHEDULER_SUSPENDED : taskSCHEDULER_RUNNING;
+}
+
+#if (configUSE_TASK_NOTIFICATIONS == 1)
+/* 使用 LiteOS EVENT 仅承担阻塞唤醒，通知值和状态保留在 compat TCB，以维持 FreeRTOS 通知语义。 */
+static void prvNotifySyncDeinit(TCB_t *taskCB, UBaseType_t count)
+{
+    (void)count;
+    (void)LOS_EventDestroy(&taskCB->notifyEvent);
+}
+
+static BaseType_t prvNotifySyncInit(TCB_t *taskCB)
+{
+    if (LOS_EventInit(&taskCB->notifyEvent) != LOS_OK) {
+        return pdFAIL;
+    }
+    for (UBaseType_t i = 0; i < configTASK_NOTIFICATION_ARRAY_ENTRIES; i++) {
+        taskCB->ulNotifiedValue[i] = 0;
+        taskCB->ucNotifyState[i] = taskNOT_WAITING_NOTIFICATION;
+    }
+    return pdPASS;
+}
+#endif /* configUSE_TASK_NOTIFICATIONS */
+
+static void prvTaskUnmapTaskId(UINT32 taskId)
+{
+    UINT32 intSave;
+    if (taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) {
+        return;
+    }
+    FR_TASK_LOCK(intSave);
+    pxCurrentTCBs[taskId] = NULL;
+    FR_TASK_UNLOCK(intSave);
+}
+
+/* 区分动态与静态 TCB 所有权，避免删除静态任务时释放调用者内存。 */
+static void prvTaskControlBlockRelease(TCB_t *taskCB)
+{
+    if ((taskCB != NULL) && (taskCB->ucStaticallyAllocated == pdFALSE) &&
+        (taskCB->ucKernelOwned == pdFALSE)) {
+        (void)LOS_MemFree(OS_SYS_MEM_ADDR, taskCB);
+    }
+}
+
+static BaseType_t prvTaskControlBlockInit(TCB_t *taskCB, size_t bufferSize,
+                                          UBaseType_t uxPriority, BaseType_t isStatic)
+{
+    if (memset_s(taskCB, bufferSize, 0, sizeof(tskTCB)) != EOK) {
+        return pdFAIL;
+    }
+    taskCB->ucStaticallyAllocated = (uint8_t)isStatic;
+    taskCB->uxBasePriority =
+        (uxPriority < configMAX_PRIORITIES) ? uxPriority : (configMAX_PRIORITIES - 1U);
+#if (configUSE_TASK_NOTIFICATIONS == 1)
+    if (prvNotifySyncInit(taskCB) != pdPASS) {
+        return pdFAIL;
+    }
+#endif
+#if (INCLUDE_xTaskAbortDelay == 1)
+    taskCB->ucDelayAborted = pdFALSE;
+#endif
+    return pdPASS;
+}
+
+static void prvTaskInitParam(TSK_INIT_PARAM_S *initParam, TaskFunction_t taskCode,
+                             const char *name, configSTACK_DEPTH_TYPE stackDepth,
+                             void *parameters, UBaseType_t priority)
+{
+    initParam->pcName = (char *)name;
+    initParam->pfnTaskEntry = (TSK_ENTRY_FUNC)taskCode;
+    initParam->pArgs = parameters;
+    initParam->uwStackSize = stackDepth * sizeof(StackType_t);
+    initParam->usTaskPrio = PrioFR2LOS(priority);
+}
+
+static void prvTaskCreateCleanup(TCB_t *taskCB, BaseType_t taskCreated,
+                                 BaseType_t taskMapped)
+{
+    if (taskMapped != pdFALSE) {
+        prvTaskUnmapTaskId(taskCB->taskId);
+    }
+    if (taskCreated != pdFALSE) {
+        (void)LOS_TaskDelete(taskCB->taskId);
+    }
+#if (configUSE_TASK_NOTIFICATIONS == 1)
+    prvNotifySyncDeinit(taskCB, configTASK_NOTIFICATION_ARRAY_ENTRIES);
+#endif
+    prvTaskControlBlockRelease(taskCB);
 }
 
 BaseType_t xTaskCreate(TaskFunction_t pxTaskCode,
@@ -176,40 +423,35 @@ BaseType_t xTaskCreate(TaskFunction_t pxTaskCode,
     }
 
     pxNewTCB = (TaskHandle_t)LOS_MemAlloc(OS_SYS_MEM_ADDR, sizeof(tskTCB));
-#if (configUSE_TASK_NOTIFICATIONS == 1)
-    for (UINT32 i = 0; i < configTASK_NOTIFICATION_ARRAY_ENTRIES; i++) {
-        pxNewTCB->ulNotifiedValue[i] = 0;
-        pxNewTCB->ucNotifyState[i] = 0;
+    if (pxNewTCB == NULL) {
+        return errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
     }
-#endif
-    initParam.pcName = (char *)pcName;
-    initParam.pfnTaskEntry = (TSK_ENTRY_FUNC)pxTaskCode;
-    initParam.pArgs = pvParameters;
-    initParam.uwStackSize = uxStackDepth * sizeof(StackType_t);
-    initParam.usTaskPrio = uxPriority;
-
-#if (INCLUDE_xTaskAbortDelay == 1)
-    pxNewTCB->ucDelayAborted = pdFALSE;
-#endif
+    if (prvTaskControlBlockInit(pxNewTCB, sizeof(tskTCB), uxPriority, pdFALSE) != pdPASS) {
+        (void)LOS_MemFree(OS_SYS_MEM_ADDR, pxNewTCB);
+        return errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
+    }
+    prvTaskInitParam(&initParam, pxTaskCode, pcName, uxStackDepth, pvParameters, uxPriority);
 
     ret = LOS_TaskCreateOnly(&(pxNewTCB->taskId), &initParam);
     if (ret != LOS_OK) {
-        LOS_MemFree(OS_SYS_MEM_ADDR, pxNewTCB);
+        prvTaskCreateCleanup(pxNewTCB, pdFALSE, pdFALSE);
         return errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
     }
-    ret = xTaskMapTaskId(pxNewTCB, (pxNewTCB)->taskId);
+    ret = xTaskMapTaskId(pxNewTCB, pxNewTCB->taskId);
     if (ret != pdPASS) {
-        LOS_MemFree(OS_SYS_MEM_ADDR, pxNewTCB);
+        prvTaskCreateCleanup(pxNewTCB, pdTRUE, pdFALSE);
         return errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
     }
 
     if (pxCreatedTask != NULL) {
         *pxCreatedTask = pxNewTCB;
     }
-
     ret = LOS_TaskResume(pxNewTCB->taskId);
     if (ret != LOS_OK) {
-        LOS_MemFree(OS_SYS_MEM_ADDR, pxNewTCB);
+        if (pxCreatedTask != NULL) {
+            *pxCreatedTask = NULL;
+        }
+        prvTaskCreateCleanup(pxNewTCB, pdTRUE, pdTRUE);
         return errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
     }
 
@@ -227,53 +469,36 @@ TaskHandle_t xTaskCreateStatic(TaskFunction_t pxTaskCode,
     UINT32 ret;
     TSK_INIT_PARAM_S initParam = {0};
 
-    if (pxTaskCode == NULL) {
+    /* 保留调用者栈缓冲区身份，并由 LiteOS 校验 3322 所需的 16 字节地址与大小对齐。 */
+    if ((pxTaskCode == NULL) || (puxStackBuffer == NULL) || (pxTaskBuffer == NULL) ||
+        (sizeof(StaticTask_t) < sizeof(tskTCB))) {
         return NULL;
     }
 
-    if (puxStackBuffer == NULL) {
+    TaskHandle_t task = (TaskHandle_t)pxTaskBuffer;
+    if (prvTaskControlBlockInit(task, sizeof(StaticTask_t), uxPriority, pdTRUE) != pdPASS) {
         return NULL;
     }
-
-    TaskHandle_t task = (TaskHandle_t)LOS_MemAlloc(OS_SYS_MEM_ADDR, sizeof(tskTCB));
-    if (task == NULL) {
-        return NULL;
-    }
-#if (configUSE_TASK_NOTIFICATIONS == 1)
-    for (UINT32 i = 0; i < configTASK_NOTIFICATION_ARRAY_ENTRIES; i++) {
-        task->ulNotifiedValue[i] = 0;
-        task->ucNotifyState[i] = 0;
-    }
-#endif
-    initParam.pcName = (char *)pcName;
-    initParam.pfnTaskEntry = (TSK_ENTRY_FUNC)pxTaskCode;
-    initParam.pArgs = pvParameters;
-    initParam.uwStackSize = uxStackDepth * sizeof(StackType_t);
-    initParam.usTaskPrio = uxPriority;
-
-#if (INCLUDE_xTaskAbortDelay == 1)
-    task->ucDelayAborted = pdFALSE;
-#endif
+    prvTaskInitParam(&initParam, pxTaskCode, pcName, uxStackDepth, pvParameters, uxPriority);
 
     ret = LOS_TaskCreateOnlyStatic(&(task->taskId), &initParam, puxStackBuffer);
     if (ret != LOS_OK) {
-        LOS_MemFree(OS_SYS_MEM_ADDR, task);
+        prvTaskCreateCleanup(task, pdFALSE, pdFALSE);
         return NULL;
     }
 
     ret = xTaskMapTaskId(task, task->taskId);
     if (ret != pdPASS) {
-        LOS_MemFree(OS_SYS_MEM_ADDR, task);
+        prvTaskCreateCleanup(task, pdTRUE, pdFALSE);
         return NULL;
     }
 
     ret = LOS_TaskResume(task->taskId);
     if (ret != LOS_OK) {
-        LOS_MemFree(OS_SYS_MEM_ADDR, task);
+        prvTaskCreateCleanup(task, pdTRUE, pdTRUE);
         return NULL;
     }
 
-    (void)pxTaskBuffer;
     return task;
 }
 
@@ -292,13 +517,37 @@ void vTaskDelete(TaskHandle_t xTaskToDelete)
         taskId = xTaskToDelete->taskId;
     }
 
-    if (pxCurrentTCBs[taskId] == NULL) {
+    if ((taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) || (pxCurrentTCBs[taskId] == NULL)) {
+                return;
+    }
+
+    TCB_t *taskCB = pxCurrentTCBs[taskId];
+    /* 保留 LiteOS 内核拥有的系统任务，避免删除失败后 compat 仍清理有效句柄。 */
+    if (taskCB->ucKernelOwned != pdFALSE) {
         return;
     }
 
-    LOS_TaskDelete(pxCurrentTCBs[taskId]->taskId);
-    LOS_MemFree(OS_SYS_MEM_ADDR, pxCurrentTCBs[taskId]);
-    pxCurrentTCBs[taskId] = NULL;
+    if (taskId == LOS_CurTaskIDGet()) {
+                if (OsPreemptable() == FALSE) {
+            return;
+        }
+#if (configUSE_TASK_NOTIFICATIONS == 1)
+        prvNotifySyncDeinit(taskCB, configTASK_NOTIFICATION_ARRAY_ENTRIES);
+#endif
+        prvTaskUnmapTaskId(taskId);
+        prvTaskControlBlockRelease(taskCB);
+        (void)LOS_TaskDelete(taskId);
+        return;
+    }
+
+    if (LOS_TaskDelete(taskCB->taskId) != LOS_OK) {
+        return;
+    }
+#if (configUSE_TASK_NOTIFICATIONS == 1)
+    prvNotifySyncDeinit(taskCB, configTASK_NOTIFICATION_ARRAY_ENTRIES);
+#endif
+        prvTaskUnmapTaskId(taskId);
+    prvTaskControlBlockRelease(taskCB);
 }
 
 void vTaskDelay(const TickType_t xTicksToDelay)
@@ -342,7 +591,7 @@ UBaseType_t uxTaskPriorityGet(const TaskHandle_t xTask)
         taskId = xTask->taskId;
     }
 
-    return LOS_TaskPriGet(taskId);
+    return PrioLOS2FR((UINT16)LOS_TaskPriGet(taskId));
 }
 
 void vTaskPrioritySet(TaskHandle_t xTask, UBaseType_t uxNewPriority)
@@ -354,7 +603,14 @@ void vTaskPrioritySet(TaskHandle_t xTask, UBaseType_t uxNewPriority)
         taskId = xTask->taskId;
     }
 
-    LOS_TaskPriSet(taskId, uxNewPriority);
+        if ((pxCurrentTCBs[taskId] != NULL) && (pxCurrentTCBs[taskId]->ucKernelOwned != pdFALSE)) {
+        return;
+    }
+    if (pxCurrentTCBs[taskId] != NULL) {
+        pxCurrentTCBs[taskId]->uxBasePriority =
+            (uxNewPriority < configMAX_PRIORITIES) ? uxNewPriority : (configMAX_PRIORITIES - 1U);
+    }
+    LOS_TaskPriSet(taskId, PrioFR2LOS(uxNewPriority));
 }
 
 void vTaskSuspend(TaskHandle_t xTaskToSuspend)
@@ -379,23 +635,27 @@ void vTaskResume(TaskHandle_t xTaskToResume)
 
 BaseType_t xTaskResumeFromISR(TaskHandle_t xTaskToResume)
 {
-    if (xTaskToResume == NULL) {
+    if ((xTaskToResume == NULL) ||
+        (xTaskToResume->taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) ||
+        (pxCurrentTCBs[xTaskToResume->taskId] != xTaskToResume)) {
         return pdFALSE;
     }
 
+    LosTaskCB *targetTask = OS_TCB_FROM_TID(xTaskToResume->taskId);
+    LosTaskCB *currentTask = OsCurrTaskGet();
+    BaseType_t shouldYield = ((currentTask != NULL) &&
+                              (targetTask->priority < currentTask->priority)) ? pdTRUE : pdFALSE;
     UINT32 ret = LOS_TaskResume(xTaskToResume->taskId);
-    if (ret == LOS_OK) {
-        return pdTRUE;
-    }
-
-    return pdFALSE;
+    return ((ret == LOS_OK) && (shouldYield != pdFALSE)) ? pdTRUE : pdFALSE;
 }
 
+#if (INCLUDE_xTaskAbortDelay == 1)
 BaseType_t xTaskAbortDelay(TaskHandle_t xTask)
 {
-    // 强制唤醒任务暂不支持
+    (void)xTask;
     return pdFALSE;
 }
+#endif
 
 UBaseType_t uxTaskPriorityGetFromISR(const TaskHandle_t xTask)
 {
@@ -406,7 +666,7 @@ UBaseType_t uxTaskPriorityGetFromISR(const TaskHandle_t xTask)
         taskId = xTask->taskId;
     }
 
-    UBaseType_t pri = LOS_TaskPriGet(taskId);
+    UBaseType_t pri = PrioLOS2FR((UINT16)LOS_TaskPriGet(taskId));
 
     return pri;
 }
@@ -419,15 +679,15 @@ UBaseType_t uxTaskBasePriorityGet(const TaskHandle_t xTask)
     } else {
         taskId = xTask->taskId;
     }
-    const LosTaskCB *taskCB =  OS_TCB_FROM_TID(taskId);
+        if ((taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) || (pxCurrentTCBs[taskId] == NULL) ||
+        ((xTask != NULL) && (pxCurrentTCBs[taskId] != xTask))) {
+        return pdFAIL;
+    }
+    TCB_t *taskCB = pxCurrentTCBs[taskId];
     if (taskCB == NULL) {
         return 0;
     }
-    if (taskCB->priBitMap != 0) {
-        return taskCB->priBitMap;
-    } else {
-        return taskCB->priority;
-    }
+    return taskCB->uxBasePriority;
 }
 
 UBaseType_t uxTaskBasePriorityGetFromISR(const TaskHandle_t xTask)
@@ -456,29 +716,34 @@ UBaseType_t uxTaskGetSystemState(TaskStatus_t * const pxTaskStatusArray,
     }
     const LosTaskCB *taskCB = NULL;
     UINT32 intSave;
+        UBaseType_t taskIndex = 0;
     FR_TASK_LOCK(intSave);
-    for (UBaseType_t loop = 0; loop < task_num; loop++) {
+    /* 扫描完整任务表，避免 LiteOS task ID 删除复用后遗漏非连续任务。 */
+    for (UBaseType_t loop = 0; loop < LOSCFG_BASE_CORE_TSK_LIMIT; loop++) {
         taskCB = g_osTaskCBArray + loop;
-        pxTaskStatusArray[loop].xHandle = pxCurrentTCBs[taskCB->taskId];
-        pxTaskStatusArray[loop].pcTaskName = taskCB->taskName;
-        pxTaskStatusArray[loop].xTaskNumber = taskCB->taskId;
-        pxTaskStatusArray[loop].eCurrentState = xTaskStatusAdapter(taskCB->taskStatus);
-        pxTaskStatusArray[loop].uxCurrentPriority = taskCB->priority;
-        pxTaskStatusArray[loop].uxBasePriority = taskCB->priBitMap != 0 ? taskCB->priBitMap : taskCB->priority;
-        pxTaskStatusArray[loop].pxStackBase = (StackType_t *)taskCB->topOfStack;
-        UINTPTR uwBottomOfStack = TRUNCATE(((UINTPTR)taskCB->topOfStack + taskCB->stackSize),
-                                           LOSCFG_STACK_POINT_ALIGN_SIZE);
-        OsStackWaterLineGet((const UINTPTR *)uwBottomOfStack,
-                            (const UINTPTR *)taskCB->topOfStack, &pxTaskStatusArray[loop].usStackHighWaterMark);
+        if ((taskCB->taskStatus & OS_TASK_STATUS_UNUSED) != 0U) {
+            continue;
+        }
+        pxTaskStatusArray[taskIndex].xHandle = pxCurrentTCBs[taskCB->taskId];
+        pxTaskStatusArray[taskIndex].pcTaskName = taskCB->taskName;
+        pxTaskStatusArray[taskIndex].xTaskNumber = taskCB->taskId;
+        pxTaskStatusArray[taskIndex].eCurrentState = xTaskStatusAdapter(taskCB->taskStatus);
+        pxTaskStatusArray[taskIndex].uxCurrentPriority = PrioLOS2FR((UINT16)taskCB->priority);
+        pxTaskStatusArray[taskIndex].uxBasePriority = (pxCurrentTCBs[taskCB->taskId] != NULL) ?
+            pxCurrentTCBs[taskCB->taskId]->uxBasePriority :
+            PrioLOS2FR((UINT16)taskCB->priority);
+        pxTaskStatusArray[taskIndex].pxStackBase = (StackType_t *)taskCB->topOfStack;
+        pxTaskStatusArray[taskIndex].usStackHighWaterMark = prvStackHighWaterMark(taskCB);
 #ifdef LOSCFG_WCFS_SCHEDULER
-        pxTaskStatusArray[loop].ulRunTimeCounter = taskCB->runtick;
+        pxTaskStatusArray[taskIndex].ulRunTimeCounter = taskCB->runtick;
 #endif
+        taskIndex++;
     }
     FR_TASK_UNLOCK(intSave);
     if (pulTotalRunTime != NULL) {
         *pulTotalRunTime = LOS_TickCountGet();
     }
-    return task_num;
+    return taskIndex;
 }
 
 void vTaskGetInfo(TaskHandle_t xTask,
@@ -505,13 +770,12 @@ void vTaskGetInfo(TaskHandle_t xTask,
     pxTaskStatus->pcTaskName = taskCB->taskName;
     pxTaskStatus->xTaskNumber = taskCB->taskId;
     pxTaskStatus->eCurrentState = xTaskStatusAdapter(taskCB->taskStatus);
-    pxTaskStatus->uxCurrentPriority = taskCB->priority;
-    pxTaskStatus->uxBasePriority = taskCB->priBitMap != 0 ? taskCB->priBitMap : taskCB->priority;
+    pxTaskStatus->uxCurrentPriority = PrioLOS2FR((UINT16)taskCB->priority);
+    pxTaskStatus->uxBasePriority = (pxCurrentTCBs[taskCB->taskId] != NULL) ?
+        pxCurrentTCBs[taskCB->taskId]->uxBasePriority :
+        PrioLOS2FR((UINT16)taskCB->priority);
     pxTaskStatus->pxStackBase = (StackType_t *)taskCB->topOfStack;
-    UINTPTR uwBottomOfStack = TRUNCATE(((UINTPTR)taskCB->topOfStack + taskCB->stackSize),
-                                       LOSCFG_STACK_POINT_ALIGN_SIZE);
-    OsStackWaterLineGet((const UINTPTR *)uwBottomOfStack,
-                        (const UINTPTR *)taskCB->topOfStack, &pxTaskStatus->usStackHighWaterMark);
+    pxTaskStatus->usStackHighWaterMark = prvStackHighWaterMark(taskCB);
 #ifdef LOSCFG_WCFS_SCHEDULER
     pxTaskStatus->ulRunTimeCounter = taskCB->runtick;
 #endif
@@ -579,44 +843,28 @@ void vTaskSetApplicationTaskTag(TaskHandle_t xTask, TaskHookFunction_t pxTagValu
 #if (INCLUDE_uxTaskGetStackHighWaterMark == 1)
 UBaseType_t uxTaskGetStackHighWaterMark(TaskHandle_t xTask)
 {
-    UINT32 taskId, ret;
+    UINT32 taskId;
     if (xTask == NULL) {
         taskId = LOS_CurTaskIDGet();
     } else {
         taskId = xTask->taskId;
     }
     const LosTaskCB *taskCB = OS_TCB_FROM_TID(taskId);
-    UBaseType_t usStackHighWaterMark = 0;
-    UINTPTR uwBottomOfStack = TRUNCATE(((UINTPTR)taskCB->topOfStack + taskCB->stackSize),
-                                       LOSCFG_STACK_POINT_ALIGN_SIZE);
-    ret = OsStackWaterLineGet((const UINTPTR *)uwBottomOfStack,
-                              (const UINTPTR *)taskCB->topOfStack, &usStackHighWaterMark);
-    if (ret == LOS_NOK) {
-        return 0;
-    }
-    return usStackHighWaterMark;
+    return prvStackHighWaterMark(taskCB);
 }
 #endif
 
 #if (INCLUDE_uxTaskGetStackHighWaterMark2 == 1)
 configSTACK_DEPTH_TYPE uxTaskGetStackHighWaterMark2(TaskHandle_t xTask)
 {
-    UINT32 taskId, ret;
+    UINT32 taskId;
     if (xTask == NULL) {
         taskId = LOS_CurTaskIDGet();
     } else {
         taskId = xTask->taskId;
     }
     const LosTaskCB *taskCB = OS_TCB_FROM_TID(taskId);
-    configSTACK_DEPTH_TYPE usStackHighWaterMark = 0;
-    UINTPTR uwBottomOfStack = TRUNCATE(((UINTPTR)taskCB->topOfStack + taskCB->stackSize),
-                                       LOSCFG_STACK_POINT_ALIGN_SIZE);
-    ret = OsStackWaterLineGet((const UINTPTR *)uwBottomOfStack,
-                              (const UINTPTR *)taskCB->topOfStack, &usStackHighWaterMark);
-    if (ret == LOS_NOK) {
-        return 0;
-    }
-    return usStackHighWaterMark;
+    return (configSTACK_DEPTH_TYPE)prvStackHighWaterMark(taskCB);
 }
 #endif
 
@@ -738,12 +986,23 @@ void vTaskEndScheduler(void)
 
 void vTaskSuspendAll(void)
 {
+    /* 记录 FreeRTOS 调度挂起层数，保证嵌套 suspend 和 resume 与 LiteOS 调度锁成对。 */
+    UINT32 intSave = LOS_IntLock();
+    uxSchedulerSuspended++;
+    LOS_IntRestore(intSave);
     LOS_TaskLock();
 }
 
 BaseType_t xTaskResumeAll(void)
 {
-    LOS_TaskUnlock();
+    UINT32 intSave = LOS_IntLock();
+    if (uxSchedulerSuspended > 0U) {
+        uxSchedulerSuspended--;
+        LOS_IntRestore(intSave);
+        LOS_TaskUnlock();
+    } else {
+        LOS_IntRestore(intSave);
+    }
     return pdFALSE;
 }
 
@@ -764,42 +1023,125 @@ BaseType_t xTaskCatchUpTicks(TickType_t xTicksToCatchUp)
 
 TickType_t xTaskGetTickCountFromISR(void)
 {
-    // liteos为自系统启动开始，freertos为调度开始。
     return LOS_TickCountGet();
 }
 
 #if (configUSE_TASK_NOTIFICATIONS == 1)
-/* 定时唤醒需要等待通知的任务 */
-STATIC VOID wake_notifiedvalue_callback(UINTPTR arg)
+static UINT32 wait_notifiedvalue_timeout(TCB_t *taskCB, UBaseType_t uxIndexToWaitOn,
+                                         TickType_t xTicksToWait)
 {
-    UINT32 taskId = (UINT32)arg;
-    LOS_TaskResume(taskId);
-    return;
-}
-
-static void wait_notifiedvalue_timeout(TCB_t *taskCB, TickType_t xTicksToWait)
-{
-    UINT32 ret;
     if (xTicksToWait == 0) {
-        return;
+        return LOS_NOK;
     }
-    if (xTicksToWait < portMAX_DELAY) {
-        ret = LOS_SwtmrCreate(xTicksToWait, LOS_SWTMR_MODE_ONCE, (SWTMR_PROC_FUNC)wake_notifiedvalue_callback,
-                              &(taskCB->swtmrId), (UINTPTR)(taskCB->taskId));
-        if (ret != LOS_OK) {
-            return;
+    TickType_t xStart = xTaskGetTickCount();
+    for (;;) {
+        UINT32 timeout = LOS_WAIT_FOREVER;
+        if (xTicksToWait != portMAX_DELAY) {
+            TickType_t elapsed = (TickType_t)(xTaskGetTickCount() - xStart);
+            if (elapsed >= xTicksToWait) {
+                return LOS_NOK;
+            }
+            timeout = (UINT32)(xTicksToWait - elapsed);
         }
-        LOS_SwtmrStart(taskCB->swtmrId);
+
+        /* 将 EVENT 限定为唤醒令牌，避免其位值替代 FreeRTOS 的独立通知状态。 */
+        UINT32 ret = LOS_EventRead(&taskCB->notifyEvent, TASK_NOTIFY_WAKE_BIT,
+                                   LOS_WAITMODE_OR | LOS_WAITMODE_CLR, timeout);
+        UINT32 intSave;
+        FR_TASK_LOCK(intSave);
+        BaseType_t notified =
+            (taskCB->ucNotifyState[uxIndexToWaitOn] == taskNOTIFICATION_RECEIVED) ? pdTRUE : pdFALSE;
+        FR_TASK_UNLOCK(intSave);
+        if (notified != pdFALSE) {
+            return LOS_OK;
+        }
+        if (ret != TASK_NOTIFY_WAKE_BIT) {
+            return ret;
+        }
+        /* 丢弃超时边界遗留的旧唤醒令牌，避免下一次等待被错误唤醒。 */
     }
-    LOS_TaskSuspend(taskCB->taskId);
 }
 
-STATIC UINT32 wake_notifiedvalue(UINT32 taskId)
+STATIC UINT32 wake_notifiedvalue(TCB_t *taskCB, UBaseType_t uxIndexToNotify)
 {
-    LOS_SwtmrStop(pxCurrentTCBs[taskId]->swtmrId);
-    LOS_SwtmrDelete(pxCurrentTCBs[taskId]->swtmrId);
-    LOS_TaskResume(taskId);
-    return LOS_OK;
+    (void)uxIndexToNotify;
+    return LOS_EventWrite(&taskCB->notifyEvent, TASK_NOTIFY_WAKE_BIT);
+}
+
+static BaseType_t prvTaskNotifyValueUpdate(TCB_t *taskCB, UBaseType_t index,
+                                           uint32_t value, eNotifyAction action,
+                                           uint8_t originalState)
+{
+    switch (action) {
+        case eSetBits:
+            taskCB->ulNotifiedValue[index] |= value;
+            return pdPASS;
+        case eIncrement:
+            taskCB->ulNotifiedValue[index]++;
+            return pdPASS;
+        case eSetValueWithOverwrite:
+            taskCB->ulNotifiedValue[index] = value;
+            return pdPASS;
+        case eSetValueWithoutOverwrite:
+            if (originalState == taskNOTIFICATION_RECEIVED) {
+                return pdFAIL;
+            }
+            taskCB->ulNotifiedValue[index] = value;
+            return pdPASS;
+        case eNoAction:
+            return pdPASS;
+        default:
+            return pdFAIL;
+    }
+}
+
+static BaseType_t prvTaskGenericNotify(TaskHandle_t xTaskToNotify,
+                                       UBaseType_t uxIndexToNotify,
+                                       uint32_t ulValue,
+                                       eNotifyAction eAction,
+                                       uint32_t *pulPreviousNotificationValue,
+                                       BaseType_t *pxWasWaiting)
+{
+    if ((xTaskToNotify == NULL) ||
+        (xTaskToNotify->taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) ||
+        (uxIndexToNotify >= configTASK_NOTIFICATION_ARRAY_ENTRIES)) {
+        return pdFAIL;
+    }
+    UINT32 intSave;
+    BaseType_t taskLockHeld = pdFALSE;
+
+    if (!OS_INT_ACTIVE) {
+        LOS_TaskLock();
+        taskLockHeld = pdTRUE;
+    }
+    FR_TASK_LOCK(intSave);
+    TCB_t *taskCB = pxCurrentTCBs[xTaskToNotify->taskId];
+    if (taskCB != xTaskToNotify) {
+        FR_TASK_UNLOCK(intSave);
+        if (taskLockHeld != pdFALSE) {
+            LOS_TaskUnlock();
+        }
+        return pdFAIL;
+    }
+    if (pulPreviousNotificationValue != NULL) {
+        *pulPreviousNotificationValue = taskCB->ulNotifiedValue[uxIndexToNotify];
+    }
+
+    uint8_t originalState = taskCB->ucNotifyState[uxIndexToNotify];
+    taskCB->ucNotifyState[uxIndexToNotify] = taskNOTIFICATION_RECEIVED;
+    BaseType_t xReturn = prvTaskNotifyValueUpdate(taskCB, uxIndexToNotify, ulValue,
+                                                  eAction, originalState);
+    if (pxWasWaiting != NULL) {
+        *pxWasWaiting = (originalState == taskWAITING_NOTIFICATION) ? pdTRUE : pdFALSE;
+    }
+    FR_TASK_UNLOCK(intSave);
+    if (originalState == taskWAITING_NOTIFICATION) {
+        (void)wake_notifiedvalue(taskCB, uxIndexToNotify);
+    }
+    if (taskLockHeld != pdFALSE) {
+        LOS_TaskUnlock();
+    }
+    return xReturn;
 }
 
 BaseType_t xTaskGenericNotify(TaskHandle_t xTaskToNotify,
@@ -808,59 +1150,8 @@ BaseType_t xTaskGenericNotify(TaskHandle_t xTaskToNotify,
                               eNotifyAction eAction,
                               uint32_t * pulPreviousNotificationValue)
 {
-    if (uxIndexToNotify >= configTASK_NOTIFICATION_ARRAY_ENTRIES || xTaskToNotify == NULL) {
-        return pdFAIL;
-    }
-    BaseType_t xReturn = pdPASS;
-    uint8_t ucOriginalNotifyState;
-    TCB_t *taskCB = pxCurrentTCBs[xTaskToNotify->taskId];
-    
-    taskENTER_CRITICAL();
-    if (pulPreviousNotificationValue != NULL) {
-        *pulPreviousNotificationValue = taskCB->ulNotifiedValue[uxIndexToNotify];
-    }
-
-    ucOriginalNotifyState = taskCB->ucNotifyState[uxIndexToNotify];
-
-    taskCB->ucNotifyState[uxIndexToNotify] = taskNOTIFICATION_RECEIVED;
-
-    switch (eAction) {
-        case eSetBits:
-            taskCB->ulNotifiedValue[uxIndexToNotify] |= ulValue;
-            break;
-        case eIncrement:
-            (taskCB->ulNotifiedValue[uxIndexToNotify])++;
-            break;
-        case eSetValueWithOverwrite:
-            taskCB->ulNotifiedValue[uxIndexToNotify] = ulValue;
-            break;
-        case eSetValueWithoutOverwrite:
-            if (ucOriginalNotifyState != taskNOTIFICATION_RECEIVED) {
-                taskCB->ulNotifiedValue[uxIndexToNotify] = ulValue;
-            } else {
-                /* The value could not be written to the task. */
-                xReturn = pdFAIL;
-            }
-            break;
-        case eNoAction:
-            /* The task is being notified without its notify value being
-             * updated. */
-            break;
-        default:
-            /* Should not get here if all enums are handled.
-            * Artificially force an assert by testing a value the
-            * compiler can't assume is const. */
-            configASSERT(xTickCount == (TickType_t) 0);
-            break;
-    }
-
-    if (ucOriginalNotifyState == taskWAITING_NOTIFICATION) {
-        wake_notifiedvalue(xTaskToNotify->taskId);
-    } else {
-        mtCOVERAGE_TEST_MARKER();
-    }
-    taskEXIT_CRITICAL();
-    return xReturn;
+    return prvTaskGenericNotify(xTaskToNotify, uxIndexToNotify, ulValue, eAction,
+                                pulPreviousNotificationValue, NULL);
 }
 
 BaseType_t xTaskGenericNotifyFromISR(TaskHandle_t xTaskToNotify,
@@ -871,10 +1162,20 @@ BaseType_t xTaskGenericNotifyFromISR(TaskHandle_t xTaskToNotify,
                                      BaseType_t * pxHigherPriorityTaskWoken)
 {
     BaseType_t xReturn;
+    BaseType_t wasWaiting = pdFALSE;
+    BaseType_t shouldYield = pdFALSE;
+    UINT32 targetTaskId = (xTaskToNotify != NULL) ? xTaskToNotify->taskId : LOSCFG_BASE_CORE_TSK_LIMIT;
 
-    xReturn = xTaskGenericNotify(xTaskToNotify, uxIndexToNotify, ulValue, eAction, pulPreviousNotificationValue);
-    if (pxHigherPriorityTaskWoken != NULL) {
-        *pxHigherPriorityTaskWoken = pdFALSE;
+    xReturn = prvTaskGenericNotify(xTaskToNotify, uxIndexToNotify, ulValue, eAction,
+                                   pulPreviousNotificationValue, &wasWaiting);
+    if ((xReturn == pdPASS) && (wasWaiting != pdFALSE) &&
+        (targetTaskId < LOSCFG_BASE_CORE_TSK_LIMIT)) {
+        LosTaskCB *targetTask = OS_TCB_FROM_TID(targetTaskId);
+        LosTaskCB *currentTask = OsCurrTaskGet();
+        shouldYield = ((currentTask != NULL) && (targetTask->priority < currentTask->priority)) ? pdTRUE : pdFALSE;
+    }
+    if ((pxHigherPriorityTaskWoken != NULL) && (shouldYield != pdFALSE)) {
+        *pxHigherPriorityTaskWoken = ((xReturn == pdPASS) && (shouldYield != pdFALSE)) ? pdTRUE : pdFALSE;
     }
     return xReturn;
 }
@@ -883,10 +1184,8 @@ void vTaskGenericNotifyGiveFromISR(TaskHandle_t xTaskToNotify,
                                    UBaseType_t uxIndexToNotify,
                                    BaseType_t * pxHigherPriorityTaskWoken)
 {
-    xTaskNotifyGiveIndexed(xTaskToNotify, uxIndexToNotify);
-    if (pxHigherPriorityTaskWoken != NULL) {
-        *pxHigherPriorityTaskWoken = pdFALSE;
-    }
+    (void)xTaskGenericNotifyFromISR(xTaskToNotify, uxIndexToNotify, 0U, eIncrement,
+        NULL, pxHigherPriorityTaskWoken);
 }
 
 uint32_t ulTaskGenericNotifyTake(UBaseType_t uxIndexToWaitOn,
@@ -899,24 +1198,28 @@ uint32_t ulTaskGenericNotifyTake(UBaseType_t uxIndexToWaitOn,
         return 0;
     }
     UINT32 taskId = LOS_CurTaskIDGet();
+    if (taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) {
+        return 0;
+    }
     TCB_t *taskCB = pxCurrentTCBs[taskId];
+        if (taskCB == NULL) {
+        return 0;
+    }
 
-    FR_TASK_LOCK(intSave);
+        FR_TASK_LOCK(intSave);
     /* Only block if the notification count is not already non-zero. */
+    BaseType_t needBlock = pdFALSE;
     if (taskCB->ulNotifiedValue[uxIndexToWaitOn] == 0U) {
         /* Mark this task as waiting for a notification. */
         taskCB->ucNotifyState[uxIndexToWaitOn] = taskWAITING_NOTIFICATION;
-        if (xTicksToWait > (TickType_t) 0) {
-            wait_notifiedvalue_timeout(taskCB, xTicksToWait);
-            FR_TASK_UNLOCK(intSave);
-        } else {
-            mtCOVERAGE_TEST_MARKER();
-        }
-    } else {
-        mtCOVERAGE_TEST_MARKER();
+        needBlock = (xTicksToWait > (TickType_t) 0) ? pdTRUE : pdFALSE;
     }
-
+    /* 阻塞前释放自旋锁，避免任务在关中断或持锁状态下挂起。 */
     FR_TASK_UNLOCK(intSave);
+
+    if (needBlock != pdFALSE) {
+        (void)wait_notifiedvalue_timeout(taskCB, uxIndexToWaitOn, xTicksToWait);
+    }
 
     FR_TASK_LOCK(intSave);
     ulReturn = taskCB->ulNotifiedValue[uxIndexToWaitOn];
@@ -926,12 +1229,12 @@ uint32_t ulTaskGenericNotifyTake(UBaseType_t uxIndexToWaitOn,
         } else {
             taskCB->ulNotifiedValue[uxIndexToWaitOn] = ulReturn - (uint32_t) 1;
         }
-    } else {
-        mtCOVERAGE_TEST_MARKER();
     }
 
     taskCB->ucNotifyState[uxIndexToWaitOn] = taskNOT_WAITING_NOTIFICATION;
     FR_TASK_UNLOCK(intSave);
+    /* 清理超时边界可能到达的唤醒令牌，避免污染下一次通知等待。 */
+    (void)LOS_EventClear(&taskCB->notifyEvent, ~TASK_NOTIFY_WAKE_BIT);
 
     return ulReturn;
 }
@@ -948,10 +1251,17 @@ BaseType_t xTaskGenericNotifyWait(UBaseType_t uxIndexToWaitOn,
         return pdFAIL;
     }
     UINT32 taskId = LOS_CurTaskIDGet();
+    if (taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) {
+        return pdFAIL;
+    }
     TCB_t *taskCB = pxCurrentTCBs[taskId];
+        if (taskCB == NULL) {
+        return pdFAIL;
+    }
 
     FR_TASK_LOCK(intSave);
     /* Only block if a notification is not already pending. */
+    BaseType_t needBlock = pdFALSE;
     if (taskCB->ucNotifyState[uxIndexToWaitOn] != taskNOTIFICATION_RECEIVED) {
         /* Clear bits in the task's notification value as bits may get
         * set by the notifying task or interrupt. This can be used
@@ -959,16 +1269,14 @@ BaseType_t xTaskGenericNotifyWait(UBaseType_t uxIndexToWaitOn,
         taskCB->ulNotifiedValue[uxIndexToWaitOn] &= ~ulBitsToClearOnEntry;
         /* Mark this task as waiting for a notification. */
         taskCB->ucNotifyState[uxIndexToWaitOn] = taskWAITING_NOTIFICATION;
-        if (xTicksToWait > (TickType_t) 0) {
-            wait_notifiedvalue_timeout(taskCB, xTicksToWait);
-            FR_TASK_UNLOCK(intSave);
-        } else {
-            mtCOVERAGE_TEST_MARKER();
-        }
-    } else {
-        mtCOVERAGE_TEST_MARKER();
+        needBlock = (xTicksToWait > (TickType_t) 0) ? pdTRUE : pdFALSE;
     }
+    /* 阻塞前释放自旋锁，避免任务在关中断或持锁状态下挂起。 */
     FR_TASK_UNLOCK(intSave);
+
+    if (needBlock != pdFALSE) {
+        (void)wait_notifiedvalue_timeout(taskCB, uxIndexToWaitOn, xTicksToWait);
+    }
 
     FR_TASK_LOCK(intSave);
     if (pulNotificationValue != NULL) {
@@ -992,13 +1300,25 @@ BaseType_t xTaskGenericNotifyWait(UBaseType_t uxIndexToWaitOn,
 
     taskCB->ucNotifyState[uxIndexToWaitOn] = taskNOT_WAITING_NOTIFICATION;
     FR_TASK_UNLOCK(intSave);
+    (void)LOS_EventClear(&taskCB->notifyEvent, ~TASK_NOTIFY_WAKE_BIT);
 
     return xReturn;
+}
+
+char *pcTaskGetName(TaskHandle_t xTaskToQuery)
+{
+    /* 从 LiteOS TCB 获取权威任务名，避免 compat 句柄重复保存名称。 */
+    UINT32 taskId = (xTaskToQuery == NULL) ? LOS_CurTaskIDGet() : xTaskToQuery->taskId;
+    if (taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) {
+        return NULL;
+    }
+    return OS_TCB_FROM_TID(taskId)->taskName;
 }
 
 BaseType_t xTaskGenericNotifyStateClear(TaskHandle_t xTask, UBaseType_t uxIndexToClear)
 {
     BaseType_t xReturn;
+    UINT32 intSave;
 
     if (uxIndexToClear >= configTASK_NOTIFICATION_ARRAY_ENTRIES) {
         return pdFAIL;
@@ -1009,24 +1329,32 @@ BaseType_t xTaskGenericNotifyStateClear(TaskHandle_t xTask, UBaseType_t uxIndexT
     } else {
         taskId = xTask->taskId;
     }
+        if (taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) {
+        return pdFAIL;
+    }
+    FR_TASK_LOCK(intSave);
     TCB_t *taskCB = pxCurrentTCBs[taskId];
-    taskENTER_CRITICAL();
+    if ((taskCB == NULL) || ((xTask != NULL) && (taskCB != xTask))) {
+        FR_TASK_UNLOCK(intSave);
+        return pdFAIL;
+    }
     if (taskCB->ucNotifyState[uxIndexToClear] == taskNOTIFICATION_RECEIVED) {
         taskCB->ucNotifyState[uxIndexToClear] = taskNOT_WAITING_NOTIFICATION;
         xReturn = pdPASS;
     } else {
         xReturn = pdFAIL;
     }
-    taskEXIT_CRITICAL();
+    FR_TASK_UNLOCK(intSave);
     return xReturn;
 }
 
 uint32_t ulTaskGenericNotifyValueClear(TaskHandle_t xTask, UBaseType_t uxIndexToClear, uint32_t ulBitsToClear)
 {
     uint32_t ulReturn;
+    UINT32 intSave;
 
     if (uxIndexToClear >= configTASK_NOTIFICATION_ARRAY_ENTRIES) {
-        return pdFAIL;
+        return 0U;
     }
     UINT32 taskId;
     if (xTask == NULL) {
@@ -1034,13 +1362,20 @@ uint32_t ulTaskGenericNotifyValueClear(TaskHandle_t xTask, UBaseType_t uxIndexTo
     } else {
         taskId = xTask->taskId;
     }
+        if (taskId >= LOSCFG_BASE_CORE_TSK_LIMIT) {
+        return 0U;
+    }
+    FR_TASK_LOCK(intSave);
     TCB_t *taskCB = pxCurrentTCBs[taskId];
-    taskENTER_CRITICAL();
+    if ((taskCB == NULL) || ((xTask != NULL) && (taskCB != xTask))) {
+        FR_TASK_UNLOCK(intSave);
+        return 0U;
+    }
     /* Return the notification as it was before the bits were cleared,
     * then clear the bit mask. */
     ulReturn = taskCB->ulNotifiedValue[uxIndexToClear];
     taskCB->ulNotifiedValue[uxIndexToClear] &= ~ulBitsToClear;
-    taskEXIT_CRITICAL();
+    FR_TASK_UNLOCK(intSave);
 
     return ulReturn;
 }

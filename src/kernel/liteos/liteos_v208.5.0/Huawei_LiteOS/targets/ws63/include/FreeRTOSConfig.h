@@ -48,11 +48,14 @@
 #define configMAX_PRIORITIES 5U
 #define configMINIMAL_STACK_SIZE LOS_TASK_MIN_STACK_SIZE
 #define configMAX_TASK_NAME_LEN 4U
-#define configTICK_TYPE_WIDTH_IN_BITS TICK_TYPE_WIDTH_64_BITS
+/* Keep TickType_t aligned with the 32-bit LiteOS tick ABI. */
+#define configTICK_TYPE_WIDTH_IN_BITS TICK_TYPE_WIDTH_32_BITS
 #define configIDLE_SHOULD_YIELD 1
 #define configTASK_NOTIFICATION_ARRAY_ENTRIES 3U
 #define configQUEUE_REGISTRY_SIZE 0U
 #define configENABLE_BACKWARD_COMPATIBILITY 1
+/* FreeRTOS+FAT reserves errno, CWD and detailed-error slots.  CWD can be
+ * disabled, but the public stdio API still requires the three-slot ABI. */
 #define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1
 #define configSTACK_DEPTH_TYPE size_t
 #define configMESSAGE_BUFFER_LENGTH_TYPE size_t
@@ -128,9 +131,11 @@
 #define INCLUDE_eTaskGetState 1
 #define INCLUDE_xEventGroupSetBitFromISR 1
 #define INCLUDE_xTimerPendFunctionCall 1
-#define INCLUDE_xTaskAbortDelay 1
+/* LiteOS has no public primitive that can safely abort an arbitrary wait. */
+#define INCLUDE_xTaskAbortDelay 0
 #define INCLUDE_xTaskGetHandle 1
 #define INCLUDE_xTaskResumeFromISR 1
+#define INCLUDE_xSemaphoreGetMutexHolder 1
 
 #define INCLUDE_uxTaskGetStackHighWaterMark 1
 #define INCLUDE_uxTaskGetStackHighWaterMark2 1

@@ -2,7 +2,7 @@
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2026. All rights reserved.
  * Description : LiteOS adapt FreeRTOS.
  * Author : Huawei LiteOS Team
- * Create : 2026-01-05
+ * Create: 2026-08-14
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice, this list of
@@ -26,35 +26,28 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <FreeRTOS.h>
+#ifndef FREERTOS_COMPAT_PRI_H
+#define FREERTOS_COMPAT_PRI_H
+
+#include "FreeRTOS.h"
+#include "task.h"
+#include "timers.h"
 #include "los_typedef.h"
-#include "los_hwi.h"
-#include "los_sched_pri.h"
 
-static UINT32 level = 0;
-static UINT32 critical_nesting = 0;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-void vPortEnterCritical(void)
-{
-    if (critical_nesting == 0) {
-        level = LOS_IntLock();
-    }
-    critical_nesting += 1;
+TaskHandle_t xTaskGetHandleByKernelTaskId(UINT32 taskId);
+
+#if (INCLUDE_xTimerPendFunctionCall == 1)
+BaseType_t xCompatTimerCancelPendedCalls(PendedFunction_t firstFunction,
+                                         PendedFunction_t secondFunction,
+                                         VOID *parameter1);
+#endif
+
+#ifdef __cplusplus
 }
+#endif
 
-void vPortExitCritical(void)
-{
-    critical_nesting -= 1;
-    if (critical_nesting == 0) {
-        LOS_IntRestore(level);
-    }
-}
-
-void vPortYieldFromISR(BaseType_t xHigherPriorityTaskWoken)
-{
-    if (xHigherPriorityTaskWoken != pdFALSE) {
-        /* LiteOS records the reschedule request in ISR context and handles it on interrupt exit. */
-        LOS_Schedule();
-    }
-}
-
+#endif /* FREERTOS_COMPAT_PRI_H */
