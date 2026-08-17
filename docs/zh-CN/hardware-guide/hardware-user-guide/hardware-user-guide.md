@@ -134,10 +134,7 @@ WS63V100 系列芯片采用的封装形式为 QFN 40PIN，管脚按位置排列�
 
 表1-4 全局控制信号管脚列表
 
-| PIN | 名称    | 类型 | 电平(V) | 说明                                                                        |
-| --- | ------- | ---- | ------- | --------------------------------------------------------------------------- |
-| 38  | PWR_ON  | I    | 3.3/1.8 | PMU 上电使能管脚(跟随DVDD3318 电平)。0:下电;1:上电。                        |
-| 23  | PWR_SEL | I    | 3.3     | VBAT_IN 电源方案选择管脚。0:VBAT_IN 采用 5V 供电;1:VBAT_IN 采用 3.3V 供电。 |
+<table><tr><td>PIN</td><td>名称</td><td>类型</td><td>电平(V)</td><td>说明</td></tr><tr><td>38</td><td>PWR_ON</td><td>I</td><td>3.3/1.8</td><td>PMU 上电使能管脚(跟随DVDD3318 电平)。<br>0:下电;<br>1:上电。</td></tr><tr><td>23</td><td>PWR_SEL</td><td>I</td><td>3.3</td><td>VBAT_IN 电源方案选择管脚。<br>0:VBAT_IN 采用 5V 供电;<br>1:VBAT_IN 采用 3.3V 供电。</td></tr></table>
 
 #### GPIO 管脚
 
@@ -202,9 +199,6 @@ GND 管脚如表 1-8 所示。
 
 表1-8 GND 管脚列表
 
-| PIN | 名称 | 电压(V) | 说明 |
-| --- | ---- | ------- | ---- |
-
 | PIN  | 名称      | 电压(V) | 说明       |
 | ---- | --------- | ------- | ---------- |
 | 21   | AVSS_PGND | -       | GND 管脚。 |
@@ -216,12 +210,7 @@ GND 管脚如表 1-8 所示。
 
 表1-9 GPIO 复用管脚
 
-| PIN | 管脚名称 | 类型 | 电压(V)   | 说明                                                     |
-| --- | -------- | ---- | --------- | -------------------------------------------------------- |
-| 26  | UART1_TX | OD   | 5/3.3/1.8 | 复用信号0: GPIO_15复用信号1: UART1_TX复用信号2: I2C1_SDA |
-| 27  | UART1_RX | I    | 5/3.3/1.8 | 复用信号0: GPIO_16复用信号1: UART1_RX复用信号2: I2C1_SCL |
-| 28  | UART0_TX | OD   | 5/3.3/1.8 | 复用信号1: UART0_TX复用信号2: I2C0_SDA                   |
-| 29  | UART0_RX | I    | 5/3.3/1.8 | 复用信号1: UART0_RX复用信号2: I2C0_SCL                   |
+<table><tr><td>PIN</td><td>管脚名称</td><td>类型</td><td>电压(V)</td><td>说明</td></tr><tr><td>26</td><td>UART1_TX</td><td>OD</td><td>5/3.3/1.8</td><td>复用信号0: GPIO_15<br>复用信号1: UART1_TX<br>复用信号2: I2C1_SDA</td></tr><tr><td>27</td><td>UART1_RX</td><td>I</td><td>5/3.3/1.8</td><td>复用信号0: GPIO_16<br>复用信号1: UART1_RX<br>复用信号2: I2C1_SCL</td></tr><tr><td>28</td><td>UART0_TX</td><td>OD</td><td>5/3.3/1.8</td><td>复用信号1: UART0_TX<br>复用信号2: I2C0_SDA</td></tr><tr><td>29</td><td>UART0_RX</td><td>I</td><td>5/3.3/1.8</td><td>复用信号1: UART0_RX<br>复用信号2: I2C0_SCL</td></tr></table>
 
 #### ADC 通道
 
@@ -229,16 +218,16 @@ GND 管脚如表 1-8 所示。
 
     ADC 管脚：LSADC 通道与 GPIO 功能只支持其中 1 种功能，ADC 通道管脚与 GPIO 管脚的对应关系如表 1-10 所示。
 
-    表1-10 ADC 通道管脚与复用管脚对应关系
+表1-10 ADC 通道管脚与复用管脚对应关系
 
-    | 复用管脚名称 | ADC 管脚 |
-    | ------------ | -------- |
-    | GPIO_07      | ADC0     |
-    | GPIO_08      | ADC1     |
-    | GPIO_09      | ADC2     |
-    | GPIO_10      | ADC3     |
-    | GPIO_11      | ADC4     |
-    | GPIO_12      | ADC5     |
+| 复用管脚名称 | ADC 管脚 |
+| ------------ | -------- |
+| GPIO_07      | ADC0     |
+| GPIO_08      | ADC1     |
+| GPIO_09      | ADC2     |
+| GPIO_10      | ADC3     |
+| GPIO_11      | ADC4     |
+| GPIO_12      | ADC5     |
 
 #### GPIO 复用管脚
 
@@ -246,25 +235,7 @@ GPIO（General Purpose Input/Output）管脚如表 1-11 所示。其中 PIN5、7
 
 表1-11 GPIO 复用管脚
 
-| PIN | 管脚名称 | 类型 | 电压(V)   | 说明                                                                                                                                                    |
-| --- | -------- | ---- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 4   | GPIO_00  | I/O  | 3.3/1.8   | 复用信号 0: GPIO_0 (Default)复用信号 1: PWM0复用信号 2: 保留复用信号 3: SPI1_CSN复用信号 4: JTAG_TDI                                                    |
-| 5   | GPIO_01  | I/O  | 3.3/1.8   | 复用信号 0: GPIO_1 (Default)复用信号 1: PWM1复用信号 2: 保留复用信号 3: SPI1_IO0/SPI1_OUT                                                               |
-| 6   | GPIO_02  | I/O  | 3.3/1.8   | 复用信号 0: GPIO_2 (Default)复用信号 1: PWM2复用信号 2: 保留复用信号3:SPI1_IO3                                                                          |
-| 7   | GPIO_03  | I/O  | 3.3/1.8   | 复用信号0:GPIO_3(Default)复用信号1:PWM3复用信号2:保留复用信号3:SPI1_IO1/SPI1_IN                                                                         |
-| 8   | GPIO_04  | I/O  | 3.3/1.8   | 复用信号0:保留(Default)复用信号1:PWM4复用信号2:GPIO_4复用信号3:SPI1_IO1/SPI1_IN(优先使用pin8)复用信号4:JTAG_ENABLE,硬件配置字                           |
-| 9   | GPIO_05  | I/O  | 3.3/1.8   | 复用信号0:保留(Default)复用信号1:PWM5复用信号2:UART2_CTS复用信号3:SPI1_IO2复用信号4:GPIO_5复用信号5:SPI0_IN                                             |
-| 10  | GPIO_06  | I/O  | 3.3/1.8   | 复用信号0:GPIO_6(Default)复用信号1:PWM6复用信号2:UART2_RTS复用信号3:SPI1_SCK复用信号4:REFCLK_FREQ_STATUS,硬件配置字复用信号5:保留复用信号6:SPI0_OUT     |
-| 11  | GPIO_07  | I/O  | 3.3/1.8   | 复用信号0:GPIO_7(Default)复用信号1:PWM7复用信号2: UART2_RXD复用信号3: SPI0_SCK复用信号4: I2S_MCLK                                                       |
-| 12  | GPIO_08  | I/O  | 3.3/1.8   | 复用信号0: GPIO_8 (Default)复用信号1: PWM0复用信号2: UART2_TXD复用信号3: SPI0_CS1_N复用信号4: 保留                                                      |
-| 13  | GPIO_09  | I/O  | 3.3/1.8   | 复用信号0: GPIO_9 (Default)复用信号1: PWM1复用信号2: RADAR_ANT0_SW复用信号3: SPI0_OUT复用信号4: I2S_DO复用信号5: 保留复用信号6: 保留复用信号7: JTAG_TDO |
-| 14  | GPIO_10  | I/O  | 3.3/1.8   | 复用信号0: GPIO_10 (Default)复用信号1: PWM2复用信号2: ANT0_SW复用信号3: SPI0_CS0_N复用信号4: I2S_SCLK                                                   |
-| 15  | GPIO_11  | I/O  | 3.3/1.8   | 复用信号0: GPIO_11 (Default)复用信号1: PWM3复用信号2: RADAR_ANTI_SW复用信号3: SPI0_IN复用信号4: I2S_LRCLK                                               |
-| 16  | GPIO_12  | I/O  | 3.3/1.8   | 复用信号0: GPIO_12 (Default)复用信号1: PWM4复用信号2: ANT1_SW复用信号4: I2S_DI                                                                          |
-| 24  | GPIO_13  | I/O  | 3.3/1.8   | 复用信号0: GPIO_13 (Default)复用信号1: UART1_CTS复用信号2: RADAR_ANT0_SW复用信号3: 保留复用信号4: JTAG_TMS/SWD                                          |
-| 25  | GPIO_14  | I/O  | 3.3/1.8   | 复用信号0: GPIO_14 (Default)复用信号1: UART1_RTS复用信号2: RADAR_ANTI_SW复用信号3: 保留复用信号4: JTAG_TCK/SWC                                          |
-| 26  | UART1_TX | OD   | 5/3.3/1.8 | 复用信号0: GPIO_15复用信号1: UART1_TX复用信号2: I2C1_SDA                                                                                                |
-| 27  | UART1_RX | I    | 5/3.3/1.8 | 复用信号0: GPIO_16复用信号1: UART1_RX复用信号2: I2C1_SCL                                                                                                |
+<table><tr><td>PIN</td><td>管脚名称</td><td>类型</td><td>电压(V)</td><td>说明</td></tr><tr><td>4</td><td>GPIO_00</td><td>I/O</td><td>3.3/1.8</td><td>复用信号 0: GPIO_0 (Default)<br>复用信号 1: PWM0<br>复用信号 2: 保留<br>复用信号 3: SPI1_CSN<br>复用信号 4: JTAG_TDI</td></tr><tr><td>5</td><td>GPIO_01</td><td>I/O</td><td>3.3/1.8</td><td>复用信号 0: GPIO_1 (Default)<br>复用信号 1: PWM1<br>复用信号 2: 保留<br>复用信号 3: SPI1_IO0/SPI1_OUT</td></tr><tr><td>6</td><td>GPIO_02</td><td>I/O</td><td>3.3/1.8</td><td>复用信号 0: GPIO_2 (Default)<br>复用信号 1: PWM2<br>复用信号 2: 保留<br>复用信号3:SPI1_IO3</td></tr><tr><td>7</td><td>GPIO_03</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:GPIO_3(Default)<br>复用信号1:PWM3<br>复用信号2:保留<br>复用信号3:SPI1_IO1/SPI1_IN</td></tr><tr><td>8</td><td>GPIO_04</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:保留(Default)<br>复用信号1:PWM4<br>复用信号2:GPIO_4<br>复用信号3:SPI1_IO1/SPI1_IN(优先使用pin8)<br>复用信号4:JTAG_ENABLE,硬件配置字</td></tr><tr><td>9</td><td>GPIO_05</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:保留(Default)<br>复用信号1:PWM5<br>复用信号2:UART2_CTS<br>复用信号3:SPI1_IO2<br>复用信号4:GPIO_5<br>复用信号5:SPI0_IN</td></tr><tr><td>10</td><td>GPIO_06</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:GPIO_6(Default)<br>复用信号1:PWM6<br>复用信号2:UART2_RTS<br>复用信号3:SPI1_SCK<br>复用信号4:REFCLK_FREQ_STATUS,硬件配置字<br>复用信号5:保留<br>复用信号6:SPI0_OUT</td></tr><tr><td>11</td><td>GPIO_07</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:GPIO_7(Default)<br>复用信号1:PWM7<br>复用信号2: UART2_RXD<br>复用信号3: SPI0_SCK<br>复用信号4: I2S_MCLK</td></tr><tr><td>12</td><td>GPIO_08</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_8 (Default)<br>复用信号1: PWM0<br>复用信号2: UART2_TXD<br>复用信号3: SPI0_CS1_N<br>复用信号4: 保留</td></tr><tr><td>13</td><td>GPIO_09</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_9 (Default)<br>复用信号1: PWM1<br>复用信号2: RADAR_ANT0_SW<br>复用信号3: SPI0_OUT<br>复用信号4: I2S_DO<br>复用信号5: 保留<br>复用信号6: 保留<br>复用信号7: JTAG_TDO</td></tr><tr><td>14</td><td>GPIO_10</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_10 (Default)<br>复用信号1: PWM2<br>复用信号2: ANT0_SW<br>复用信号3: SPI0_CS0_N<br>复用信号4: I2S_SCLK</td></tr><tr><td>15</td><td>GPIO_11</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_11 (Default)<br>复用信号1: PWM3<br>复用信号2: RADAR_ANTI_SW<br>复用信号3: SPI0_IN<br>复用信号4: I2S_LRCLK</td></tr><tr><td>16</td><td>GPIO_12</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_12 (Default)<br>复用信号1: PWM4<br>复用信号2: ANT1_SW<br>复用信号4: I2S_DI</td></tr><tr><td>24</td><td>GPIO_13</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_13 (Default)<br>复用信号1: UART1_CTS<br>复用信号2: RADAR_ANT0_SW<br>复用信号3: 保留<br>复用信号4: JTAG_TMS/SWD</td></tr><tr><td>25</td><td>GPIO_14</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_14 (Default)<br>复用信号1: UART1_RTS<br>复用信号2: RADAR_ANTI_SW<br>复用信号3: 保留<br>复用信号4: JTAG_TCK/SWC</td></tr><tr><td>26</td><td>UART1_TX</td><td>OD</td><td>5/3.3/1.8</td><td>复用信号0: GPIO_15<br>复用信号1: UART1_TX<br>复用信号2: I2C1_SDA</td></tr><tr><td>27</td><td>UART1_RX</td><td>I</td><td>5/3.3/1.8</td><td>复用信号0: GPIO_16<br>复用信号1: UART1_RX<br>复用信号2: I2C1_SCL</td></tr></table>
 
 #### CLK 管脚
 
@@ -285,11 +256,7 @@ CLK 管脚如表 1-12 所示。
 
 表2-1 电流参数
 
-| 符号     | 描述         |           | 最小值 | 典型值 | 最大值 | 单位 |
-| -------- | ------------ | --------- | ------ | ------ | ------ | ---- |
-| VBAT_IN  | VBAT_IN 电源 |           | -      | -      | 600    | mA   |
-| DVDD3318 | IO 输入电源  | BUCK 方案 | -      | -      | 110    | mA   |
-|          |              | LDO 方案  | -      | -      | 300    | mA   |
+<table><tr><td>符号</td><td colspan="2">描述</td><td>最小值</td><td>典型值</td><td>最大值</td><td>单位</td></tr><tr><td>VBAT_IN</td><td colspan="2">VBAT_IN 电源</td><td>-</td><td>-</td><td>600</td><td>mA</td></tr><tr><td rowspan="2">DVDD3318</td><td rowspan="2">IO 输入电源</td><td>BUCK 方案</td><td>-</td><td>-</td><td>110</td><td>mA</td></tr><tr><td>LDO 方案</td><td>-</td><td>-</td><td>300</td><td>mA</td></tr></table>
 
 ### 极限工作条件
 
@@ -298,20 +265,20 @@ CLK 管脚如表 1-12 所示。
     极限工作电压参数如表 2-2 所示，超过这些数值，可能导致芯片损坏与可靠性问题。  
     芯片 ESD 防护能力如表 2-3
 
-    表2-2 极限工作电压参数
+表2-2 极限工作电压参数
 
-    | 符号     | 描述             | 最小值 | 最大值 | 单位 |
-    | -------- | ---------------- | ------ | ------ | ---- |
-    | VBAT_IN  | VBAT_IN 输入电源 | -0.3   | 5.5    | V    |
-    | DVDD3318 | IO 输入电源      | -0.3   | 3.63   | V    |
+| 符号     | 描述             | 最小值 | 最大值 | 单位 |
+| -------- | ---------------- | ------ | ------ | ---- |
+| VBAT_IN  | VBAT_IN 输入电源 | -0.3   | 5.5    | V    |
+| DVDD3318 | IO 输入电源      | -0.3   | 3.63   | V    |
 
-    表2-3 芯片引脚 ESD 防护
+表2-3 芯片引脚 ESD 防护
 
-    | ESD 模型                              | 防护能力 |
-    | ------------------------------------- | -------- |
-    | ESD-CDM                               | 500V     |
-    | ESD-HBM                               | 2.5kV    |
-    | ESD-HBM (UART0/UART1 耐 5V IO 对 GND) | 6kV      |
+| ESD 模型                              | 防护能力 |
+| ------------------------------------- | -------- |
+| ESD-CDM                               | 500V     |
+| ESD-HBM                               | 2.5kV    |
+| ESD-HBM (UART0/UART1 耐 5V IO 对 GND) | 6kV      |
 
 ### 推荐工作条件
 
@@ -393,57 +360,57 @@ CLK 管脚如表 1-12 所示。
 
     - DVDD3318 对应管脚：DVDD3318。
 
-    表2-8 时间参数说明
+表2-8 时间参数说明
 
-    | 参数         | 描述                                                                             | 说明                                            | 最小值(min) | 最大值(max) | 单位 |
-    | ------------ | -------------------------------------------------------------------------------- | ----------------------------------------------- | ----------- | ----------- | ---- |
-    | t<sub>1</sub>        | 上电后,PWR_ON的高电平持续时间                                                    | -                                               | 20          | -           | ms   |
-    | t<sub>2</sub>        | 睡眠后,唤醒的间隔时间(AVDD33和DVDD3318为高电平时,PWR_ON拉低后再次拉高的间隔时间) | 推荐间隔大于20ms                                | 5           | -           | ms   |
-    | t<sub>3</sub>        | 下电后,再次上电的间隔时间                                                        | -                                               | 50          | -           | ms   |
-    | t<sub>D1</sub>     | 上电时,PWR_ON相对电源上电的延时时间;                                             | 上电时,PWR_ON晚于AVDD33和DVDD3318上电较晚者;    | 1           | -           | ms   |
-    | t<sub>D2</sub><sup>1</sup> | 下电时,PWR_ON相对电源下电的提前时间。                                            | 下电时,PWR_ON不晚于AVDD33和DVDD3318下电较早者。 | 0           | -           | ms   |
-    | t<sub>hw1</sub>    | 上电时,硬件配置字IO在PWR_ON拉高前的电平建立时间                                  | -                                               | 1           | -           | ms   |
-    | t<sub>hw2</sub>    | 上电时,硬件配置字IO在POWER_ON拉高后的电平保持时间                                | -                                               | 10          | -           | ms   |
-    | t<sub>r</sub>        | 电源上升时间                                                                     | -                                               | 1           | 10          | ms   |
+| 参数         | 描述                                                                             | 说明                                            | 最小值(min) | 最大值(max) | 单位 |
+| ------------ | -------------------------------------------------------------------------------- | ----------------------------------------------- | ----------- | ----------- | ---- |
+| t<sub>1</sub>        | 上电后,PWR_ON的高电平持续时间                                                    | -                                               | 20          | -           | ms   |
+| t<sub>2</sub>        | 睡眠后,唤醒的间隔时间(AVDD33和DVDD3318为高电平时,PWR_ON拉低后再次拉高的间隔时间) | 推荐间隔大于20ms                                | 5           | -           | ms   |
+| t<sub>3</sub>        | 下电后,再次上电的间隔时间                                                        | -                                               | 50          | -           | ms   |
+| t<sub>D1</sub>     | 上电时,PWR_ON相对电源上电的延时时间;                                             | 上电时,PWR_ON晚于AVDD33和DVDD3318上电较晚者;    | 1           | -           | ms   |
+| t<sub>D2</sub><sup>1</sup> | 下电时,PWR_ON相对电源下电的提前时间。                                            | 下电时,PWR_ON不晚于AVDD33和DVDD3318下电较早者。 | 0           | -           | ms   |
+| t<sub>hw1</sub>    | 上电时,硬件配置字IO在PWR_ON拉高前的电平建立时间                                  | -                                               | 1           | -           | ms   |
+| t<sub>hw2</sub>    | 上电时,硬件配置字IO在POWER_ON拉高后的电平保持时间                                | -                                               | 10          | -           | ms   |
+| t<sub>r</sub>        | 电源上升时间                                                                     | -                                               | 1           | 10          | ms   |
 
-    注 1: PWR_ON 与 DVDD3318 合并控制时，PWR_ON 跟随 DVDD3318 启动，板级需要增加 RC 延时电路，下电场景 PWR_ON 跟随 DVDD3318 下电；PWR_ON 与 DVDD3318 独立控制时，下电场景 PWR_ON 下电不晚于 DVDD3318 和 AVDD33。
+注 1: PWR_ON 与 DVDD3318 合并控制时，PWR_ON 跟随 DVDD3318 启动，板级需要增加 RC 延时电路，下电场景 PWR_ON 跟随 DVDD3318 下电；PWR_ON 与 DVDD3318 独立控制时，下电场景 PWR_ON 下电不晚于 DVDD3318 和 AVDD33。
 
-    表2-9 电压参数说明
+表2-9 电压参数说明
 
-    | 参数               | 描述                                                        | 阈值         | 单位 |
-    | ------------------ | ----------------------------------------------------------- | ------------ | ---- |
-    | V<sub>th\<sub>r</sub>st</sub>      | PWR_ON的上升/下降沿电平,芯片内部PMU的复位及解复位电压阈值。 | 1.4          | V    |
-    | V<sub>IH\<sub>V</sub>BAT</sub>     | AVDD33的上电阈值电平,LDO33开始上电                          | 2.3          | V    |
-    | V<sub>IL\<sub>V</sub>BAT</sub>     | AVDD33的下电阈值电平,LDO33开始下电                          | 3.4          | V    |
-    | V<sub>IH\<sub>A</sub>VDD33</sub>   | AVDD33 的上电阈值电平                                       | 2.3          | V    |
-    | V<sub>IL\<sub>A</sub>VDD33</sub>   | AVDD33 的下电阈值电平                                       | 2.3          | V    |
-    | V<sub>IH\<sub>D</sub>VDD3318</sub> | DVDD3318 的上电阈值电平                                     | 0.8×DVDD3318 | V    |
-    | V<sub>IL\<sub>D</sub>VDD3318</sub> | DVDD3318 的下电阈值电平                                     | 0.8×DVDD3318 | V    |
-    | V<sub>pwron</sub>        | 芯片上电后 PWR_ON 稳态保持电平                              | 1.6          | V    |
-    | AVDD33             | 芯片模拟模块供电电源                                        | 3.3          | V    |
-    | DVDD3318           | 芯片数字模块供电电源                                        | 3.3 / 1.8    | V    |
- 
-    上电时序说明：
+| 参数               | 描述                                                        | 阈值         | 单位 |
+| ------------------ | ----------------------------------------------------------- | ------------ | ---- |
+| V<sub>th\<sub>r</sub>st</sub>      | PWR_ON的上升/下降沿电平,芯片内部PMU的复位及解复位电压阈值。 | 1.4          | V    |
+| V<sub>IH\<sub>V</sub>BAT</sub>     | AVDD33的上电阈值电平,LDO33开始上电                          | 2.3          | V    |
+| V<sub>IL\<sub>V</sub>BAT</sub>     | AVDD33的下电阈值电平,LDO33开始下电                          | 3.4          | V    |
+| V<sub>IH\<sub>A</sub>VDD33</sub>   | AVDD33 的上电阈值电平                                       | 2.3          | V    |
+| V<sub>IL\<sub>A</sub>VDD33</sub>   | AVDD33 的下电阈值电平                                       | 2.3          | V    |
+| V<sub>IH\<sub>D</sub>VDD3318</sub> | DVDD3318 的上电阈值电平                                     | 0.8×DVDD3318 | V    |
+| V<sub>IL\<sub>D</sub>VDD3318</sub> | DVDD3318 的下电阈值电平                                     | 0.8×DVDD3318 | V    |
+| V<sub>pwron</sub>        | 芯片上电后 PWR_ON 稳态保持电平                              | 1.6          | V    |
+| AVDD33             | 芯片模拟模块供电电源                                        | 3.3          | V    |
+| DVDD3318           | 芯片数字模块供电电源                                        | 3.3 / 1.8    | V    |
 
-    1. 电源 VBAT/DVDD3318 电源上电时间范围建议1ms~10ms（VBAT 支持上电时间最快200μs）。
+上电时序说明：
 
-    2. VBAT 支持 5V/3.3V，若芯片采用 5V_BUCK 方案，则 AVDD33 由芯片内部 LDO33 产生，上电时间 t<sub>LDO33</sub> （VBAT 开启上电到 LDO33 输出 3.3V 的时间）跟随 VBAT 上电时间变化；VBAT <1ms 上电，则 t<sub>LDO33</sub> = 1ms ; VBAT <10ms 上电，则 t<sub>LDO33</sub> = 10ms 。
+1. 电源 VBAT/DVDD3318 电源上电时间范围建议1ms~10ms（VBAT 支持上电时间最快200μs）。
 
-    3. 电源VBAT、AVDD33、DVDD3318间上电顺序无要求，上电完成1ms后将PWR_ON上拉至高电平（DVDD3318）。当确保PWR_ON晚于DVDD3318和AVDD33电源1ms（即Tpwrion≥1ms）后，上电达到1.4V（Vth_rst）时，才可确保芯片正常工作。
+2. VBAT 支持 5V/3.3V，若芯片采用 5V_BUCK 方案，则 AVDD33 由芯片内部 LDO33 产生，上电时间 t<sub>LDO33</sub> （VBAT 开启上电到 LDO33 输出 3.3V 的时间）跟随 VBAT 上电时间变化；VBAT <1ms 上电，则 t<sub>LDO33</sub> = 1ms ; VBAT <10ms 上电，则 t<sub>LDO33</sub> = 10ms 。
 
-    4. 电源上电后，在 PWR_ON 拉高前，硬件控制字 IO 需要提前维持至少 1ms， t<sub>hw1</sub> ≥ 1ms ；在 PWR_ON 拉高后，硬件控制字 IO 需要持续维持至少 10ms， t<sub>hw2</sub> ≥ 10ms 。
+3. 电源VBAT、AVDD33、DVDD3318间上电顺序无要求，上电完成1ms后将PWR_ON上拉至高电平（DVDD3318）。当确保PWR_ON晚于DVDD3318和AVDD33电源1ms（即Tpwrion≥1ms）后，上电达到1.4V（Vth_rst）时，才可确保芯片正常工作。
 
-    5. WS63 系列芯片内部 PMU 检测到 PWR_ON 信号为高电平 400us 后，芯片内部开始解复位流程，有序地开启各电源，解复位时间为 21ms，其中硬件配置字在解复位之后 9.5ms 内锁存，然后芯片正常工作。
+4. 电源上电后，在 PWR_ON 拉高前，硬件控制字 IO 需要提前维持至少 1ms， t<sub>hw1</sub> ≥ 1ms ；在 PWR_ON 拉高后，硬件控制字 IO 需要持续维持至少 10ms， t<sub>hw2</sub> ≥ 10ms 。
 
-    6. 对于 DVDD3318 和 AVDD33 电源同源、PWR_ON 跟随 DVDD3318 启动的情况，无法满足 Tpwron ≥ms 要求，可以采用板级加 RC 延时电路解决，RC 常数要大于等于 20k×220nF=4.4ms≈5ms。
+5. WS63 系列芯片内部 PMU 检测到 PWR_ON 信号为高电平 400us 后，芯片内部开始解复位流程，有序地开启各电源，解复位时间为 21ms，其中硬件配置字在解复位之后 9.5ms 内锁存，然后芯片正常工作。
 
-    下电时序说明：
+6. 对于 DVDD3318 和 AVDD33 电源同源、PWR_ON 跟随 DVDD3318 启动的情况，无法满足 Tpwron ≥ms 要求，可以采用板级加 RC 延时电路解决，RC 常数要大于等于 20k×220nF=4.4ms≈5ms。
 
-    1. 当电源 VBAT_IN、AVDD33、DVDD3318 正常供电，通过拉低 PWR_ON 管脚控制芯片复位时，PWR_ON 电压要低于 1.4V 才能重新拉高启动芯片。
+下电时序说明：
 
-    2. 当芯片整体掉电时，需要保证 VBAT_IN、AVDD33、DVDD3318 和 PWR_ON 电压残压低于 800mV，才能重新上电（重新上电需要满足上电时序要求）。
+1. 当电源 VBAT_IN、AVDD33、DVDD3318 正常供电，通过拉低 PWR_ON 管脚控制芯片复位时，PWR_ON 电压要低于 1.4V 才能重新拉高启动芯片。
 
-    3. 芯片 VBAT 采用 5V 方案时，VBAT 小于 3.4V，LDO33 输出的 3.3V 开始掉电。
+2. 当芯片整体掉电时，需要保证 VBAT_IN、AVDD33、DVDD3318 和 PWR_ON 电压残压低于 800mV，才能重新上电（重新上电需要满足上电时序要求）。
+
+3. 芯片 VBAT 采用 5V 方案时，VBAT 小于 3.4V，LDO33 输出的 3.3V 开始掉电。
 
 !!! warning "注意"
 
@@ -517,34 +484,23 @@ CL1 实际调测步骤如下（需要使用综测仪进行测试，综测仪可�
 
 表3-3 CL1 测试举例
 
-| 晶体 CL                                             | xin 与xou 上件容值 | xo_trim_coarse | xo_trim_fine | fmax   | fmin   | f0    | f1    |
-| --------------------------------------------------- | ------------------ | -------------- | ------------ | ------ | ------ | ----- | ----- |
-| 8pF                                                 | 0                  | 0              | 0            | 100ppm | -      | -     | -     |
-|                                                     | 0                  | 15             | 127          | -      | -20ppm | -     | -     |
-|                                                     | 1pF                | 0              | 0            | -      | -      | 90ppm | -     |
-|                                                     | 2pF                | 0              | 0            | -      | -      | -     | 80ppm |
-| 此时 ratio_adjust=10ppm/1pF,CL1=(100-20)/2/10+0=4pF |                    |                |              |        |        |       |       |
-| 8pF                                                 | 4pF                | 0              | 0            | 60ppm  | -      | -     | -     |
-|                                                     | 4pF                | 15             | 127          | -      | -60ppm | -     | -     |
+<table><tr><td>晶体 CL</td><td>xin 与xou 上件容值</td><td>xo_trim_coarse</td><td>xo_trim_fine</td><td>fmax</td><td>fmin</td><td>f0</td><td>f1</td></tr><tr><td rowspan="4">8pF</td><td>0</td><td>0</td><td>0</td><td>100ppm</td><td>-</td><td>-</td><td>-</td></tr><tr><td>0</td><td>15</td><td>127</td><td>-</td><td>-20ppm</td><td>-</td><td>-</td></tr><tr><td>1pF</td><td>0</td><td>0</td><td>-</td><td>-</td><td>90ppm</td><td>-</td></tr><tr><td>2pF</td><td>0</td><td>0</td><td>-</td><td>-</td><td>-</td><td>80ppm</td></tr><tr><td colspan="8">此时 ratio_adjust=10ppm/1pF,CL1=(100-20)/2/10+0=4pF</td></tr><tr><td rowspan="2">8pF</td><td>4pF</td><td>0</td><td>0</td><td>60ppm</td><td>-</td><td>-</td><td>-</td></tr><tr><td>4pF</td><td>15</td><td>127</td><td>-</td><td>-60ppm</td><td>-</td><td>-</td></tr></table>
 
 !!! note "说明"
 
     配置频偏校准粗调码值与细调码值命令详细说明请参见《WS63V100 产线工装用户指南》。
 
-    WS63 系列芯片支持 24MHz、40MHz 参考时钟频率。参考时钟频率通过 GPIO_06 的硬件配置字进行判断，上电时通过读取 GPIO_06 高低电平选择内部分频系数。外部时钟选择真值如表 3-4 所示。
+WS63 系列芯片支持 24MHz、40MHz 参考时钟频率。参考时钟频率通过 GPIO_06 的硬件配置字进行判断，上电时通过读取 GPIO_06 高低电平选择内部分频系数。外部时钟选择真值如表 3-4 所示。
 
-    表3-4 外部时钟选择真值表
+表3-4 外部时钟选择真值表
 
-    | 时钟频率 | REFCLK_FREQ_STATUS | 说明 |
-    | -------- | ------------------ | ---- |
+| 时钟频率 | REFCLK_FREQ_STATUS | 说明                    |
+| -------- | ------------------ | ----------------------- |
+| 40MHz    | 0                  | 默认内部下拉。          |
+| 24MHz    | 1                  | 上拉 2.2kΩ到 DVDD3318。 |
 
-    | 时钟频率 | REFCLK_FREQ_STATUS | 说明                    |
-    | -------- | ------------------ | ----------------------- |
-    | 40MHz    | 0                  | 默认内部下拉。          |
-    | 24MHz    | 1                  | 上拉 2.2kΩ到 DVDD3318。 |
-
-    图3-2 频率选择管脚参考电路图  
-    ![](images/ce34938790ec3a70f3b9030e94788c965b18b86d7db75351953293d359408c57.jpg)
+图3-2 频率选择管脚参考电路图  
+![](images/ce34938790ec3a70f3b9030e94788c965b18b86d7db75351953293d359408c57.jpg)
 
 #### 复位电路
 
@@ -553,7 +509,9 @@ WS63V100 系列芯片集成内部 POR（Power On Reset）电路以及 Watchdog�
 图3-3 PWR_ON 电路设计参考  
 ![](images/eb248316a658605d580f70d3d78e59bd3619b2c63118c535584493344e2206e1.jpg)
 
-硬件设计时，power_on 管脚建议上件 RC 延时电路，根据电源上电响应速度，调节 RC 参数，保证上电时序满足芯片规格约束；同时预留下拉电阻位置，作为下电快速泄放通道和 power_on 分压控制电路使用。
+!!! note "说明"
+
+    硬件设计时，power_on 管脚建议上件 RC 延时电路，根据电源上电响应速度，调节 RC 参数，保证上电时序满足芯片规格约束；同时预留下拉电阻位置，作为下电快速泄放通道和 power_on 分压控制电路使用。
 
 #### 硬件初始化系统配置电路
 
@@ -561,20 +519,7 @@ WS63V100 系列芯片的 PIN23 为电源方案配置管脚，当 VBAT 电源选�
 
 表3-5 硬件配置字信号描述
 
-| 信号名                            | PIN   | 管脚电平 | 芯片工作模式       |
-| --------------------------------- | ----- | -------- | ------------------ |
-| FLASH BOOT (GPIO_03)              | 7     | 0        | 正常启动           |
-|                                   |       | 1        | 进烧录模式         |
-| JTAG_ENABLE (GPIO_04)             | 8     | 0        | 正常启动           |
-|                                   |       | 1        | 使能 JTAG 调试接口 |
-| REFCLK_FREQ_STATUS (GPIO_06)      | 10    | 0        | 时钟选择 40MHz     |
-|                                   |       | 1        | 时钟选择 24MHz     |
-| 保留 1 (GPIO_01)                  | 5     | 0        | 正常工作模式       |
-|                                   |       | 1        | 禁止               |
-| 保留 2 (GPIO_11):保留 3 (GPIO_09) | 15:13 | 0:0      | 正常工作模式       |
-|                                   |       | 0:1      | 正常工作模式       |
-|                                   |       | 1:0      | 正常工作模式       |
-|                                   |       | 1:1      | 禁止               |
+<table><tr><td>信号名</td><td>PIN</td><td>管脚电平</td><td>芯片工作模式</td></tr><tr><td rowspan="2">FLASH BOOT (GPIO_03)</td><td rowspan="2">7</td><td>0</td><td>正常启动</td></tr><tr><td>1</td><td>进烧录模式</td></tr><tr><td rowspan="2">JTAG_ENABLE (GPIO_04)</td><td rowspan="2">8</td><td>0</td><td>正常启动</td></tr><tr><td>1</td><td>使能 JTAG 调试接口</td></tr><tr><td rowspan="2">REFCLK_FREQ_STATUS (GPIO_06)</td><td rowspan="2">10</td><td>0</td><td>时钟选择 40MHz</td></tr><tr><td>1</td><td>时钟选择 24MHz</td></tr><tr><td rowspan="2">保留 1 (GPIO_01)</td><td rowspan="2">5</td><td>0</td><td>正常工作模式</td></tr><tr><td>1</td><td>禁止</td></tr><tr><td rowspan="4">保留 2 (GPIO_11):保留 3 (GPIO_09)</td><td rowspan="4">15:13</td><td>0:0</td><td>正常工作模式</td></tr><tr><td>0:1</td><td>正常工作模式</td></tr><tr><td>1:0</td><td>正常工作模式</td></tr><tr><td>1:1</td><td>禁止</td></tr></table>
 
 注：1. 上电初始化时，硬件配置字 JTAG_ENABLE 高电平使能后，GPIO13 和 GPIO14 固定使用为 JTAG 接口。
 
@@ -582,10 +527,7 @@ WS63V100 系列芯片的 PIN23 为电源方案配置管脚，当 VBAT 电源选�
 
 表3-6 电源方案选择管脚说明
 
-| 信号名  | PIN | 管脚电平 | 芯片工作模式            |
-| ------- | --- | -------- | ----------------------- |
-| PWR_SEL | 23  | 0        | VBAT_IN 采用 5V 供电。  |
-|         |     | 1        | VBAT_IN 采用 3V3 供电。 |
+<table><tr><td>信号名</td><td>PIN</td><td>管脚电平</td><td>芯片工作模式</td></tr><tr><td rowspan="2">PWR_SEL</td><td rowspan="2">23</td><td>0</td><td>VBAT_IN 采用 5V 供电。</td></tr><tr><td>1</td><td>VBAT_IN 采用 3V3 供电。</td></tr></table>
 
 !!! warning "须知"
 
@@ -727,9 +669,9 @@ DVDD3318：支持 1.8V/3.3V 电压，推荐设计建议如表 3-10 所示，参�
 图3-11 DVDD3318 输入电路  
 ![](images/bb715fe8b2f5f31ed934db99505e49ceb1bf48f5242baf8b5b214039e26e3926.jpg)
 
-说明
+!!! note "说明"
 
-当DVDD3318选择1V8电源供电时，需要将DVDD3318和IOLDO18短接，即PIN34和PIN35短接。选择3V3电源供电时不需要。
+    当DVDD3318选择1V8电源供电时，需要将DVDD3318和IOLDO18短接，即PIN34和PIN35短接。选择3V3电源供电时不需要。
 
 #### 内部电源滤波电路
 
@@ -866,11 +808,7 @@ WS63V100 系列芯片支持 QSPI 和 SPI 接口，输入输出电平与 DVDD3318
 
 表3-17 QSPI&SPI 接口设计建议
 
-| 名称     | 设计建议                                                                                                                                                                                                                |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SPI_CSN  | 直连,走线≤5inch。                                                                                                                                                                                                       |
-| SPI_CLK  | 两层板,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。四层板,DVDD3318=1.8V,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。四层板,DVDD3318=3.3V,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理 |
-| SPI_DATA | 两层板,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。四层板,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。                                                                                          |
+<table><tr><td>名称</td><td>设计建议</td></tr><tr><td>SPI_CSN</td><td>直连,走线≤5inch。</td></tr><tr><td>SPI_CLK</td><td>两层板,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。四层板,DVDD3318=1.8V,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。四层板,DVDD3318=3.3V,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理</td></tr><tr><td>SPI_DATA</td><td>两层板,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。四层板,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。</td></tr></table>
 
 #### I2C 接口
 
@@ -919,9 +857,7 @@ WS63 系列芯片的 PIN1 为 RFIO 管脚，作为 WiFi/BLE/SLE 的接收发送�
 WS63E 芯片中也可作为雷达发射管脚。射频链路建议使用π型 LC 滤波电路，参考电路如图 3-16，图中的 LC 滤波为推荐值，LC 滤波及天线匹配电路请根据实际情况调整。RF 连接器旁边建议预留 ESD 器件。
 
 图3-16 RFIO 设计参考电路图
-![](images/4b8a4a871160f83144ad707a7882e05c42835c1e7b4d5d86323015b5a3e83321.jpg)
-
-放在bottom层，周围地露一圈铜，打过孔到TOP层RF线
+![](images/4b8a4a871160f83144ad707a7882e05c42835c1e7b4d5d86323015b5a3e83321.png)
 
 ### RFI 设计
 
@@ -953,59 +889,43 @@ WS63 系列芯片封装为 QFN40，规格大小为 5mm × 5 mm ，PCB 支持 2/4
 
 - 两层板分层设计建议：
 
-- TOP 层：信号走线，信号线和电源线尽量走 TOP 层。
+    \- TOP 层：信号走线，信号线和电源线尽量走 TOP 层。
 
-- BOTTOM 层：地平面层，尽量保持地平面的完整。
+    \- BOTTOM 层：地平面层，尽量保持地平面的完整。
 
 - 四层板分层设计建议：
 
-- TOP 层：信号走线，信号线尽量走 TOP 层。
+    \- TOP 层：信号走线，信号线尽量走 TOP 层。
 
-- 内一层：地平面层，保持一个完整的地平面层。
+    \- 内一层：地平面层，保持一个完整的地平面层。
 
-- 内二层：电源平面层，电源走线尽量走第三层，且电源之间需要用地隔开。
+    \- 内二层：电源平面层，电源走线尽量走第三层，且电源之间需要用地隔开。
 
-- BOTTOM 层：可以走少量的信号线，尽量保持 BOTTOM 层为一个完整的地平面层。
+    \- BOTTOM 层：可以走少量的信号线，尽量保持 BOTTOM 层为一个完整的地平面层。
 
 - PCB 设计注意事项:
 
-- 推荐 PCB 板厚 On Board 方案一般≥1mm，防止翘曲，过孔 8/18 mil。
+    \- 推荐 PCB 板厚 On Board 方案一般≥1mm，防止翘曲，过孔 8/18 mil。
 
-- PCB 典型材料 FR4 介电常数为 4.0~4.3，表层铜箔厚度建议为 1.2mil (0.5oz+plating)，PCB 板厚度一般≥1.0mm，典型值为 1.2mm，可选用 1.0mm。
+    \- PCB 典型材料 FR4 介电常数为 4.0~4.3，表层铜箔厚度建议为 1.2mil (0.5oz+plating)，PCB 板厚度一般≥1.0mm，典型值为 1.2mm，可选用 1.0mm。
 
-- 2 层板设计中，EPAD 和外部地用细线连通，改善 RF 回流。
+    \- 2 层板设计中，EPAD 和外部地用细线连通，改善 RF 回流。
 
 常用的叠层设计和阻抗控制可参考表 4-1。
 
 表4-1 2 层板 1.0mm 参考叠层信息
 
-| 层标识 | 设计要求层叠图示         | 设计要求介质厚度(oz/mil) | PCB厂家设计调整介质厚度(oz/mil) | PCB厂家设计调整层叠图示 |
-| ------ | ------------------------ | ------------------------ | ------------------------------- | ----------------------- |
-| Art 1  | 0.5oz+plating            |                          | 0.5oz+plating                   |                         |
-|        | CORE                     | 35.4                     | 34.06                           | CORE                    |
-| Art 2  | 0.5oz+plating            |                          | 0.5oz+plating                   |                         |
-| 板厚   | 客户设计板厚:1.0±0.10 mm |                          | 厂家理论板厚:1.0±0.10 mm        |                         |
+<table><tr><td>层标识</td><td>设计要求层叠图示</td><td>设计要求介质厚度(oz/mil)</td><td>PCB厂家设计调整介质厚度(oz/mil)</td><td>PCB厂家设计调整层叠图示</td></tr><tr><td rowspan="2">Art 1</td><td colspan="2">0.5oz+plating</td><td colspan="2">0.5oz+plating</td></tr><tr><td>CORE</td><td>35.4</td><td>34.06</td><td>CORE</td></tr><tr><td>Art 2</td><td colspan="2">0.5oz+plating</td><td colspan="2">0.5oz+plating</td></tr><tr><td>板厚</td><td colspan="2">客户设计板厚:1.0±0.10 mm</td><td colspan="2">厂家理论板厚:1.0±0.10 mm</td></tr></table>
 
 表4-2 单线线宽、阻抗、参考层控制信息参考
 
-| 层标识 | 设计线宽                       | 设计阻抗 | 调整线宽                       | 调整阻抗 | 参考层    |
-| ------ | ------------------------------ | -------- | ------------------------------ | -------- | --------- |
-| Art 1  | 5/19/5(到地距离/线宽/到地距离) | 50±10%   | 5/19/5(到地距离/线宽/到地距离) | 50±10%   | L1&amp;L2 |
+<table><tr><td>层标识</td><td>设计线宽</td><td>设计阻抗</td><td>调整线宽</td><td>调整阻抗</td><td>参考层</td></tr><tr><td>Art 1</td><td>5/19/5(到地距离/线宽/到地距离)</td><td>50±10%</td><td>5/19/5(到地距离/线宽/到地距离)</td><td>50±10%</td><td>L1&amp;L2</td></tr></table>
 
 注：线宽的计量单位为 mil，阻抗的计量单位为 Ω 。
 
 表4-3 4 层板 1.2mm 参考叠层信息
 
-| 层标识 | 设计要求层叠图示         | 设计要求介质厚度(oz/mil) | PCB厂家设计调整介质厚度(oz/mil) | PCB厂家设计调整层叠图示 |
-| ------ | ------------------------ | ------------------------ | ------------------------------- | ----------------------- |
-| Art 1  | 0.5oz+plating            |                          | 0.5oz+plating                   |                         |
-|        | PP                       | 8.2                      | 10.88                           | PP                      |
-| Art 2  | 1oz                      |                          | 1oz                             |                         |
-|        | CORE                     | 23.8                     | 18                              | CORE                    |
-| Art 3  | 1oz                      |                          | 1oz                             |                         |
-|        | PP                       | 8.2                      | 10.88                           | PP                      |
-| Art 4  | 0.5oz+plating            |                          | 0.5oz+plating                   |                         |
-| 板厚   | 客户设计板厚:1.2±0.12 mm |                          | 厂家理论板厚:1.2±0.12 mm        |                         |
+<table><tr><td>层标识</td><td>设计要求层叠图示</td><td>设计要求介质厚度(oz/mil)</td><td>PCB厂家设计调整介质厚度(oz/mil)</td><td>PCB厂家设计调整层叠图示</td></tr><tr><td rowspan="2">Art 1</td><td colspan="2">0.5oz+plating</td><td colspan="2">0.5oz+plating</td></tr><tr><td>PP</td><td>8.2</td><td>10.88</td><td>PP</td></tr><tr><td rowspan="2">Art 2</td><td colspan="2">1oz</td><td colspan="2">1oz</td></tr><tr><td>CORE</td><td>23.8</td><td>18</td><td>CORE</td></tr><tr><td rowspan="2">Art 3</td><td colspan="2">1oz</td><td colspan="2">1oz</td></tr><tr><td>PP</td><td>8.2</td><td>10.88</td><td>PP</td></tr><tr><td>Art 4</td><td colspan="2">0.5oz+plating</td><td colspan="2">0.5oz+plating</td></tr><tr><td>板厚</td><td colspan="2">客户设计板厚:1.2±0.12 mm</td><td colspan="2">厂家理论板厚:1.2±0.12 mm</td></tr></table>
 
 表4-4 单线线宽、阻抗、参考层控制信息
 
@@ -1042,15 +962,15 @@ WS63 系列芯片封装为 QFN40，规格大小为 5mm × 5 mm ，PCB 支持 2/4
 
 - On Board 方案
 
-- 支持 2 层板设计。
+    \- 支持 2 层板设计。
 
-- On Board 可双面贴片，空间允许可以选择 0402 封装，空间不足可选择 0201 封装（inch）。
+    \- On Board 可双面贴片，空间允许可以选择 0402 封装，空间不足可选择 0201 封装（inch）。
 
 - 模组
 
-- 建议用 2 层板。
+    \- 建议用 2 层板。
 
-- 贴片器件建议用 0201 封装 (inch)。
+    \- 贴片器件建议用 0201 封装 (inch)。
 
 PCB 设计以模组两层板为例，参考设计如图 4-2 和图 4-3 所示。
 
@@ -1096,9 +1016,9 @@ BOTTOM VIEW
 
 - 粉色：VBAT_IN;
 
-说明
+!!! note "说明"
 
-通常RF器件布局比较紧凑，这样会导致近芯片侧π型LC滤波网络的两个接地电容的接地过孔靠的比较近，这样会影响到RF的谐波抑制性能，建议两个接地电容分布在RF走线的两边，这样可以提高RF电路的谐波抑制效果。
+    通常RF器件布局比较紧凑，这样会导致近芯片侧π型LC滤波网络的两个接地电容的接地过孔靠的比较近，这样会影响到RF的谐波抑制性能，建议两个接地电容分布在RF走线的两边，这样可以提高RF电路的谐波抑制效果。
 
 ### 电源
 
@@ -1192,27 +1112,27 @@ TBD
 
     - 在短期工作条件下，芯片可以容忍超过 105° C（长期工作结温的最大值）而小于 125° C（极限结温的最大值）的高温，但长时间工作在超过 105° C（长期工作结温的最大值）结温下会导致芯片寿命缩减。
 
-    表5-1 芯片的结温要求
+表5-1 芯片的结温要求
 
-    | 封装形式 | 正常工作结温下限(°C) | 长期工作最大结温(°C) | 短期工作上限结温(°C) | 破坏性最大结温(°C) | 生命周期定义 |
-    | -------- | -------------------- | -------------------- | -------------------- | ------------------ | ------------ |
-    | QFN      | -40                  | 105                  | 125                  | 125                | 10年         |
+| 封装形式 | 正常工作结温下限(°C) | 长期工作最大结温(°C) | 短期工作上限结温(°C) | 破坏性最大结温(°C) | 生命周期定义 |
+| -------- | -------------------- | -------------------- | -------------------- | ------------------ | ------------ |
+| QFN      | -40                  | 105                  | 125                  | 125                | 10年         |
 
-    表5-2 芯片的封装热阻
+表5-2 芯片的封装热阻
 
-    | 参数                                              | 符号          | WS63 系列芯片 | 单位 |
-    | ------------------------------------------------- | ------------- | ------------- | ---- |
-    | Junction-to-ambient thermal resistance            | θ<sub>JA</sub> | 57.0          | °C/W |
-    | Junction-to-case thermal resistance               | θ<sub>JC</sub> | 27.7          | °C/W |
-    | Junction-to-top center of case thermal resistance | Ψ<sub>JT</sub>   | -             | °C/W |
-    | Junction-to-board thermal resistance              | θ<sub>JB</sub> | 19.44         | °C/W |
+| 参数                                              | 符号          | WS63 系列芯片 | 单位 |
+| ------------------------------------------------- | ------------- | ------------- | ---- |
+| Junction-to-ambient thermal resistance            | θ<sub>JA</sub> | 57.0          | °C/W |
+| Junction-to-case thermal resistance               | θ<sub>JC</sub> | 27.7          | °C/W |
+| Junction-to-top center of case thermal resistance | Ψ<sub>JT</sub>   | -             | °C/W |
+| Junction-to-board thermal resistance              | θ<sub>JB</sub> | 19.44         | °C/W |
 
-    备注：热阻基于 JEDEC JESD51-2 标准给出，应用时的系统设计及环境可能与 JEDEC JESD51-2 标准不同，需要根据应用条件作出分析。
+备注：热阻基于 JEDEC JESD51-2 标准给出，应用时的系统设计及环境可能与 JEDEC JESD51-2 标准不同，需要根据应用条件作出分析。
 
-    上述封装热阻参数仿真环境是JEDEC标准的4层PCB，如图5-1所示。
+上述封装热阻参数仿真环境是JEDEC标准的4层PCB，如图5-1所示。
 
-    图5-1 JEDEC 标准的 4 层 PCB 参数  
-    ![](images/b1e77c5b1d810c99208c41566d9cc2d8763412dcfb0b6909d5d3034a56dc8ad7.jpg)
+图5-1 JEDEC 标准的 4 层 PCB 参数  
+![](images/b1e77c5b1d810c99208c41566d9cc2d8763412dcfb0b6909d5d3034a56dc8ad7.jpg)
 
 ### 电路热设计参考
 
@@ -1281,21 +1201,21 @@ TBD
 | 回流区(&gt;217°C)  | 60~90s  | -           | 230~260°C | -                     |
 | 冷却区(Tmax~180°C) | -       | -           | -         | 1.0°C/s≤Slope≤4.0°C/s |
 
-说明：
+!!! note "说明"
 
-- 预热区：温度由 40°C ~ 150°C ，温度上升速率控制在 2°C / s 左右，该温区时间为 60 s ~ 150 s 。
+    - 预热区：温度由 40°C ~ 150°C ，温度上升速率控制在 2°C / s 左右，该温区时间为 60 s ~ 150 s 。
 
-- 均温区：温度由 150°C ~ 200°C ，稳定缓慢升温，温度上升速率小于 1°C / s ，且该区域时间控制在 60 s ~ 120 s （注意：该区域一定缓慢受热，否则易导致焊接不良）。
+    - 均温区：温度由 150°C ~ 200°C ，稳定缓慢升温，温度上升速率小于 1°C / s ，且该区域时间控制在 60 s ~ 120 s （注意：该区域一定缓慢受热，否则易导致焊接不良）。
 
-- 回流区：温度由 217°C ~ Tmax ~ 217°C ，整个区间时间控制在 60 s ~ 90 s 。
+    - 回流区：温度由 217°C ~ Tmax ~ 217°C ，整个区间时间控制在 60 s ~ 90 s 。
 
-- 冷却区：温度由 Tmax～180°C，温度下降速率最大不能超过 4°C/s。
+    - 冷却区：温度由 Tmax～180°C，温度下降速率最大不能超过 4°C/s。
 
-- 温度从室温 25°C 升温到 250°C 时间不应该超过 6min。
+    - 温度从室温 25°C 升温到 250°C 时间不应该超过 6min。
 
-- 该回流焊曲线仅为推荐值，客户端需根据实际生产情况做相应调整。
+    - 该回流焊曲线仅为推荐值，客户端需根据实际生产情况做相应调整。
 
-- 回流时间以 60s ~ 90s 为目标，对于一些热容较大无法满足时间要求的单板可将回流时间放宽至 120s。封装体耐温标准参考 IPC/JEDEC J-STD-020D 标准，封装体测温方法参考 JEP 140 标准。
+    - 回流时间以 60s ~ 90s 为目标，对于一些热容较大无法满足时间要求的单板可将回流时间放宽至 120s。封装体耐温标准参考 IPC/JEDEC J-STD-020D 标准，封装体测温方法参考 JEP 140 标准。
 
 IPC/JEDEC J-STD-020D 标准，封装体测温方法按照 JEP 140 标准要求：IPC/JEDEC 020D 中的无铅器件封装体耐温标准如表 6-2 所示。
 
@@ -1326,34 +1246,26 @@ JEP140 推荐：对于厚度较小的器件，测量封装体温度时，直接�
 
 表6-3 混装回流焊工艺参数表
 
-| 数值要求            |          | 有铅 BGA              | 无铅 BGA    | 其它器件    |
-| ------------------- | -------- | --------------------- | ----------- | ----------- |
-| 预热区(40°C~150°C)  | 时间     | 60s ~ 150s            |             |             |
-|                     | 升温斜率 | &lt;2.5°C/s           |             |             |
-| 均温区(150°C~183°C) | 时间     | 30s ~ 90s             |             |             |
-|                     | 升温斜率 | &lt;1.0°C/s           |             |             |
-| 回流区(&gt;183°C)   | 峰值温度 | 210°C~240°C           | 220°C~240°C | 210°C~245°C |
-|                     | 时间     | 30s~120s              | 60s~120s    | 30s~120s    |
-| 冷却区(Tmax~150°C)  | 降温斜率 | 1.0°C/s≤Slope≤4.0°C/s |             |             |
+<table><tr><td colspan="2">数值要求</td><td>有铅 BGA</td><td>无铅 BGA</td><td>其它器件</td></tr><tr><td rowspan="2">预热区(40°C~150°C)</td><td>时间</td><td colspan="3">60s ~ 150s</td></tr><tr><td>升温斜率</td><td colspan="3">&lt;2.5°C/s</td></tr><tr><td rowspan="2">均温区(150°C~183°C)</td><td>时间</td><td colspan="3">30s ~ 90s</td></tr><tr><td>升温斜率</td><td colspan="3">&lt;1.0°C/s</td></tr><tr><td rowspan="2">回流区(&gt;183°C)</td><td>峰值温度</td><td>210°C~240°C</td><td>220°C~240°C</td><td>210°C~245°C</td></tr><tr><td>时间</td><td>30s~120s</td><td>60s~120s</td><td>30s~120s</td></tr><tr><td>冷却区(Tmax~150°C)</td><td>降温斜率</td><td colspan="3">1.0°C/s≤Slope≤4.0°C/s</td></tr></table>
 
 !!! note "说明"
 
     以上工艺参数要求均针对焊点温度。单板上焊点最热点和最冷点均需要满足以上规范要求。
 
-    曲线调制中，还需要满足单板上元器件的封装体耐温要求。封装体耐温标准按照IPC/JEDEC J-STD-020D标准，封装体测温方法按照JEP 140标准。
+曲线调制中，还需要满足单板上元器件的封装体耐温要求。封装体耐温标准按照IPC/JEDEC J-STD-020D标准，封装体测温方法按照JEP 140标准。
 
-    IPC/JEDEC 020D 中的有铅器件封装体耐温标准如表 6-4 所示。
+IPC/JEDEC 020D 中的有铅器件封装体耐温标准如表 6-4 所示。
 
-    表6-4 IPC/JEDEC 020D 中的有铅器件封装体耐温标准
+表6-4 IPC/JEDEC 020D 中的有铅器件封装体耐温标准
 
-    | PackageThickness | Volume mm3&lt; 350 | Volume mm3≥350 |
-    | ---------------- | ------------------ | -------------- |
-    | &lt; 2.5mm       | 235°C              | 220°C          |
-    | ≥2.5mm           | 220°C              | 220°C          |
+| PackageThickness | Volume mm3&lt; 350 | Volume mm3≥350 |
+| ---------------- | ------------------ | -------------- |
+| &lt; 2.5mm       | 235°C              | 220°C          |
+| ≥2.5mm           | 220°C              | 220°C          |
 
-    体积计算中不计入器件焊端（焊球，引脚）和外部散热片。
+体积计算中不计入器件焊端（焊球，引脚）和外部散热片。
 
-    JEP140 标准规定测量封装体温度方法同无铅工艺，请参考「无铅回流焊工艺参数要求」的详细说明。
+JEP140 标准规定测量封装体温度方法同无铅工艺，请参考「无铅回流焊工艺参数要求」的详细说明。
 
 ## 潮敏参数
 
@@ -1412,23 +1324,7 @@ JEP140 推荐：对于厚度较小的器件，测量封装体温度时，直接�
 
 表7-2 重新烘烤参考表
 
-| 芯片厚度 | MSL 潮敏等级 | 烘烤 125°C | 烘烤 90°C/≤5% RH | 烘烤 40°C/≤5% RH |
-| -------- | ------------ | ---------- | ---------------- | ---------------- |
-| ≤1.4mm   | 2a           | 3h         | 11h              | 5day             |
-|          | 3            | 7h         | 23h              | 9day             |
-|          | 4            | 7h         | 23h              | 9day             |
-|          | 5            | 7h         | 24h              | 10day            |
-|          | 5a           | 10h        | 24h              | 10day            |
-| ≤2.0mm   | 2a           | 16h        | 2day             | 22day            |
-|          | 3            | 17h        | 2day             | 23day            |
-|          | 4            | 20h        | 3day             | 28day            |
-|          | 5            | 25h        | 4day             | 35day            |
-|          | 5a           | 40h        | 6day             | 56day            |
-| ≤4.5mm   | 2a           | 48h        | 7day             | 67day            |
-|          | 3            | 48h        | 8day             | 67day            |
-|          | 4            | 48h        | 10day            | 67day            |
-|          | 5            | 48h        | 10day            | 67day            |
-|          | 5a           | 48h        | 10day            | 67day            |
+<table><tr><td>芯片厚度</td><td>MSL 潮敏等级</td><td>烘烤 125°C</td><td>烘烤 90°C/≤5% RH</td><td>烘烤 40°C/≤5% RH</td></tr><tr><td rowspan="5">≤1.4mm</td><td>2a</td><td>3h</td><td>11h</td><td>5day</td></tr><tr><td>3</td><td>7h</td><td>23h</td><td>9day</td></tr><tr><td>4</td><td>7h</td><td>23h</td><td>9day</td></tr><tr><td>5</td><td>7h</td><td>24h</td><td>10day</td></tr><tr><td>5a</td><td>10h</td><td>24h</td><td>10day</td></tr><tr><td rowspan="5">≤2.0mm</td><td>2a</td><td>16h</td><td>2day</td><td>22day</td></tr><tr><td>3</td><td>17h</td><td>2day</td><td>23day</td></tr><tr><td>4</td><td>20h</td><td>3day</td><td>28day</td></tr><tr><td>5</td><td>25h</td><td>4day</td><td>35day</td></tr><tr><td>5a</td><td>40h</td><td>6day</td><td>56day</td></tr><tr><td rowspan="5">≤4.5mm</td><td>2a</td><td>48h</td><td>7day</td><td>67day</td></tr><tr><td>3</td><td>48h</td><td>8day</td><td>67day</td></tr><tr><td>4</td><td>48h</td><td>10day</td><td>67day</td></tr><tr><td>5</td><td>48h</td><td>10day</td><td>67day</td></tr><tr><td>5a</td><td>48h</td><td>10day</td><td>67day</td></tr></table>
 
 !!! note "说明"
 
@@ -1501,17 +1397,17 @@ I2S 接口支持 Master/Slave 模式，接口时序 TBD。
 
 ### SPI 时序
 
-说明
+!!! note "说明"
 
-以下缩略语或字母含义：
-
-• MSB: Most Significant Bit
-
-• LSB: Least Significant Bit
-
-- SPI_CK(0): spo=0
-
-- SPI_CK(1): spo=1
+    以下缩略语或字母含义：
+    
+    • MSB: Most Significant Bit
+    
+    • LSB: Least Significant Bit
+    
+    • SPI_CK(0): spo=0
+    
+    • SPI_CK(1): spo=1
 
 标准 SPI 接口（SPI0）支持 Master/Slave 模式，接口时序如图 8-3 所示。
 
@@ -1573,59 +1469,39 @@ QSPI 接口（SPI1）只支持 Master 模式，不支持 XIP，接口时序 TBD�
 
 - PCB存储条件建议：
 
-- OSP (Organic Solderability Preservative) 板
+    \-  OSP (Organic Solderability Preservative) 板
 
-真空包装前后的存放条件：温度 20°C ~ 30°C ，相对湿度 50%。真空包装后寿命 3 个月～1 年。储存时间超过 6 个月时，通常拆封后即可组装，但为了避免板材储藏湿气造成爆板，可以烘烤方式来去除板内湿气，烘烤条件为 110°C ~ 120°C ，1h（最长时间不要超过 1.5h）。
+        真空包装前后的存放条件：温度 20°C ~ 30°C ，相对湿度 50%。真空包装后寿命 3 个月～1 年。储存时间超过 6 个月时，通常拆封后即可组装，但为了避免板材储藏湿气造成爆板，可以烘烤方式来去除板内湿气，烘烤条件为 110°C ~ 120°C ，1h（最长时间不要超过 1.5h）。
 
-- 喷锡板
+    \-  喷锡板
 
-真空包装前后的存放条件：温度 25° C，相对湿度 60%。真空包装后寿命 1 年。储存时间超过 6 个月时，通常拆封后即可组装，但为了避免板材储藏湿气造成爆板，可以烘烤方式来去除板内湿气，烘烤条件为 120° C，1h（最长时间不要超过 1.5h）。
-
+        真空包装前后的存放条件：温度 25° C，相对湿度 60%。真空包装后寿命 1 年。储存时间超过 6 个月时，通常拆封后即可组装，但为了避免板材储藏湿气造成爆板，可以烘烤方式来去除板内湿气，烘烤条件为 120° C，1h（最长时间不要超过 1.5h）。
 
 ## 缩略语
 
-| A     |                                                   |                          |
-| ----- | ------------------------------------------------- | ------------------------ |
-| AC    | Alternating Current                               | 交流(电)                 |
-| ADC   | Analog to Digital Converter                       | 模数转换器               |
-| ALE   | Address Latch Enable                              | 地址锁存使能             |
-| C     |                                                   |                          |
-| CPU   | Central Processing Unit                           | 中央处理单元             |
-| CS    | Chip Select                                       | 片选                     |
-| D     |                                                   |                          |
-| DDR   | Double Data Rate                                  | 双数据速率               |
-| E     |                                                   |                          |
-| EPAD  | Exposed PAD                                       |                          |
-| F     |                                                   |                          |
-| FLASH | FLASH memory                                      | 闪速存储器               |
-| I     |                                                   |                          |
-| I2C   | The Inter-Integrated Circuit                      | 一种串行总线协议标准     |
-| I2S   | Inter-IC Sound                                    | 一种音频数据传输总线标准 |
-| IO    | Input Output                                      | 输入输出                 |
-| IPU   | Internal Pull-Up                                  | 内部上拉                 |
-| J     |                                                   |                          |
-| JEDEC | Joint Electron Device Engineering Council         | 电子元件工业联合会       |
-| JTAG  | Joint Test Action Group                           | 联合测试行动小组         |
-| L     |                                                   |                          |
-| LSB   | Least Significant Byte                            | 最低有效字节             |
-| M     |                                                   |                          |
-| MSB   | Most Significant Bit                              | 最高位                   |
-| N     |                                                   |                          |
-| NC    | No Connection                                     | 未连接                   |
-| O     |                                                   |                          |
-| OD    | Open Drain                                        | 漏极开路门               |
-| P     |                                                   |                          |
-| PCB   | Physical Control Block                            | 物理控制块               |
-| PWM   | Pulse Width Modulation                            | 脉宽调制                 |
-| R     |                                                   |                          |
-| RST   | Reset                                             | 复位                     |
-| RX    | Reception                                         | 接收                     |
-| S     |                                                   |                          |
-| SCL   | Serial Clock Line                                 | 串行时钟线               |
-| SDA   | Serial Data and Address                           | 串行数据地址线           |
-| SPI   | SDH Physical Interface                            | SDH 物理接口             |
-| STA   | Static Timing Analysis                            | 静态时序分析             |
-| SYNC  | Synchronization (network)                         | 同步(网)                 |
-| U     |                                                   |                          |
-| UART  | Universal Asynchronous Receiver &amp; Transmitter | 通用异步收发器           |
-| USB   | Universal Serial Bus                              | 通用串行总线             |
+<style>
+  .ws63-abbr-table,
+  .ws63-abbr-table thead,
+  .ws63-abbr-table tbody,
+  .ws63-abbr-table tr,
+  .ws63-abbr-table th,
+  .ws63-abbr-table td {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    background-image: none !important;
+  }
+  .ws63-abbr-table {
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    width: auto;
+  }
+  /* 字母分组标题行 */
+  .ws63-abbr-table .abbr-letter {
+    font-weight: bold;
+    padding-top: 1em;
+  }
+</style>
+
+<table class="ws63-abbr-table" style="border: none !important; outline: none !important; border-collapse: collapse; border-spacing: 0; box-shadow: none;"><tr><td colspan="3" style="border: none !important;padding:8px 8px 2px 8px;font-weight:bold;text-align:left;">A</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">AC</td><td style="border: none !important;padding:2px 8px;text-align:left;">Alternating Current</td><td style="border: none !important;padding:2px 8px;text-align:left;">交流(电)</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">ADC</td><td style="border: none !important;padding:2px 8px;text-align:left;">Analog to Digital Converter</td><td style="border: none !important;padding:2px 8px;text-align:left;">模数转换器</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">ALE</td><td style="border: none !important;padding:2px 8px;text-align:left;">Address Latch Enable</td><td style="border: none !important;padding:2px 8px;text-align:left;">地址锁存使能</td></tr><tr><td colspan="3" style="border: none !important;padding:8px 8px 2px 8px;font-weight:bold;text-align:left;">C</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">CPU</td><td style="border: none !important;padding:2px 8px;text-align:left;">Central Processing Unit</td><td style="border: none !important;padding:2px 8px;text-align:left;">中央处理单元</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">CS</td><td style="border: none !important;padding:2px 8px;text-align:left;">Chip Select</td><td style="border: none !important;padding:2px 8px;text-align:left;">片选</td></tr><tr><td colspan="3" style="border: none !important;padding:8px 8px 2px 8px;font-weight:bold;text-align:left;">D</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">DDR</td><td style="border: none !important;padding:2px 8px;text-align:left;">Double Data Rate</td><td style="border: none !important;padding:2px 8px;text-align:left;">双数据速率</td></tr><tr><td colspan="3" style="border: none !important;padding:8px 8px 2px 8px;font-weight:bold;text-align:left;">E</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">EPAD</td><td style="border: none !important;padding:2px 8px;text-align:left;">Exposed PAD</td><td style="border: none !important;padding:2px 8px;text-align:left;"></td></tr><tr><td colspan="3" style="border: none !important;padding:8px 8px 2px 8px;font-weight:bold;text-align:left;">F</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">FLASH</td><td style="border: none !important;padding:2px 8px;text-align:left;">FLASH memory</td><td style="border: none !important;padding:2px 8px;text-align:left;">闪速存储器</td></tr><tr><td colspan="3" style="border: none !important;padding:8px 8px 2px 8px;font-weight:bold;text-align:left;">I</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">I2C</td><td style="border: none !important;padding:2px 8px;text-align:left;">The Inter-Integrated Circuit</td><td style="border: none !important;padding:2px 8px;text-align:left;">一种串行总线协议标准</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">I2S</td><td style="border: none !important;padding:2px 8px;text-align:left;">Inter-IC Sound</td><td style="border: none !important;padding:2px 8px;text-align:left;">一种音频数据传输总线标准</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">IO</td><td style="border: none !important;padding:2px 8px;text-align:left;">Input Output</td><td style="border: none !important;padding:2px 8px;text-align:left;">输入输出</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">IPU</td><td style="border: none !important;padding:2px 8px;text-align:left;">Internal Pull-Up</td><td style="border: none !important;padding:2px 8px;text-align:left;">内部上拉</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">J</td><td style="border: none !important;padding:2px 8px;text-align:left;"></td><td style="border: none !important;padding:2px 8px;text-align:left;"></td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">JEDEC</td><td style="border: none !important;padding:2px 8px;text-align:left;">Joint Electron Device Engineering Council</td><td style="border: none !important;padding:2px 8px;text-align:left;">电子元件工业联合会</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">JTAG</td><td style="border: none !important;padding:2px 8px;text-align:left;">Joint Test Action Group</td><td style="border: none !important;padding:2px 8px;text-align:left;">联合测试行动小组</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">L</td><td style="border: none !important;padding:2px 8px;text-align:left;"></td><td style="border: none !important;padding:2px 8px;text-align:left;"></td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">LSB</td><td style="border: none !important;padding:2px 8px;text-align:left;">Least Significant Byte</td><td style="border: none !important;padding:2px 8px;text-align:left;">最低有效字节</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">M</td><td style="border: none !important;padding:2px 8px;text-align:left;"></td><td style="border: none !important;padding:2px 8px;text-align:left;"></td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">MSB</td><td style="border: none !important;padding:2px 8px;text-align:left;">Most Significant Bit</td><td style="border: none !important;padding:2px 8px;text-align:left;">最高位</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">N</td><td style="border: none !important;padding:2px 8px;text-align:left;"></td><td style="border: none !important;padding:2px 8px;text-align:left;"></td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">NC</td><td style="border: none !important;padding:2px 8px;text-align:left;">No Connection</td><td style="border: none !important;padding:2px 8px;text-align:left;">未连接</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">O</td><td style="border: none !important;padding:2px 8px;text-align:left;"></td><td style="border: none !important;padding:2px 8px;text-align:left;"></td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">OD</td><td style="border: none !important;padding:2px 8px;text-align:left;">Open Drain</td><td style="border: none !important;padding:2px 8px;text-align:left;">漏极开路门</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">P</td><td style="border: none !important;padding:2px 8px;text-align:left;"></td><td style="border: none !important;padding:2px 8px;text-align:left;"></td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">PCB</td><td style="border: none !important;padding:2px 8px;text-align:left;">Physical Control Block</td><td style="border: none !important;padding:2px 8px;text-align:left;">物理控制块</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">PWM</td><td style="border: none !important;padding:2px 8px;text-align:left;">Pulse Width Modulation</td><td style="border: none !important;padding:2px 8px;text-align:left;">脉宽调制</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">R</td><td style="border: none !important;padding:2px 8px;text-align:left;"></td><td style="border: none !important;padding:2px 8px;text-align:left;"></td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">RST</td><td style="border: none !important;padding:2px 8px;text-align:left;">Reset</td><td style="border: none !important;padding:2px 8px;text-align:left;">复位</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">RX</td><td style="border: none !important;padding:2px 8px;text-align:left;">Reception</td><td style="border: none !important;padding:2px 8px;text-align:left;">接收</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">S</td><td style="border: none !important;padding:2px 8px;text-align:left;"></td><td style="border: none !important;padding:2px 8px;text-align:left;"></td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">SCL</td><td style="border: none !important;padding:2px 8px;text-align:left;">Serial Clock Line</td><td style="border: none !important;padding:2px 8px;text-align:left;">串行时钟线</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">SDA</td><td style="border: none !important;padding:2px 8px;text-align:left;">Serial Data and Address</td><td style="border: none !important;padding:2px 8px;text-align:left;">串行数据地址线</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">SPI</td><td style="border: none !important;padding:2px 8px;text-align:left;">SDH Physical Interface</td><td style="border: none !important;padding:2px 8px;text-align:left;">SDH 物理接口</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">STA</td><td style="border: none !important;padding:2px 8px;text-align:left;">Static Timing Analysis</td><td style="border: none !important;padding:2px 8px;text-align:left;">静态时序分析</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">SYNC</td><td style="border: none !important;padding:2px 8px;text-align:left;">Synchronization (network)</td><td style="border: none !important;padding:2px 8px;text-align:left;">同步(网)</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">U</td><td style="border: none !important;padding:2px 8px;text-align:left;"></td><td style="border: none !important;padding:2px 8px;text-align:left;"></td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">UART</td><td style="border: none !important;padding:2px 8px;text-align:left;">Universal Asynchronous Receiver &amp; Transmitter</td><td style="border: none !important;padding:2px 8px;text-align:left;">通用异步收发器</td></tr><tr><td style="border: none !important;padding:2px 8px;text-align:left;">USB</td><td style="border: none !important;padding:2px 8px;text-align:left;">Universal Serial Bus</td><td style="border: none !important;padding:2px 8px;text-align:left;">通用串行总线</td></tr></table>
