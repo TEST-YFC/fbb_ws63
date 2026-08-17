@@ -90,7 +90,6 @@ target = {
             "tiot_driver",
             "lvgl",
             "cxx_adapter",
-            "arduino",
         ],
         'ccflags': [
             "-DBOARD_ASIC", '-DPRE_ASIC',
