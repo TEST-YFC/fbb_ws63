@@ -318,6 +318,7 @@ nav:
           - Time: zh-CN/api-reference/osal/time/time.md
   - 硬件指南:
       - 硬件指南: zh-CN/hardware-guide/index.md
+      - 硬件用户指南: zh-CN/hardware-guide/hardware-user-guide/hardware-user-guide.md
       - 芯片手册:
           - 芯片手册: zh-CN/hardware-guide/datasheet/index.md
           - 产品概述: zh-CN/hardware-guide/datasheet/product-overview/product-overview.md
