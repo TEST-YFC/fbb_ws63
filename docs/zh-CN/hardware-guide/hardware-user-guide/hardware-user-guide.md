@@ -134,7 +134,7 @@ WS63V100 系列芯片采用的封装形式为 QFN 40PIN，管脚按位置排列�
 
 表1-4 全局控制信号管脚列表
 
-<table><tr><td>PIN</td><td>名称</td><td>类型</td><td>电平(V)</td><td>说明</td></tr><tr><td>38</td><td>PWR_ON</td><td>I</td><td>3.3/1.8</td><td>PMU 上电使能管脚(跟随DVDD3318 电平)。<br>0:下电;<br>1:上电。</td></tr><tr><td>23</td><td>PWR_SEL</td><td>I</td><td>3.3</td><td>VBAT_IN 电源方案选择管脚。<br>0:VBAT_IN 采用 5V 供电;<br>1:VBAT_IN 采用 3.3V 供电。</td></tr></table>
+<table><tr><th>PIN</th><th>名称</th><th>类型</th><th>电平(V)</th><th>说明</th></tr><tr><td>38</td><td>PWR_ON</td><td>I</td><td>3.3/1.8</td><td>PMU 上电使能管脚(跟随DVDD3318 电平)。<br>0:下电;<br>1:上电。</td></tr><tr><td>23</td><td>PWR_SEL</td><td>I</td><td>3.3</td><td>VBAT_IN 电源方案选择管脚。<br>0:VBAT_IN 采用 5V 供电;<br>1:VBAT_IN 采用 3.3V 供电。</td></tr></table>
 
 #### GPIO 管脚
 
@@ -210,7 +210,7 @@ GND 管脚如表 1-8 所示。
 
 表1-9 GPIO 复用管脚
 
-<table><tr><td>PIN</td><td>管脚名称</td><td>类型</td><td>电压(V)</td><td>说明</td></tr><tr><td>26</td><td>UART1_TX</td><td>OD</td><td>5/3.3/1.8</td><td>复用信号0: GPIO_15<br>复用信号1: UART1_TX<br>复用信号2: I2C1_SDA</td></tr><tr><td>27</td><td>UART1_RX</td><td>I</td><td>5/3.3/1.8</td><td>复用信号0: GPIO_16<br>复用信号1: UART1_RX<br>复用信号2: I2C1_SCL</td></tr><tr><td>28</td><td>UART0_TX</td><td>OD</td><td>5/3.3/1.8</td><td>复用信号1: UART0_TX<br>复用信号2: I2C0_SDA</td></tr><tr><td>29</td><td>UART0_RX</td><td>I</td><td>5/3.3/1.8</td><td>复用信号1: UART0_RX<br>复用信号2: I2C0_SCL</td></tr></table>
+<table><tr><th>PIN</th><th>管脚名称</th><th>类型</th><th>电压(V)</th><th>说明</th></tr><tr><td>26</td><td>UART1_TX</td><td>OD</td><td>5/3.3/1.8</td><td>复用信号0: GPIO_15<br>复用信号1: UART1_TX<br>复用信号2: I2C1_SDA</td></tr><tr><td>27</td><td>UART1_RX</td><td>I</td><td>5/3.3/1.8</td><td>复用信号0: GPIO_16<br>复用信号1: UART1_RX<br>复用信号2: I2C1_SCL</td></tr><tr><td>28</td><td>UART0_TX</td><td>OD</td><td>5/3.3/1.8</td><td>复用信号1: UART0_TX<br>复用信号2: I2C0_SDA</td></tr><tr><td>29</td><td>UART0_RX</td><td>I</td><td>5/3.3/1.8</td><td>复用信号1: UART0_RX<br>复用信号2: I2C0_SCL</td></tr></table>
 
 #### ADC 通道
 
@@ -235,7 +235,7 @@ GPIO（General Purpose Input/Output）管脚如表 1-11 所示。其中 PIN5、7
 
 表1-11 GPIO 复用管脚
 
-<table><tr><td>PIN</td><td>管脚名称</td><td>类型</td><td>电压(V)</td><td>说明</td></tr><tr><td>4</td><td>GPIO_00</td><td>I/O</td><td>3.3/1.8</td><td>复用信号 0: GPIO_0 (Default)<br>复用信号 1: PWM0<br>复用信号 2: 保留<br>复用信号 3: SPI1_CSN<br>复用信号 4: JTAG_TDI</td></tr><tr><td>5</td><td>GPIO_01</td><td>I/O</td><td>3.3/1.8</td><td>复用信号 0: GPIO_1 (Default)<br>复用信号 1: PWM1<br>复用信号 2: 保留<br>复用信号 3: SPI1_IO0/SPI1_OUT</td></tr><tr><td>6</td><td>GPIO_02</td><td>I/O</td><td>3.3/1.8</td><td>复用信号 0: GPIO_2 (Default)<br>复用信号 1: PWM2<br>复用信号 2: 保留<br>复用信号3:SPI1_IO3</td></tr><tr><td>7</td><td>GPIO_03</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:GPIO_3(Default)<br>复用信号1:PWM3<br>复用信号2:保留<br>复用信号3:SPI1_IO1/SPI1_IN</td></tr><tr><td>8</td><td>GPIO_04</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:保留(Default)<br>复用信号1:PWM4<br>复用信号2:GPIO_4<br>复用信号3:SPI1_IO1/SPI1_IN(优先使用pin8)<br>复用信号4:JTAG_ENABLE,硬件配置字</td></tr><tr><td>9</td><td>GPIO_05</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:保留(Default)<br>复用信号1:PWM5<br>复用信号2:UART2_CTS<br>复用信号3:SPI1_IO2<br>复用信号4:GPIO_5<br>复用信号5:SPI0_IN</td></tr><tr><td>10</td><td>GPIO_06</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:GPIO_6(Default)<br>复用信号1:PWM6<br>复用信号2:UART2_RTS<br>复用信号3:SPI1_SCK<br>复用信号4:REFCLK_FREQ_STATUS,硬件配置字<br>复用信号5:保留<br>复用信号6:SPI0_OUT</td></tr><tr><td>11</td><td>GPIO_07</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:GPIO_7(Default)<br>复用信号1:PWM7<br>复用信号2: UART2_RXD<br>复用信号3: SPI0_SCK<br>复用信号4: I2S_MCLK</td></tr><tr><td>12</td><td>GPIO_08</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_8 (Default)<br>复用信号1: PWM0<br>复用信号2: UART2_TXD<br>复用信号3: SPI0_CS1_N<br>复用信号4: 保留</td></tr><tr><td>13</td><td>GPIO_09</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_9 (Default)<br>复用信号1: PWM1<br>复用信号2: RADAR_ANT0_SW<br>复用信号3: SPI0_OUT<br>复用信号4: I2S_DO<br>复用信号5: 保留<br>复用信号6: 保留<br>复用信号7: JTAG_TDO</td></tr><tr><td>14</td><td>GPIO_10</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_10 (Default)<br>复用信号1: PWM2<br>复用信号2: ANT0_SW<br>复用信号3: SPI0_CS0_N<br>复用信号4: I2S_SCLK</td></tr><tr><td>15</td><td>GPIO_11</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_11 (Default)<br>复用信号1: PWM3<br>复用信号2: RADAR_ANTI_SW<br>复用信号3: SPI0_IN<br>复用信号4: I2S_LRCLK</td></tr><tr><td>16</td><td>GPIO_12</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_12 (Default)<br>复用信号1: PWM4<br>复用信号2: ANT1_SW<br>复用信号4: I2S_DI</td></tr><tr><td>24</td><td>GPIO_13</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_13 (Default)<br>复用信号1: UART1_CTS<br>复用信号2: RADAR_ANT0_SW<br>复用信号3: 保留<br>复用信号4: JTAG_TMS/SWD</td></tr><tr><td>25</td><td>GPIO_14</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_14 (Default)<br>复用信号1: UART1_RTS<br>复用信号2: RADAR_ANTI_SW<br>复用信号3: 保留<br>复用信号4: JTAG_TCK/SWC</td></tr><tr><td>26</td><td>UART1_TX</td><td>OD</td><td>5/3.3/1.8</td><td>复用信号0: GPIO_15<br>复用信号1: UART1_TX<br>复用信号2: I2C1_SDA</td></tr><tr><td>27</td><td>UART1_RX</td><td>I</td><td>5/3.3/1.8</td><td>复用信号0: GPIO_16<br>复用信号1: UART1_RX<br>复用信号2: I2C1_SCL</td></tr></table>
+<table><tr><th>PIN</th><th>管脚名称</th><th>类型</th><th>电压(V)</th><th>说明</th></tr><tr><td>4</td><td>GPIO_00</td><td>I/O</td><td>3.3/1.8</td><td>复用信号 0: GPIO_0 (Default)<br>复用信号 1: PWM0<br>复用信号 2: 保留<br>复用信号 3: SPI1_CSN<br>复用信号 4: JTAG_TDI</td></tr><tr><td>5</td><td>GPIO_01</td><td>I/O</td><td>3.3/1.8</td><td>复用信号 0: GPIO_1 (Default)<br>复用信号 1: PWM1<br>复用信号 2: 保留<br>复用信号 3: SPI1_IO0/SPI1_OUT</td></tr><tr><td>6</td><td>GPIO_02</td><td>I/O</td><td>3.3/1.8</td><td>复用信号 0: GPIO_2 (Default)<br>复用信号 1: PWM2<br>复用信号 2: 保留<br>复用信号3:SPI1_IO3</td></tr><tr><td>7</td><td>GPIO_03</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:GPIO_3(Default)<br>复用信号1:PWM3<br>复用信号2:保留<br>复用信号3:SPI1_IO1/SPI1_IN</td></tr><tr><td>8</td><td>GPIO_04</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:保留(Default)<br>复用信号1:PWM4<br>复用信号2:GPIO_4<br>复用信号3:SPI1_IO1/SPI1_IN(优先使用pin8)<br>复用信号4:JTAG_ENABLE,硬件配置字</td></tr><tr><td>9</td><td>GPIO_05</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:保留(Default)<br>复用信号1:PWM5<br>复用信号2:UART2_CTS<br>复用信号3:SPI1_IO2<br>复用信号4:GPIO_5<br>复用信号5:SPI0_IN</td></tr><tr><td>10</td><td>GPIO_06</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:GPIO_6(Default)<br>复用信号1:PWM6<br>复用信号2:UART2_RTS<br>复用信号3:SPI1_SCK<br>复用信号4:REFCLK_FREQ_STATUS,硬件配置字<br>复用信号5:保留<br>复用信号6:SPI0_OUT</td></tr><tr><td>11</td><td>GPIO_07</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0:GPIO_7(Default)<br>复用信号1:PWM7<br>复用信号2: UART2_RXD<br>复用信号3: SPI0_SCK<br>复用信号4: I2S_MCLK</td></tr><tr><td>12</td><td>GPIO_08</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_8 (Default)<br>复用信号1: PWM0<br>复用信号2: UART2_TXD<br>复用信号3: SPI0_CS1_N<br>复用信号4: 保留</td></tr><tr><td>13</td><td>GPIO_09</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_9 (Default)<br>复用信号1: PWM1<br>复用信号2: RADAR_ANT0_SW<br>复用信号3: SPI0_OUT<br>复用信号4: I2S_DO<br>复用信号5: 保留<br>复用信号6: 保留<br>复用信号7: JTAG_TDO</td></tr><tr><td>14</td><td>GPIO_10</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_10 (Default)<br>复用信号1: PWM2<br>复用信号2: ANT0_SW<br>复用信号3: SPI0_CS0_N<br>复用信号4: I2S_SCLK</td></tr><tr><td>15</td><td>GPIO_11</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_11 (Default)<br>复用信号1: PWM3<br>复用信号2: RADAR_ANTI_SW<br>复用信号3: SPI0_IN<br>复用信号4: I2S_LRCLK</td></tr><tr><td>16</td><td>GPIO_12</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_12 (Default)<br>复用信号1: PWM4<br>复用信号2: ANT1_SW<br>复用信号4: I2S_DI</td></tr><tr><td>24</td><td>GPIO_13</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_13 (Default)<br>复用信号1: UART1_CTS<br>复用信号2: RADAR_ANT0_SW<br>复用信号3: 保留<br>复用信号4: JTAG_TMS/SWD</td></tr><tr><td>25</td><td>GPIO_14</td><td>I/O</td><td>3.3/1.8</td><td>复用信号0: GPIO_14 (Default)<br>复用信号1: UART1_RTS<br>复用信号2: RADAR_ANTI_SW<br>复用信号3: 保留<br>复用信号4: JTAG_TCK/SWC</td></tr><tr><td>26</td><td>UART1_TX</td><td>OD</td><td>5/3.3/1.8</td><td>复用信号0: GPIO_15<br>复用信号1: UART1_TX<br>复用信号2: I2C1_SDA</td></tr><tr><td>27</td><td>UART1_RX</td><td>I</td><td>5/3.3/1.8</td><td>复用信号0: GPIO_16<br>复用信号1: UART1_RX<br>复用信号2: I2C1_SCL</td></tr></table>
 
 #### CLK 管脚
 
@@ -256,7 +256,7 @@ CLK 管脚如表 1-12 所示。
 
 表2-1 电流参数
 
-<table><tr><td>符号</td><td colspan="2">描述</td><td>最小值</td><td>典型值</td><td>最大值</td><td>单位</td></tr><tr><td>VBAT_IN</td><td colspan="2">VBAT_IN 电源</td><td>-</td><td>-</td><td>600</td><td>mA</td></tr><tr><td rowspan="2">DVDD3318</td><td rowspan="2">IO 输入电源</td><td>BUCK 方案</td><td>-</td><td>-</td><td>110</td><td>mA</td></tr><tr><td>LDO 方案</td><td>-</td><td>-</td><td>300</td><td>mA</td></tr></table>
+<table><tr><th>符号</th><th colspan="2">描述</th><th>最小值</th><th>典型值</th><th>最大值</th><th>单位</th></tr><tr><td>VBAT_IN</td><td colspan="2">VBAT_IN 电源</td><td>-</td><td>-</td><td>600</td><td>mA</td></tr><tr><td rowspan="2">DVDD3318</td><td rowspan="2">IO 输入电源</td><td>BUCK 方案</td><td>-</td><td>-</td><td>110</td><td>mA</td></tr><tr><td>LDO 方案</td><td>-</td><td>-</td><td>300</td><td>mA</td></tr></table>
 
 ### 极限工作条件
 
@@ -484,7 +484,7 @@ CL1 实际调测步骤如下（需要使用综测仪进行测试，综测仪可�
 
 表3-3 CL1 测试举例
 
-<table><tr><td>晶体 CL</td><td>xin 与xou 上件容值</td><td>xo_trim_coarse</td><td>xo_trim_fine</td><td>fmax</td><td>fmin</td><td>f0</td><td>f1</td></tr><tr><td rowspan="4">8pF</td><td>0</td><td>0</td><td>0</td><td>100ppm</td><td>-</td><td>-</td><td>-</td></tr><tr><td>0</td><td>15</td><td>127</td><td>-</td><td>-20ppm</td><td>-</td><td>-</td></tr><tr><td>1pF</td><td>0</td><td>0</td><td>-</td><td>-</td><td>90ppm</td><td>-</td></tr><tr><td>2pF</td><td>0</td><td>0</td><td>-</td><td>-</td><td>-</td><td>80ppm</td></tr><tr><td colspan="8">此时 ratio_adjust=10ppm/1pF,CL1=(100-20)/2/10+0=4pF</td></tr><tr><td rowspan="2">8pF</td><td>4pF</td><td>0</td><td>0</td><td>60ppm</td><td>-</td><td>-</td><td>-</td></tr><tr><td>4pF</td><td>15</td><td>127</td><td>-</td><td>-60ppm</td><td>-</td><td>-</td></tr></table>
+<table><tr><th>晶体 CL</th><th>xin 与xou 上件容值</th><th>xo_trim_coarse</th><th>xo_trim_fine</th><th>fmax</th><th>fmin</th><th>f0</th><th>f1</th></tr><tr><td rowspan="4">8pF</td><td>0</td><td>0</td><td>0</td><td>100ppm</td><td>-</td><td>-</td><td>-</td></tr><tr><td>0</td><td>15</td><td>127</td><td>-</td><td>-20ppm</td><td>-</td><td>-</td></tr><tr><td>1pF</td><td>0</td><td>0</td><td>-</td><td>-</td><td>90ppm</td><td>-</td></tr><tr><td>2pF</td><td>0</td><td>0</td><td>-</td><td>-</td><td>-</td><td>80ppm</td></tr><tr><td colspan="8">此时 ratio_adjust=10ppm/1pF,CL1=(100-20)/2/10+0=4pF</td></tr><tr><td rowspan="2">8pF</td><td>4pF</td><td>0</td><td>0</td><td>60ppm</td><td>-</td><td>-</td><td>-</td></tr><tr><td>4pF</td><td>15</td><td>127</td><td>-</td><td>-60ppm</td><td>-</td><td>-</td></tr></table>
 
 !!! note "说明"
 
@@ -519,15 +519,15 @@ WS63V100 系列芯片的 PIN23 为电源方案配置管脚，当 VBAT 电源选�
 
 表3-5 硬件配置字信号描述
 
-<table><tr><td>信号名</td><td>PIN</td><td>管脚电平</td><td>芯片工作模式</td></tr><tr><td rowspan="2">FLASH BOOT (GPIO_03)</td><td rowspan="2">7</td><td>0</td><td>正常启动</td></tr><tr><td>1</td><td>进烧录模式</td></tr><tr><td rowspan="2">JTAG_ENABLE (GPIO_04)</td><td rowspan="2">8</td><td>0</td><td>正常启动</td></tr><tr><td>1</td><td>使能 JTAG 调试接口</td></tr><tr><td rowspan="2">REFCLK_FREQ_STATUS (GPIO_06)</td><td rowspan="2">10</td><td>0</td><td>时钟选择 40MHz</td></tr><tr><td>1</td><td>时钟选择 24MHz</td></tr><tr><td rowspan="2">保留 1 (GPIO_01)</td><td rowspan="2">5</td><td>0</td><td>正常工作模式</td></tr><tr><td>1</td><td>禁止</td></tr><tr><td rowspan="4">保留 2 (GPIO_11):保留 3 (GPIO_09)</td><td rowspan="4">15:13</td><td>0:0</td><td>正常工作模式</td></tr><tr><td>0:1</td><td>正常工作模式</td></tr><tr><td>1:0</td><td>正常工作模式</td></tr><tr><td>1:1</td><td>禁止</td></tr></table>
+<table><tr><th>信号名</th><th>PIN</th><th>管脚电平</th><th>芯片工作模式</th></tr><tr><td rowspan="2">FLASH BOOT (GPIO_03)</td><td rowspan="2">7</td><td>0</td><td>正常启动</td></tr><tr><td>1</td><td>进烧录模式</td></tr><tr><td rowspan="2">JTAG_ENABLE (GPIO_04)</td><td rowspan="2">8</td><td>0</td><td>正常启动</td></tr><tr><td>1</td><td>使能 JTAG 调试接口</td></tr><tr><td rowspan="2">REFCLK_FREQ_STATUS (GPIO_06)</td><td rowspan="2">10</td><td>0</td><td>时钟选择 40MHz</td></tr><tr><td>1</td><td>时钟选择 24MHz</td></tr><tr><td rowspan="2">保留 1 (GPIO_01)</td><td rowspan="2">5</td><td>0</td><td>正常工作模式</td></tr><tr><td>1</td><td>禁止</td></tr><tr><td rowspan="4">保留 2 (GPIO_11):保留 3 (GPIO_09)</td><td rowspan="4">15:13</td><td>0:0</td><td>正常工作模式</td></tr><tr><td>0:1</td><td>正常工作模式</td></tr><tr><td>1:0</td><td>正常工作模式</td></tr><tr><td>1:1</td><td>禁止</td></tr></table>
 
-注：1. 上电初始化时，硬件配置字 JTAG_ENABLE 高电平使能后，GPIO13 和 GPIO14 固定使用为 JTAG 接口。
-
+注：
+1. 上电初始化时，硬件配置字 JTAG_ENABLE 高电平使能后，GPIO13 和 GPIO14 固定使用为 JTAG 接口。
 2. 上电初始化时，硬件配置字 FLASH_BOOT 高电平使能后，芯片启动流程会停留在 BOOT 阶段，等待烧录。
 
 表3-6 电源方案选择管脚说明
 
-<table><tr><td>信号名</td><td>PIN</td><td>管脚电平</td><td>芯片工作模式</td></tr><tr><td rowspan="2">PWR_SEL</td><td rowspan="2">23</td><td>0</td><td>VBAT_IN 采用 5V 供电。</td></tr><tr><td>1</td><td>VBAT_IN 采用 3V3 供电。</td></tr></table>
+<table><tr><th>信号名</th><th>PIN</th><th>管脚电平</th><th>芯片工作模式</th></tr><tr><td rowspan="2">PWR_SEL</td><td rowspan="2">23</td><td>0</td><td>VBAT_IN 采用 5V 供电。</td></tr><tr><td>1</td><td>VBAT_IN 采用 3V3 供电。</td></tr></table>
 
 !!! warning "须知"
 
@@ -808,7 +808,7 @@ WS63V100 系列芯片支持 QSPI 和 SPI 接口，输入输出电平与 DVDD3318
 
 表3-17 QSPI&SPI 接口设计建议
 
-<table><tr><td>名称</td><td>设计建议</td></tr><tr><td>SPI_CSN</td><td>直连,走线≤5inch。</td></tr><tr><td>SPI_CLK</td><td>两层板,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。四层板,DVDD3318=1.8V,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。四层板,DVDD3318=3.3V,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理</td></tr><tr><td>SPI_DATA</td><td>两层板,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。四层板,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。</td></tr></table>
+<table><tr><th>名称</th><th>设计建议</th></tr><tr><td>SPI_CSN</td><td>直连,走线≤5inch。</td></tr><tr><td>SPI_CLK</td><td>两层板,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。四层板,DVDD3318=1.8V,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。四层板,DVDD3318=3.3V,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理</td></tr><tr><td>SPI_DATA</td><td>两层板,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。四层板,走线≤5inch,芯片端预留一个串接电阻位置,单根走线包地处理。</td></tr></table>
 
 #### I2C 接口
 
@@ -915,17 +915,17 @@ WS63 系列芯片封装为 QFN40，规格大小为 5mm × 5 mm ，PCB 支持 2/4
 
 表4-1 2 层板 1.0mm 参考叠层信息
 
-<table><tr><td>层标识</td><td>设计要求层叠图示</td><td>设计要求介质厚度(oz/mil)</td><td>PCB厂家设计调整介质厚度(oz/mil)</td><td>PCB厂家设计调整层叠图示</td></tr><tr><td rowspan="2">Art 1</td><td colspan="2">0.5oz+plating</td><td colspan="2">0.5oz+plating</td></tr><tr><td>CORE</td><td>35.4</td><td>34.06</td><td>CORE</td></tr><tr><td>Art 2</td><td colspan="2">0.5oz+plating</td><td colspan="2">0.5oz+plating</td></tr><tr><td>板厚</td><td colspan="2">客户设计板厚:1.0±0.10 mm</td><td colspan="2">厂家理论板厚:1.0±0.10 mm</td></tr></table>
+<table><tr><th>层标识</th><th>设计要求层叠图示</th><th>设计要求介质厚度(oz/mil)</th><th>PCB厂家设计调整介质厚度(oz/mil)</th><th>PCB厂家设计调整层叠图示</th></tr><tr><td rowspan="2">Art 1</td><td colspan="2">0.5oz+plating</td><td colspan="2">0.5oz+plating</td></tr><tr><td>CORE</td><td>35.4</td><td>34.06</td><td>CORE</td></tr><tr><td>Art 2</td><td colspan="2">0.5oz+plating</td><td colspan="2">0.5oz+plating</td></tr><tr><td>板厚</td><td colspan="2">客户设计板厚:1.0±0.10 mm</td><td colspan="2">厂家理论板厚:1.0±0.10 mm</td></tr></table>
 
 表4-2 单线线宽、阻抗、参考层控制信息参考
 
-<table><tr><td>层标识</td><td>设计线宽</td><td>设计阻抗</td><td>调整线宽</td><td>调整阻抗</td><td>参考层</td></tr><tr><td>Art 1</td><td>5/19/5(到地距离/线宽/到地距离)</td><td>50±10%</td><td>5/19/5(到地距离/线宽/到地距离)</td><td>50±10%</td><td>L1&amp;L2</td></tr></table>
+<table><tr><th>层标识</th><th>设计线宽</th><th>设计阻抗</th><th>调整线宽</th><th>调整阻抗</th><th>参考层</th></tr><tr><td>Art 1</td><td>5/19/5(到地距离/线宽/到地距离)</td><td>50±10%</td><td>5/19/5(到地距离/线宽/到地距离)</td><td>50±10%</td><td>L1&amp;L2</td></tr></table>
 
 注：线宽的计量单位为 mil，阻抗的计量单位为 Ω 。
 
 表4-3 4 层板 1.2mm 参考叠层信息
 
-<table><tr><td>层标识</td><td>设计要求层叠图示</td><td>设计要求介质厚度(oz/mil)</td><td>PCB厂家设计调整介质厚度(oz/mil)</td><td>PCB厂家设计调整层叠图示</td></tr><tr><td rowspan="2">Art 1</td><td colspan="2">0.5oz+plating</td><td colspan="2">0.5oz+plating</td></tr><tr><td>PP</td><td>8.2</td><td>10.88</td><td>PP</td></tr><tr><td rowspan="2">Art 2</td><td colspan="2">1oz</td><td colspan="2">1oz</td></tr><tr><td>CORE</td><td>23.8</td><td>18</td><td>CORE</td></tr><tr><td rowspan="2">Art 3</td><td colspan="2">1oz</td><td colspan="2">1oz</td></tr><tr><td>PP</td><td>8.2</td><td>10.88</td><td>PP</td></tr><tr><td>Art 4</td><td colspan="2">0.5oz+plating</td><td colspan="2">0.5oz+plating</td></tr><tr><td>板厚</td><td colspan="2">客户设计板厚:1.2±0.12 mm</td><td colspan="2">厂家理论板厚:1.2±0.12 mm</td></tr></table>
+<table><tr><th>层标识</th><th>设计要求层叠图示</th><th>设计要求介质厚度(oz/mil)</th><th>PCB厂家设计调整介质厚度(oz/mil)</th><th>PCB厂家设计调整层叠图示</th></tr><tr><td rowspan="2">Art 1</td><td colspan="2">0.5oz+plating</td><td colspan="2">0.5oz+plating</td></tr><tr><td>PP</td><td>8.2</td><td>10.88</td><td>PP</td></tr><tr><td rowspan="2">Art 2</td><td colspan="2">1oz</td><td colspan="2">1oz</td></tr><tr><td>CORE</td><td>23.8</td><td>18</td><td>CORE</td></tr><tr><td rowspan="2">Art 3</td><td colspan="2">1oz</td><td colspan="2">1oz</td></tr><tr><td>PP</td><td>8.2</td><td>10.88</td><td>PP</td></tr><tr><td>Art 4</td><td colspan="2">0.5oz+plating</td><td colspan="2">0.5oz+plating</td></tr><tr><td>板厚</td><td colspan="2">客户设计板厚:1.2±0.12 mm</td><td colspan="2">厂家理论板厚:1.2±0.12 mm</td></tr></table>
 
 表4-4 单线线宽、阻抗、参考层控制信息
 
@@ -1221,7 +1221,7 @@ IPC/JEDEC J-STD-020D 标准，封装体测温方法按照 JEP 140 标准要求�
 
 表6-2 IPC/JEDEC 020D 中的无铅器件封装体耐温标准
 
-| PackageThickness | Volume mm3&lt; 350 | Volume mm3350 ~ 2000 | Volume mm3&gt; 2000 |
+| PackageThickness | Volume mm³ &lt; 350 | Volume mm³ 350 ~ 2000 | Volume mm³ &gt; 2000 |
 | ---------------- | ------------------ | -------------------- | ------------------- |
 | &lt; 1.6mm       | 260°C              | 260°C                | 260°C               |
 | 1.6mm ~ 2.5mm    | 260°C              | 250°C                | 245°C               |
@@ -1246,7 +1246,7 @@ JEP140 推荐：对于厚度较小的器件，测量封装体温度时，直接�
 
 表6-3 混装回流焊工艺参数表
 
-<table><tr><td colspan="2">数值要求</td><td>有铅 BGA</td><td>无铅 BGA</td><td>其它器件</td></tr><tr><td rowspan="2">预热区(40°C~150°C)</td><td>时间</td><td colspan="3">60s ~ 150s</td></tr><tr><td>升温斜率</td><td colspan="3">&lt;2.5°C/s</td></tr><tr><td rowspan="2">均温区(150°C~183°C)</td><td>时间</td><td colspan="3">30s ~ 90s</td></tr><tr><td>升温斜率</td><td colspan="3">&lt;1.0°C/s</td></tr><tr><td rowspan="2">回流区(&gt;183°C)</td><td>峰值温度</td><td>210°C~240°C</td><td>220°C~240°C</td><td>210°C~245°C</td></tr><tr><td>时间</td><td>30s~120s</td><td>60s~120s</td><td>30s~120s</td></tr><tr><td>冷却区(Tmax~150°C)</td><td>降温斜率</td><td colspan="3">1.0°C/s≤Slope≤4.0°C/s</td></tr></table>
+<table><tr><th colspan="2">数值要求</th><th>有铅 BGA</th><th>无铅 BGA</th><th>其它器件</th></tr><tr><td rowspan="2">预热区(40°C~150°C)</td><td>时间</td><td colspan="3">60s ~ 150s</td></tr><tr><td>升温斜率</td><td colspan="3">&lt;2.5°C/s</td></tr><tr><td rowspan="2">均温区(150°C~183°C)</td><td>时间</td><td colspan="3">30s ~ 90s</td></tr><tr><td>升温斜率</td><td colspan="3">&lt;1.0°C/s</td></tr><tr><td rowspan="2">回流区(&gt;183°C)</td><td>峰值温度</td><td>210°C~240°C</td><td>220°C~240°C</td><td>210°C~245°C</td></tr><tr><td>时间</td><td>30s~120s</td><td>60s~120s</td><td>30s~120s</td></tr><tr><td>冷却区(Tmax~150°C)</td><td>降温斜率</td><td colspan="3">1.0°C/s≤Slope≤4.0°C/s</td></tr></table>
 
 !!! note "说明"
 
@@ -1258,7 +1258,7 @@ IPC/JEDEC 020D 中的有铅器件封装体耐温标准如表 6-4 所示。
 
 表6-4 IPC/JEDEC 020D 中的有铅器件封装体耐温标准
 
-| PackageThickness | Volume mm3&lt; 350 | Volume mm3≥350 |
+| PackageThickness | Volume mm³ &lt; 350 | Volume mm³ ≥ 350 |
 | ---------------- | ------------------ | -------------- |
 | &lt; 2.5mm       | 235°C              | 220°C          |
 | ≥2.5mm           | 220°C              | 220°C          |
@@ -1324,7 +1324,7 @@ JEP140 标准规定测量封装体温度方法同无铅工艺，请参考「无�
 
 表7-2 重新烘烤参考表
 
-<table><tr><td>芯片厚度</td><td>MSL 潮敏等级</td><td>烘烤 125°C</td><td>烘烤 90°C/≤5% RH</td><td>烘烤 40°C/≤5% RH</td></tr><tr><td rowspan="5">≤1.4mm</td><td>2a</td><td>3h</td><td>11h</td><td>5day</td></tr><tr><td>3</td><td>7h</td><td>23h</td><td>9day</td></tr><tr><td>4</td><td>7h</td><td>23h</td><td>9day</td></tr><tr><td>5</td><td>7h</td><td>24h</td><td>10day</td></tr><tr><td>5a</td><td>10h</td><td>24h</td><td>10day</td></tr><tr><td rowspan="5">≤2.0mm</td><td>2a</td><td>16h</td><td>2day</td><td>22day</td></tr><tr><td>3</td><td>17h</td><td>2day</td><td>23day</td></tr><tr><td>4</td><td>20h</td><td>3day</td><td>28day</td></tr><tr><td>5</td><td>25h</td><td>4day</td><td>35day</td></tr><tr><td>5a</td><td>40h</td><td>6day</td><td>56day</td></tr><tr><td rowspan="5">≤4.5mm</td><td>2a</td><td>48h</td><td>7day</td><td>67day</td></tr><tr><td>3</td><td>48h</td><td>8day</td><td>67day</td></tr><tr><td>4</td><td>48h</td><td>10day</td><td>67day</td></tr><tr><td>5</td><td>48h</td><td>10day</td><td>67day</td></tr><tr><td>5a</td><td>48h</td><td>10day</td><td>67day</td></tr></table>
+<table><tr><th>芯片厚度</th><th>MSL 潮敏等级</th><th>烘烤 125°C</th><th>烘烤 90°C/≤5% RH</th><th>烘烤 40°C/≤5% RH</th></tr><tr><td rowspan="5">≤1.4mm</td><td>2a</td><td>3h</td><td>11h</td><td>5day</td></tr><tr><td>3</td><td>7h</td><td>23h</td><td>9day</td></tr><tr><td>4</td><td>7h</td><td>23h</td><td>9day</td></tr><tr><td>5</td><td>7h</td><td>24h</td><td>10day</td></tr><tr><td>5a</td><td>10h</td><td>24h</td><td>10day</td></tr><tr><td rowspan="5">≤2.0mm</td><td>2a</td><td>16h</td><td>2day</td><td>22day</td></tr><tr><td>3</td><td>17h</td><td>2day</td><td>23day</td></tr><tr><td>4</td><td>20h</td><td>3day</td><td>28day</td></tr><tr><td>5</td><td>25h</td><td>4day</td><td>35day</td></tr><tr><td>5a</td><td>40h</td><td>6day</td><td>56day</td></tr><tr><td rowspan="5">≤4.5mm</td><td>2a</td><td>48h</td><td>7day</td><td>67day</td></tr><tr><td>3</td><td>48h</td><td>8day</td><td>67day</td></tr><tr><td>4</td><td>48h</td><td>10day</td><td>67day</td></tr><tr><td>5</td><td>48h</td><td>10day</td><td>67day</td></tr><tr><td>5a</td><td>48h</td><td>10day</td><td>67day</td></tr></table>
 
 !!! note "说明"
 
