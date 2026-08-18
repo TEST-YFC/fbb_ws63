@@ -15,6 +15,6 @@ hide:
 
     了解 WS63 系列芯片的各项基本功能，包括产品概述、系统、QSPI Flash 控制器、WiFi/BLE & SLE、安全系统、外围设备、JTAG 与缩略语等内容。
 
-- [硬件用户指南](hardware-user-guide/hardware-user-guide.md)
+- [硬件用户指南](hardware-user-guide/index.md)
 
     介绍 WS63 系列芯片的封装管脚信息、电气特性参数、原理图设计建议、PCB 设计建议、热设计建议、焊接工艺、潮敏参数、接口时序与注意事项等内容。

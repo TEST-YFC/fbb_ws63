@@ -340,7 +340,18 @@ nav:
               - ADC: zh-CN/hardware-guide/datasheet/peripherals/ADC.md
           - JTAG: zh-CN/hardware-guide/datasheet/JTAG/JTAG.md
           - 缩略语: zh-CN/hardware-guide/datasheet/abbreviations/abbreviations.md
-      - 硬件用户指南: zh-CN/hardware-guide/hardware-user-guide/hardware-user-guide.md
+      - 硬件用户指南:
+          - 硬件用户指南: zh-CN/hardware-guide/hardware-user-guide/index.md
+          - 封装与管脚: zh-CN/hardware-guide/hardware-user-guide/package-and-pins.md
+          - 电性能参数: zh-CN/hardware-guide/hardware-user-guide/electrical-characteristics.md
+          - 原理图设计建议: zh-CN/hardware-guide/hardware-user-guide/schematic-design.md
+          - PCB 设计建议: zh-CN/hardware-guide/hardware-user-guide/pcb-design.md
+          - 热设计建议: zh-CN/hardware-guide/hardware-user-guide/thermal-design.md
+          - 焊接工艺: zh-CN/hardware-guide/hardware-user-guide/soldering-process.md
+          - 潮敏参数: zh-CN/hardware-guide/hardware-user-guide/moisture-sensitivity.md
+          - 接口时序: zh-CN/hardware-guide/hardware-user-guide/interface-timing.md
+          - 注意事项: zh-CN/hardware-guide/hardware-user-guide/precautions.md
+          - 缩略语: zh-CN/hardware-guide/hardware-user-guide/abbreviations.md
   - 工具中心:
       - 工具中心索引: zh-CN/tools/index.md
       - HiSpark插件: zh-CN/tools/HiSparkStudioforVSCodeUserGuide/HiSparkStudioforVSCodeUserGuide.md
