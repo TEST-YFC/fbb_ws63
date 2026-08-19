@@ -24,6 +24,7 @@ import time
 import stat
 import shutil
 import hashlib
+import threading
 from typing import List, Set, Optional
 
 # ============================================================
@@ -608,52 +609,54 @@ def compile_sdk_and_save_log(build_target_name: str) -> None:
     log_path = os.path.join('..', 'archives', f'build-{global_combined}.log')
     _info("日志文件", os.path.abspath(log_path))
 
-    writer = os.fdopen(os.open(
-        log_path,
-        os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
-        stat.S_IWUSR | stat.S_IRUSR,
-    ), 'wb')
-    reader = os.fdopen(os.open(
-        log_path,
-        os.O_RDONLY,
-        stat.S_IWUSR | stat.S_IRUSR,
-    ), 'rb')
-    os.chmod(log_path, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
+    writer = None
+    stdout_pipe = None
+    output_thread = None
+    process = None
 
     args = ['-c', build_target_name]
-    try:
-        process = subprocess.Popen(
-            ['python', BUILD_SCRIPT] + args,
-            text=False,
-            stdout=writer,
-            stderr=writer
-        )
-        start = time.time()
-        while True:
-            timeout = (time.time() - start) > DEFAULT_BUILD_TIMEOUT
 
-            line = reader.readline()
+    def _mirror_build_output(stream, log_file) -> None:
+        while True:
+            line = stream.readline()
             if line == b'':
-                if process.poll() is not None:
-                    break
-                time.sleep(2)
-                if not timeout:
-                    continue
-                else:
-                    process.kill()
-                    raise Exception("构建超时")
+                break
+
+            log_file.write(line)
+            log_file.flush()
 
             try:
-                outs = line.decode('utf-8', errors='strict').rstrip()
+                outs = line.decode('utf-8', errors='strict')
             except UnicodeDecodeError:
-                outs = line.decode('gbk', errors='replace').rstrip()
-            if not outs:
-                if not timeout:
-                    continue
-                else:
-                    process.kill()
-                    raise Exception("构建超时")
-            print(outs)
+                outs = line.decode('gbk', errors='replace')
+            sys.stdout.write(outs)
+            sys.stdout.flush()
+
+    try:
+        writer = os.fdopen(os.open(
+            log_path,
+            os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+            stat.S_IWUSR | stat.S_IRUSR,
+        ), 'wb')
+        os.chmod(log_path, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
+
+        process = subprocess.Popen(
+            [sys.executable, '-u', BUILD_SCRIPT] + args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        stdout_pipe = process.stdout
+        if stdout_pipe is None:
+            raise Exception("无法获取构建输出")
+
+        output_thread = threading.Thread(
+            target=_mirror_build_output,
+            args=(stdout_pipe, writer),
+            daemon=True,
+        )
+        output_thread.start()
+        process.wait(timeout=DEFAULT_BUILD_TIMEOUT)
+        output_thread.join()
 
         elapsed = time.time() - start_time
         _info("构建耗时", f"{elapsed:.1f}s")
@@ -664,15 +667,26 @@ def compile_sdk_and_save_log(build_target_name: str) -> None:
         else:
             writer.write(b"Finished: FAILURE")
             _fail(f"编译失败! 请检查日志: {log_path}")
-            print(process.stderr.read().decode('utf-8'))
 
+    except subprocess.TimeoutExpired:
+        if process is not None and process.poll() is None:
+            process.kill()
+            process.wait()
+        if output_thread is not None:
+            output_thread.join()
+        _fail("构建超时")
     except Exception as e:
+        if process is not None and process.poll() is None:
+            process.kill()
+            process.wait()
+        if output_thread is not None:
+            output_thread.join()
         _fail(f"编译异常: {str(e)}")
     finally:
+        if stdout_pipe is not None:
+            stdout_pipe.close()
         if writer:
             writer.close()
-        if reader:
-            reader.close()
 
     move_file(OUTPUT_FWPKG_PATH, global_combined)
 
