@@ -1,4 +1,5 @@
 /**
+ * Copyright (c) 2020 HiSilicon (Shanghai) Technologies CO.; LIMITED.
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2022-2023. All rights reserved.
  *
  * Description: Application core main function for standard \n
@@ -184,7 +185,6 @@ void sdk_msg_thread(void);
 #ifndef CHIP_EDA
 static void app_main(const void *unused);
 #endif
-extern int external_board_init(void) __attribute__((weak));
 static const app_task_definition_t g_app_tasks[] = {
 #ifndef CHIP_EDA
     {"app", APP_STACK_SIZE, TASK_PRIORITY_APP, (osal_kthread_handler)app_main},
@@ -615,6 +615,11 @@ __attribute__((weak)) void OHOS_SystemInit(void)
     return;
 }
 
+__attribute__((weak)) int external_board_init(void)
+{
+    return 0;
+}
+
 LITE_OS_SEC_TEXT_INIT int main(void)
 {
     patch_init();
@@ -679,12 +684,10 @@ LITE_OS_SEC_TEXT_INIT int main(void)
     main_initialise(NULL, 0);
 
     OHOS_SystemInit();
-    if (external_board_init != NULL) {
-        int board_ret = external_board_init();
-        if (board_ret != 0) {
-            PRINT("external board init failed: %d\r\n", board_ret);
-            return board_ret;
-        }
+    int board_ret = external_board_init();
+    if (board_ret != 0) {
+        PRINT("external board init failed: %d\r\n", board_ret);
+        return board_ret;
     }
     app_tasks_init();
 

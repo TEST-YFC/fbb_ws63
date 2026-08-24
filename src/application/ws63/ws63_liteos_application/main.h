@@ -20,6 +20,8 @@ __attribute__((section(".text.runtime.init"))) void init_mem_value(unsigned int 
 __attribute__((section(".text.runtime.init"))) void do_relocation(void);
 __attribute__((section(".text.runtime.init"))) void runtime_init(void);
 
+int external_board_init(void);
+
 extern void LOS_PrepareMainTask(void);
 
 #ifdef WIFI_TASK_EXIST
