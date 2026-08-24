@@ -194,6 +194,12 @@ macro(cfbb_build_epilogue)
         target_link_libraries(
             ${TARGET_NAME} PRIVATE ${FBB_EXTERNAL_COMPONENT_TARGETS})
     endif()
+    if(FBB_EXTERNAL_BOOTSTRAP_SOURCE)
+        # Bootstrap owns the single strong external_board_init definition.
+        # Compile it only into the final firmware target.
+        target_sources(
+            ${TARGET_NAME} PRIVATE "${FBB_EXTERNAL_BOOTSTRAP_SOURCE}")
+    endif()
     endif() # FBB project image
     # Refresh the linker's notion of all components after project additions.
     set(TARGET_COMPONENT "${RAM_COMPONENT}" "${ROM_COMPONENT}")
