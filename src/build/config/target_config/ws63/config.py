@@ -91,7 +91,6 @@ target = {
             "mqtt",
             "lvgl",
             "cxx_adapter",
-            "arduino",
         ],
         'ccflags': [
             "-DBOARD_ASIC", '-DPRE_ASIC',
