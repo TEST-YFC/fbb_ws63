@@ -90,7 +90,6 @@ target = {
             "tiot_driver",
             "mqtt",
             "lvgl",
-            "cxx_adapter",
         ],
         'ccflags': [
             "-DBOARD_ASIC", '-DPRE_ASIC',
