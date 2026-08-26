@@ -91,7 +91,7 @@ extern VOID OsSwtmrScan(VOID);
 extern UINT32 OsSwtmrInit(VOID);
 extern VOID OsSwtmrTask(VOID);
 extern SPIN_LOCK_S g_swtmrSpin;
-#ifdef LOSCFG_COMPAT_RT_THREAD
+#if defined(LOSCFG_COMPAT_RT_THREAD) || defined(LOSCFG_COMPAT_FREERTOS)
 extern LosSwtmrCB *OsSwtmrIdVerify(UINT16 swtmrId);
 #endif
 #ifdef LOSCFG_EXC_INTERACTION
