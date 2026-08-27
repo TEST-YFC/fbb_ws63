@@ -1,4 +1,5 @@
 /**
+ * Copyright (c) 2020 HiSilicon (Shanghai) Technologies CO.; LIMITED.
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2022-2023. All rights reserved.
  *
  * Description: Application core main function for standard \n
@@ -614,6 +615,11 @@ __attribute__((weak)) void OHOS_SystemInit(void)
     return;
 }
 
+__attribute__((weak)) int external_board_init(void)
+{
+    return 0;
+}
+
 LITE_OS_SEC_TEXT_INIT int main(void)
 {
     patch_init();
@@ -678,6 +684,11 @@ LITE_OS_SEC_TEXT_INIT int main(void)
     main_initialise(NULL, 0);
 
     OHOS_SystemInit();
+    int board_ret = external_board_init();
+    if (board_ret != 0) {
+        PRINT("external board init failed: %d\r\n", board_ret);
+        return board_ret;
+    }
     app_tasks_init();
 
     /* Start LiteOS */
