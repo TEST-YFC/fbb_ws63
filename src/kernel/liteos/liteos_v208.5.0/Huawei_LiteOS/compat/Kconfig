@@ -9,5 +9,11 @@ config LOSCFG_COMPAT_RT_THREAD
       Enable the independently distributed RT-Thread 5.2.1 compatibility
       component. The LiteOS adaptation and tailored RT-Thread sources are
       supplied by the FBB project dependency instead of the kernel tree.
-endmenu
 
+config LOSCFG_COMPAT_FREERTOS
+    bool "Enable FreeRTOS"
+    default n
+    help
+      Answer Y to enable LiteOS support FreeRTOS interface.
+
+endmenu
