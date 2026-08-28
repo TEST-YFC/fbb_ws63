@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # coding=utf-8
+# Copyright (c) 2020 HiSilicon (Shanghai) Technologies CO.; LIMITED.
 # Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2022-2022. All rights reserved.
 
 import os
@@ -7,7 +8,7 @@ import shutil
 import sys
 import time
 
-from utils.build_utils import exec_shell, root_path, output_root, sdk_output_path, pkg_tools_path
+from utils.build_utils import build_root_path, exec_shell, root_path, output_root, sdk_output_path, pkg_tools_path
 from utils.build_utils import compare_bin
 from enviroment import TargetEnvironment, BuildEnvironment
 from pack_tool import packTool
@@ -191,6 +192,10 @@ class CMakeBuilder(BuildEnvironment):
             env.append('defines', 'SUPPORT_CALLSTACK')
             env.append('ccflags', '-fno-omit-frame-pointer')
         self.add_build_param(env)
+        # Keep SDK source paths and generated output paths separate.  CMake
+        # modules consume this single build-root contract instead of reading
+        # FBB_BUILD_ROOT_PATH independently.
+        self.add_cmake_param('-DFBB_BUILD_ROOT_DIR=%s' % build_root_path)
 
         output_path = env.get_output_path()
         self.pre_sdk(output_path, env)

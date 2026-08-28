@@ -16,6 +16,21 @@
 #   project(${CHIP}_CFBB C ASM CXX)
 #   cfbb_build_epilogue()
 
+function(_fbb_link_sdk_interfaces external_target)
+    if(NOT TARGET "${external_target}")
+        return()
+    endif()
+
+    get_target_property(_fbb_external_type "${external_target}" TYPE)
+    get_target_property(_fbb_external_imported "${external_target}" IMPORTED)
+    if(_fbb_external_type STREQUAL "INTERFACE_LIBRARY" OR
+            _fbb_external_imported)
+        target_link_libraries("${external_target}" INTERFACE ${ARGN})
+    else()
+        target_link_libraries("${external_target}" PRIVATE ${ARGN})
+    endif()
+endfunction()
+
 # --------------------------------------------------------------------
 # Prologue - runs before project(); sets up compile env, platform name,
 # kconfig helpers, and includes the foundational cmake modules.
@@ -151,10 +166,8 @@ macro(cfbb_build_epilogue)
             endif()
         endforeach()
         foreach(_fbb_external_target IN LISTS FBB_EXTERNAL_COMPONENT_TARGETS)
-            if(TARGET ${_fbb_external_target})
-                target_link_libraries(
-                    ${_fbb_external_target} PRIVATE ${_fbb_sdk_interfaces})
-            endif()
+            _fbb_link_sdk_interfaces(
+                "${_fbb_external_target}" ${_fbb_sdk_interfaces})
         endforeach()
     endif()
 

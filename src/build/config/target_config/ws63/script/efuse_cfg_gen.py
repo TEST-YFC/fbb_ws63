@@ -30,9 +30,17 @@ if len(sys.argv) == 1:
     target_name = "ws63-liteos-app"
 elif len(sys.argv) == 2:
     target_name = sys.argv[1]
+elif len(sys.argv) == 3:
+    target_name = sys.argv[1]
 else:
     sys.exit("Failed to generate efuse_cfg.bin.")
-target_path = os.path.join(csv_dir + "/../../../../../output/ws63/acore/", target_name)
+if len(sys.argv) == 3:
+    output_root = os.path.abspath(sys.argv[2])
+else:
+    output_root = os.path.realpath(
+        os.path.join(csv_dir, "../../../../../output"))
+target_path = os.path.join(output_root, "ws63", "acore", target_name)
+os.makedirs(target_path, exist_ok=True)
 bin_path = os.path.join(target_path, 'efuse_cfg.bin')
 
 def get_flash_key_param():
