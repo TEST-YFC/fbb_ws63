@@ -115,26 +115,28 @@ def do_cmd(target_name: str, hook_name: str, env: Dict[str, Any])->bool:
     if env.get('generate_efuse_bin'):
         copy_py = os.path.join(SCRIPT_DIR, 'efuse_cfg_gen.py')
         print("generate_efuse_bin ing...")
-        errcode = exec_shell([sys.executable, copy_py, target_name], None, True)
+        errcode = exec_shell([sys.executable, copy_py, target_name, output_root], None, True)
         if errcode != 0:
             print("generate_efuse_bin failed!")
             return False
-        target_bin_path = os.path.join(root_path, 'output/ws63/acore/', target_name, 'efuse_cfg.bin')
-        shutil.copy(target_bin_path, os.path.join(root_path, 'output/ws63/acore/boot_bin'))
+        target_bin_path = os.path.join(output_root, 'ws63', 'acore', target_name, 'efuse_cfg.bin')
+        boot_bin_path = os.path.join(output_root, 'ws63', 'acore', 'boot_bin')
+        os.makedirs(boot_bin_path, exist_ok=True)
+        shutil.copy(target_bin_path, boot_bin_path)
         print("generate_efuse_bin done!")
 
     if env.get('copy_files_to_interim'):
         # copy_files_to_interim
         copy_py = os.path.join(SCRIPT_DIR, 'copy_files_to_interim.py')
         print("copy_files_to_interim ing...")
-        errcode = exec_shell([sys.executable, copy_py, root_path], None, True)
+        errcode = exec_shell([sys.executable, copy_py, root_path, output_root], None, True)
         if errcode != 0:
             print("copy_files_to_interim failed!")
             return False
         print("copy_files_to_interim done!")
 
     if "CONFIG_SUPPORT_HILINK_INDIE_UPGRADE" in env.get("defines"):
-        dump_indie_upg_check_file(os.path.join(root_path, "output", "ws63", "acore", target_name), target_name)
+        dump_indie_upg_check_file(os.path.join(output_root, "ws63", "acore", target_name), target_name)
 
     if env.get('pke_rom_bin'):
         # gen pke_rom_bin
@@ -150,7 +152,7 @@ def do_cmd(target_name: str, hook_name: str, env: Dict[str, Any])->bool:
 
             # verify pke rom bin
             if env.get('fixed_pke'):
-                bin1 = os.path.join(root_path, "output", env.get('chip'), env.get('core'), 'pke_rom', 'pke_rom.bin')
+                bin1 = os.path.join(output_root, env.get('chip'), env.get('core'), 'pke_rom', 'pke_rom.bin')
                 bin2 = env.get('fixed_pke_path', '').replace('<root>', root_path)
                 if not compare_bin(bin1, bin2):
                     print(f"Verify pke rom bin ERROR! :{bin1} is not same with {bin2}")
@@ -173,7 +175,7 @@ def do_cmd(target_name: str, hook_name: str, env: Dict[str, Any])->bool:
         print("generate rom_in_one done!")
 
         # verify codepoint bin
-        bin1 = os.path.join(root_path, "output", env.get('chip'), env.get('core'), \
+        bin1 = os.path.join(output_root, env.get('chip'), env.get('core'), \
                 target_name, env.get('bin_name')+'_rompack.bin')
         if env.get('fixed_rom_in_one') and os.path.isfile(bin1):# only rompack bin exists
             bin2 = env.get('fixed_rom_in_one_path', '').replace('<root>', root_path)
@@ -182,14 +184,14 @@ def do_cmd(target_name: str, hook_name: str, env: Dict[str, Any])->bool:
                 return False
 
     if env.get('fixed_bin_name'):
-        bin1 = os.path.join(root_path, "output", env.get('chip'), env.get('core'), \
+        bin1 = os.path.join(output_root, env.get('chip'), env.get('core'), \
             target_name, env.get('fixed_bin_name'))
         bin2 = env.get('fixed_bin_path', '').replace('<root>', root_path)
         if not compare_bin(bin1, bin2):
             print(f"Verify bin ERROR! :{bin1} is not same with {bin2}")
             return False
     nv_handle = os.path.join(SCRIPT_DIR, 'nv_handle.py')
-    exec_shell([python_path, nv_handle], None, True)
+    exec_shell([python_path, nv_handle, output_root], None, True)
     return True
 
 
