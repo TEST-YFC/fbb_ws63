@@ -4,7 +4,7 @@
 **适用范围：** WS63 系列芯片（WS63 / WS63E）  
 **目标平台：** Huawei LiteOS (v208.5.0)，RISC-V rv32imc  
 **配网方式：** BLE GATT（手机 → WS63 单向写入 WiFi 凭证）  
-**实现状态：** ✅ 已实现（代码路径 `src/application/samples/wifi/ble_wifi_cfg_sample/`）
+**实现状态：** ✅ 已实现（代码路径 `src/application/samples/wifi_test/ble_wifi_cfg_sample/`）
 
 ---
 
@@ -31,7 +31,7 @@ WS63 是面向 IoT 场景的嵌入式 Wi-Fi SoC，设备端通常没有键盘/�
 | 文档 | 路径 |
 |------|------|
 | BLE WiFi Config Server 源码 | `src/application/samples/bt/ble/ble_wifi_cfg_server/` |
-| BLE 配网完整流程示例 | `src/application/samples/wifi/ble_wifi_cfg_sample/` |
+| BLE 配网完整流程示例 | `src/application/samples/wifi_test/ble_wifi_cfg_sample/` |
 | WS63 错误码定义 | `src/include/errcode.h` |
 | Wi-Fi STA API | `src/middleware/services/wifi_service/` |
 | 软件开发指南 | `docs/zh-CN/software/软件开发指南/软件开发指南.md` |
