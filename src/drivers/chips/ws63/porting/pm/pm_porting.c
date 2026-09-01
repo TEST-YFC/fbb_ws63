@@ -1052,15 +1052,17 @@ void pm_port_exit_lowpower(void)
 
 void pm_porting_wait_exit_lowpower(void)
 {
+    int32_t wait_cnt = 0x1000; // 最多等待4096次100ms,约7分钟
     PRINT("[pm_port][%ld]Wait start.\r\n", osal_get_current_tid());
 #ifdef CONFIG_PM_SUPPORT_SRV_DECOUPLING
-    while (g_pm_srv_ctrl.ctrl_mode == PM_CTRL_SUSPEND) {
+    while ((g_pm_srv_ctrl.ctrl_mode == PM_CTRL_SUSPEND) && (wait_cnt > 0)) {
 #else
-    while (g_pm_is_in_lowpower) {
+    while ((g_pm_is_in_lowpower) && (wait_cnt > 0)) {
 #endif
         osal_msleep(PM_WAIT_EXIT_LOWPOWER_MS);
+        wait_cnt--;
     }
-    PRINT("[pm_port][%ld]Wait succ!\r\n", osal_get_current_tid());
+    PRINT("[pm_port][%ld]Wait succ[%d]!\r\n", osal_get_current_tid(), wait_cnt);
 }
 
 #if defined(PM_LIGHT_SLEEP_SUPPORT)

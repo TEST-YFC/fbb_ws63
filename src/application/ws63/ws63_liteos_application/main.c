@@ -1,5 +1,4 @@
 /**
- * Copyright (c) 2020 HiSilicon (Shanghai) Technologies CO.; LIMITED.
  * Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2022-2023. All rights reserved.
  *
  * Description: Application core main function for standard \n
@@ -73,8 +72,10 @@
 
 #ifdef CONFIG_MIDDLEWARE_SUPPORT_NV
 #include "nv.h"
+#if (defined(CONFIG_NV_SUPPORT_ENCRYPT) && (defined(NV_YES)) && (CONFIG_NV_SUPPORT_ENCRYPT == NV_YES))
+#include "cipher.h"
+#endif
 #if defined(CONFIG_OTA_UPDATE_SUPPORT)
-#include "nv_config.h"
 #if (defined(CONFIG_NV_SUPPORT_OTA_UPDATE) && (defined(NV_YES)) && (CONFIG_NV_SUPPORT_OTA_UPDATE == NV_YES))
 #include "upg_common_porting.h"
 #include "cipher.h"
@@ -119,7 +120,6 @@
 #define TASK_PRIORITY_SDK       12
 #define TASK_PRIORITY_WF        25
 #define TASK_PRIORITY_BTH_SDK   13
-#define TASK_PRIORITY_BTH_RECV  10
 #define TASK_PRIORITY_SRV       12
 
 #define STACK_SIZE_BASELINE     0x200
@@ -170,6 +170,13 @@ static void at_radar_cmd_register_weakref(void) __attribute__ ((weakref("at_rada
 
 #ifdef WIFI_TASK_EXIST
 static void at_sys_cmd_register_weakref(void) __attribute__ ((weakref("at_sys_cmd_register")));
+#endif
+
+#ifdef BTH_BLE_MESH_AT_ENABLE
+static void at_bt_ble_mesh_cmd_register_weakref(void) __attribute__ ((weakref("mesh_at_register")));
+#endif
+#ifdef BTH_SLE_MESH_AT_ENABLE
+static void at_sle_mesh_cmd_register_weakref(void) __attribute__ ((weakref("sle_at_mesh_register")));
 #endif
 
 #ifdef BTH_TASK_EXIST
@@ -280,9 +287,14 @@ static void app_main(const void *unused)
         (void)osDelay(APP_MAIN_DELAY_TIME);
         LOS_MemInfoGet(m_aucSysMem0, &status);
 #ifndef DEVICE_ONLY
+#ifdef LOG_SUPPORT
         PRINT("[SYS INFO] mem: used:%u, free:%u; log: drop/all[%u/%u], at_recv %u.\r\n", status.uwTotalUsedSize,
             status.uwTotalFreeSize, log_get_missed_messages_count(), log_get_all_messages_count(),
             at_uart_get_rcv_cnt());
+#else
+        PRINT("[SYS INFO] mem: used:%u, free:%u; at_recv %u.\r\n", status.uwTotalUsedSize,
+            status.uwTotalFreeSize,   at_uart_get_rcv_cnt());
+#endif
 #endif
 #if defined(CONFIG_UART_SUPPORT_RX_THREAD)
 #if defined(CONFIG_UART_SUPPORT_RX_THREAD_DEBUG)
@@ -430,7 +442,6 @@ static void hw_init(void)
     sw_debug_uart_init(CONFIG_DEBUG_UART_BAUDRATE);
     PRINT("dbg uart init ok.\n");
 #endif
-    timer_patch_init();
     uapi_timer_init();
     uapi_timer_adapter(1, TIMER_1_IRQN, irq_prio(TIMER_1_IRQN));
     uapi_systick_init();
@@ -444,8 +455,11 @@ static void hw_init(void)
     uapi_efuse_init(); // efuse函数初始化
 
     uapi_sfc_init((sfc_flash_config_t *)&sfc_cfg);
-
+    uapi_drv_cipher_env_init();
 #if defined(CONFIG_MIDDLEWARE_SUPPORT_NV)
+#if (defined(CONFIG_NV_SUPPORT_ENCRYPT) && (defined(NV_YES)) && (CONFIG_NV_SUPPORT_ENCRYPT == NV_YES))
+    uapi_drv_cipher_symc_init();
+#endif
     uapi_nv_init();
 #endif
 
@@ -460,12 +474,8 @@ static void hw_init(void)
     uapi_tsensor_init();
     // 默认采样周期为 0xFFFF 个32K时钟
     uapi_tsensor_start_inquire_mode(TSENSOR_SAMP_MODE_AVERAGE_CYCLE, 0xFFFF);
-    uapi_drv_cipher_env_init();
 #if defined(CONFIG_MIDDLEWARE_SUPPORT_NV) && defined(CONFIG_OTA_UPDATE_SUPPORT)
 #if (defined(CONFIG_NV_SUPPORT_OTA_UPDATE) && (defined(NV_YES)) && (CONFIG_NV_SUPPORT_OTA_UPDATE == NV_YES))
-#if (defined(CONFIG_NV_SUPPORT_ENCRYPT) && (defined(NV_YES)) && (CONFIG_NV_SUPPORT_ENCRYPT == NV_YES))
-    uapi_drv_cipher_symc_init();
-#endif
     (void)ws63_upg_init();
     (void)uapi_drv_cipher_hash_init();
     (void)nv_upg_upgrade_task_process();
@@ -586,6 +596,16 @@ static void do_at_cmd_register(void)
         at_sys_cmd_register_weakref();
     }
 #endif
+#ifdef BTH_BLE_MESH_AT_ENABLE
+    if ((void*)at_bt_ble_mesh_cmd_register_weakref != NULL) {
+        at_bt_ble_mesh_cmd_register_weakref();
+    }
+#endif
+#ifdef BTH_SLE_MESH_AT_ENABLE
+    if ((void *)at_sle_mesh_cmd_register_weakref != NULL) {
+        at_sle_mesh_cmd_register_weakref();
+    }
+#endif
 #ifdef BTH_TASK_EXIST
     if ((void *)at_bt_cmd_register_weakref != NULL) {
         at_bt_cmd_register_weakref();
@@ -613,11 +633,6 @@ static void do_at_cmd_register(void)
 __attribute__((weak)) void OHOS_SystemInit(void)
 {
     return;
-}
-
-__attribute__((weak)) int external_board_init(void)
-{
-    return 0;
 }
 
 LITE_OS_SEC_TEXT_INIT int main(void)
@@ -684,11 +699,6 @@ LITE_OS_SEC_TEXT_INIT int main(void)
     main_initialise(NULL, 0);
 
     OHOS_SystemInit();
-    int board_ret = external_board_init();
-    if (board_ret != 0) {
-        PRINT("external board init failed: %d\r\n", board_ret);
-        return board_ret;
-    }
     app_tasks_init();
 
     /* Start LiteOS */

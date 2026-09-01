@@ -351,5 +351,6 @@ set(WHOLE_LINK
 set(MAIN_COMPONENT
     false
 )
-
+install_sdk(${CMAKE_CURRENT_SOURCE_DIR}/drv_cipher/drv_pke_v5 "*")
+install_sdk(${CMAKE_CURRENT_SOURCE_DIR}/kapi/source "*")
 build_component()

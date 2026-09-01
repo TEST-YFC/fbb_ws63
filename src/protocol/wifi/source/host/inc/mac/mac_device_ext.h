@@ -969,7 +969,7 @@ typedef struct {
     oal_bool_enum_uint8 dbac_enabled         : 1; /* DBAC是否已经使能 */
     oal_bool_enum_uint8 dbac_running         : 1; /* DBAC是否在运行 */
     oal_bool_enum_uint8 intol_bit_recd_40mhz : 1;
-    oal_bool_enum_uint8 sniffer_switch       : 1; /* 抓包功能开关 */
+    oal_bool_enum_uint8 sniffer_switch       : 1;
     oal_bool_enum_uint8 en_wmm               : 1; /* wmm使能开关 根据对端wmm能力更新 */
 
     oal_bool_enum_uint8 arp_offload_switch;

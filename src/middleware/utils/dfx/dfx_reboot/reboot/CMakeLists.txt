@@ -13,7 +13,7 @@ set(PUBLIC_HEADER
 )
 
 set(PRIVATE_HEADER
-     ${ROOT_DIR}/middleware/chips/${CHIP}/dfx/include
+     ${CMAKE_SOURCE_DIR}/middleware/chips/${CHIP}/dfx/include
 )
 
 set(PRIVATE_DEFINES

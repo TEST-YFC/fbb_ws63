@@ -781,7 +781,9 @@
  *
  * Comment this macro to disable NIST curves optimisation.
  */
+#if !defined(MBEDTLS_SMALL_OPTIM_ENABLE)
 #define MBEDTLS_ECP_NIST_OPTIM
+#endif
 
 /**
  * \def MBEDTLS_ECP_RESTARTABLE

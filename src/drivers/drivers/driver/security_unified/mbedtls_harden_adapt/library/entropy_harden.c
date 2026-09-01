@@ -7,6 +7,9 @@
 #include "common.h"
 
 #if defined(MBEDTLS_ENTROPY_C) && defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
+#if defined(CONFIG_DRIVER_SUPPORT_SECURITY_UNIFIED)
+#include "mbedtls_build_config_check.h"
+#endif
 #include "mbedtls/error.h"
 #include "mbedtls/entropy.h"
 #include "entropy_poll.h"

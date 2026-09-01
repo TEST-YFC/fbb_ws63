@@ -361,7 +361,7 @@ static osal_void hmac_bridge_dhcp_checksum(mac_udp_header_stru *udp_header, dhcp
     udp_header->check_sum = (osal_u16)((new_sum >> 16) + new_sum);  // 左移16位重新计算checksum
 }
 
-static osal_u32 hmac_bridge_rx_udp_replace(const oal_netbuf_stru *netbuf, osal_u32 contig_len, osal_u32 pkt_len,
+OSAL_STATIC osal_u32 hmac_bridge_rx_udp_replace(const oal_netbuf_stru *netbuf, osal_u32 contig_len, osal_u32 pkt_len,
     const hmac_vap_stru *hmac_vap, osal_u8 *des_mac)
 {
     mac_ether_header_stru *ether_header = (mac_ether_header_stru *)oal_netbuf_data((oal_netbuf_stru *)netbuf);
@@ -418,7 +418,7 @@ static osal_u32 hmac_bridge_rx_udp_replace(const oal_netbuf_stru *netbuf, osal_u
              1.DHCP报文的处理；
              2.其他IP类型报文的处理
 *****************************************************************************/
-static osal_u32 hmac_bridge_rx_ip_addr_replace(const hmac_vap_stru *hmac_vap,
+OSAL_STATIC osal_u32 hmac_bridge_rx_ip_addr_replace(const hmac_vap_stru *hmac_vap,
     mac_ether_header_stru *ether_header, osal_u32 pkt_len, const oal_netbuf_stru *netbuf)
 {
     osal_u32 contig_len = (osal_u32)sizeof(mac_ether_header_stru);
@@ -446,8 +446,8 @@ static osal_u32 hmac_bridge_rx_ip_addr_replace(const hmac_vap_stru *hmac_vap,
         return OSAL_FAILURE;
     }
 
-    /* 如果是UDP包，并且是DHCP协议的报文处理 */
-    if (ip_header->protocol == OAL_IPPROTO_UDP) {
+    /* 如果是UDP包(分片offset为0的包，包括未分片与分片的第一片包)，并且是DHCP协议的报文处理 */
+    if ((ip_header->protocol == OAL_IPPROTO_UDP) && ((ip_header->frag_off & 0xFF1F) == 0)) {
         if (hmac_bridge_rx_udp_replace(netbuf, contig_len, pkt_len, hmac_vap, des_mac) != OSAL_SUCCESS) {
             return OSAL_FAILURE;
         }
@@ -889,7 +889,7 @@ OSAL_STATIC osal_u32 hmac_bridge_tx_arp_addr_insert(hmac_vap_stru *hmac_vap, mac
     return OSAL_SUCCESS;
 }
 
-static osal_u32 hmac_bridge_tx_udp_replace(const oal_netbuf_stru *netbuf, osal_u32 contig_len, osal_u32 pkt_len,
+OSAL_STATIC osal_u32 hmac_bridge_tx_udp_replace(const oal_netbuf_stru *netbuf, osal_u32 contig_len, osal_u32 pkt_len,
     hmac_vap_stru *hmac_vap)
 {
     mac_ether_header_stru *ether_header = (mac_ether_header_stru *)oal_netbuf_header(netbuf);
@@ -975,7 +975,8 @@ OSAL_STATIC osal_u32 hmac_bridge_tx_ip_addr_insert(hmac_vap_stru *hmac_vap,
         return OSAL_FAILURE;
     }
 
-    if (ip_header->protocol == OAL_IPPROTO_UDP) {
+    /* 如果是UDP包(分片offset为0的包，包括未分片与分片的第一片包)，并且是DHCP协议的报文处理 */
+    if ((ip_header->protocol == OAL_IPPROTO_UDP) && ((ip_header->frag_off & 0xFF1F) == 0)) {
         if (hmac_bridge_tx_udp_replace(netbuf, contig_len, pkt_len, hmac_vap) != OSAL_SUCCESS) {
             return OSAL_FAILURE;
         }

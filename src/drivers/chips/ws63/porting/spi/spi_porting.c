@@ -19,6 +19,7 @@
 #include "osal_interrupt.h"
 #include "arch_port.h"
 #include "soc_porting.h"
+#include "tcxo.h"
 #include "spi_porting.h"
 
 /** -----------------------------------------------------
@@ -198,11 +199,16 @@
 #define SPI_DMA_TX_DATA_LEVEL_4     4
 #define QSPI_DMA_TX_DATA_LEVEL_8    8
 
+#define CMU_NEW_CFG2            0x400034A8
 #define CLDO_CRG_DIV_CTL3       0x44001114
+#define CLDO_CRG_DIV_CTL8       0x44001128
+#define CLDO_SUB_CRG_CKEN_CTL0  0x44001100
 #define CLDO_SUB_CRG_CKEN_CTL1  0x44001104
 #define CLDO_CRG_CLK_SEL        0x44001134
 #define SPI_DIV_LEN             5
+#define QSPI_DIV_LEN            3
 #define PLL_CLK480M             480
+#define PLL_CLK64M              64
 
 #define SPI_PORT_FIFO_DEPTH     64
 
@@ -446,9 +452,9 @@ bool hal_opi_set_received_data_num(spi_bus_t bus, uint32_t number)
     if (bus >= HAL_SPI_BUS_MAX_NUM) {
         return false;
     }
-    number--;
+
     g_spi_base_addrs[bus]->spi_ctrb &= ~HAL_SPI_RECEIVED_DATA_REG_MAX;
-    g_spi_base_addrs[bus]->spi_ctrb = number;
+    g_spi_base_addrs[bus]->spi_ctrb = number - 1;
     return true;
 }
 
@@ -678,23 +684,43 @@ uint8_t spi_port_rx_data_level_get(spi_bus_t bus)
 
 void spi_porting_clock_init(spi_bus_t bus, const void *attr)
 {
-    unused(bus);
     uint8_t div = 0;
-    if ((((const hal_spi_attr_t *)attr))->is_slave) {
-        div = SPI_SLAVE_FREQ_DIV;     // slave默认配置240M
-    } else {
-        div = (uint8_t)(PLL_CLK480M / ((((const hal_spi_attr_t *)attr))->bus_clk / 1000000));
-            // 1000000: div 1M,covert hz to mhz
+    if (bus == SPI_BUS_0) {
+        if ((((const hal_spi_attr_t *)attr))->is_slave) {
+            div = SPI_SLAVE_FREQ_DIV;     // slave默认配置240M
+        } else {
+            div = (uint8_t)(PLL_CLK480M / ((((const hal_spi_attr_t *)attr))->bus_clk / 1000000));
+                // 1000000: div 1M,covert hz to mhz
+        }
+
+        reg_clrbit(CLDO_CRG_DIV_CTL3, 0, POS_10);
+        reg32_setbits(CLDO_CRG_DIV_CTL3, POS_5, SPI_DIV_LEN, div);
+        reg32_setbits(CLDO_CRG_DIV_CTL3, POS_0, SPI_DIV_LEN, 1);
+        reg_setbit(CLDO_CRG_DIV_CTL3, 0, POS_10);
+
+        reg_clrbit(CLDO_SUB_CRG_CKEN_CTL1, 0, POS_25); // close spi clock
+        reg_setbit(CLDO_CRG_CLK_SEL, 0, POS_6); // switch spi clock to pll
+        reg_setbit(CLDO_SUB_CRG_CKEN_CTL1, 0, POS_25); // open spi clock
+        return;
     }
+    if (bus == SPI_BUS_1) {
+        reg_setbit(CMU_NEW_CFG2, 0, POS_0);
+        uapi_tcxo_delay_us(1);
+        reg_setbit(CMU_NEW_CFG2, 0, POS_1);
+        uapi_tcxo_delay_us(1);
 
-    reg_clrbit(CLDO_CRG_DIV_CTL3, 0, POS_10);
-    reg32_setbits(CLDO_CRG_DIV_CTL3, POS_5, SPI_DIV_LEN, div);
-    reg32_setbits(CLDO_CRG_DIV_CTL3, POS_0, SPI_DIV_LEN, 1);
-    reg_setbit(CLDO_CRG_DIV_CTL3, 0, POS_10);
+        div = (uint8_t)(PLL_CLK64M / ((((const hal_spi_attr_t *)attr))->bus_clk / 1000000));
+        reg_clrbit(CLDO_CRG_DIV_CTL8, 0, POS_26);
+        reg32_setbits(CLDO_CRG_DIV_CTL8, POS_23, QSPI_DIV_LEN, 1);
+        reg32_setbits(CLDO_CRG_DIV_CTL8, POS_20, QSPI_DIV_LEN, div);
+        reg_setbit(CLDO_CRG_DIV_CTL8, 0, POS_26);
 
-    reg_clrbit(CLDO_SUB_CRG_CKEN_CTL1, 0, POS_25);      // close spi clock
-    reg_setbit(CLDO_CRG_CLK_SEL, 0, POS_6);             // switch spi clock to pll
-    reg_setbit(CLDO_SUB_CRG_CKEN_CTL1, 0, POS_25);      // open spi clock
+        reg_clrbit(CLDO_SUB_CRG_CKEN_CTL0, 0, POS_27); // close qspi clock
+        uapi_tcxo_delay_us(1);
+        reg_setbit(CLDO_CRG_CLK_SEL, 0, POS_15); // switch qspi clock to pll
+        uapi_tcxo_delay_us(1);
+        reg_setbit(CLDO_SUB_CRG_CKEN_CTL0, 0, POS_27); // open qspi clock
+    }
 }
 
 uint32_t spi_port_get_fifo_depth(void)

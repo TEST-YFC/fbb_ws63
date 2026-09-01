@@ -1,22 +1,23 @@
 <MSG_LOG><MSG STRUCTURE="diag_log_msg0" NAME="adv_param is null @gle_aa_dev_discovery_ui.c(28),ERROR" ID="0xde4600e2" />
 			<MSG STRUCTURE="diag_log_msg0" NAME="aa set adv params in @gle_aa_dev_discovery_ui.c(64),INFO" ID="0xde460205" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="data_off point null @gle_aa_dev_discovery_ui.c(82),ERROR" ID="0xde460292" />
-			<MSG STRUCTURE="diag_log_msg4" NAME="adv data_off = %u, data_len = %u, operation = 0x%x, ops = 0x%x @gle_aa_dev_discovery_ui.c(97),INFO" ID="0xde46030d" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="gle aa set adv data mem new failed @gle_aa_dev_discovery_ui.c(102),ERROR" ID="0xde460332" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="gle aa set adv data memcpy failed @gle_aa_dev_discovery_ui.c(111),ERROR" ID="0xde46037a" />
-			<MSG STRUCTURE="diag_log_msg2" NAME="adv_handle = 0x%x, adv_enable = 0x%x @gle_aa_dev_discovery_ui.c(140),INFO" ID="0xde460465" />
-			<MSG STRUCTURE="diag_log_msg1" NAME="adv_handle = 0x%x @gle_aa_dev_discovery_ui.c(152),INFO" ID="0xde4604c5" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="gle aa clear adv sets @gle_aa_dev_discovery_ui.c(162),INFO" ID="0xde460515" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="[GLE AA] adv terminated cbk par null error @gle_aa_dev_discovery_ui.c(172),ERROR" ID="0xde460562" />
-			<MSG STRUCTURE="diag_log_msg1" NAME="op_ev = 0x%02X  @gle_aa_dev_discovery_ui.c(176),INFO" ID="0xde460585" />
-			<MSG STRUCTURE="diag_log_msg2" NAME="[GLE AA] adv terminated get link is NULL. connection_handle: %02x, adv_handle: %02x @gle_aa_dev_discovery_ui.c(187),ERROR" ID="0xde4605da" />
-			<MSG STRUCTURE="diag_log_msg2" NAME="[GLE AA] adv terminated mgr_adv_item is NULL. connection_handle: %02x, adv_handle: %02x @gle_aa_dev_discovery_ui.c(193),ERROR" ID="0xde46060a" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="[GLE AA] scan_params is null @gle_aa_dev_discovery_ui.c(212),ERROR" ID="0xde4606a2" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="cmd mem new failed @gle_aa_dev_discovery_ui.c(219),ERROR" ID="0xde4606da" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="[GLE AA] scan_params is null @gle_aa_dev_discovery_ui.c(240),ERROR" ID="0xde460782" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="cmd mem new failed @gle_aa_dev_discovery_ui.c(248),ERROR" ID="0xde4607c2" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="[GLE AA] scan_enable is null @gle_aa_dev_discovery_ui.c(271),ERROR" ID="0xde46087a" />
-			<MSG STRUCTURE="diag_log_msg2" NAME="scan_enable = 0x%x, filter_duplicates = 0x%x @gle_aa_dev_discovery_ui.c(279),INFO" ID="0xde4608bd" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="[GLE AA] adv report cbk par null error @gle_aa_dev_discovery_ui.c(290),ERROR" ID="0xde460912" />
-			<MSG STRUCTURE="diag_log_msg1" NAME="op_ev = 0x%02X  @gle_aa_dev_discovery_ui.c(294),INFO" ID="0xde460935" />
+			<MSG STRUCTURE="diag_log_msg1" NAME="get_announce_hci_cmd failed, ops 0x%x err @gle_aa_dev_discovery_ui.c(96),ERROR" ID="0xde460302" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="data_off point null @gle_aa_dev_discovery_ui.c(115),ERROR" ID="0xde46039a" />
+			<MSG STRUCTURE="diag_log_msg4" NAME="adv data_off = %u, data_len = %u, operation = 0x%x, ops = 0x%x @gle_aa_dev_discovery_ui.c(124),INFO" ID="0xde4603e5" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="gle aa set adv data mem new failed @gle_aa_dev_discovery_ui.c(129),ERROR" ID="0xde46040a" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="gle aa set adv data memcpy failed @gle_aa_dev_discovery_ui.c(138),ERROR" ID="0xde460452" />
+			<MSG STRUCTURE="diag_log_msg2" NAME="adv_handle = 0x%x, adv_enable = 0x%x @gle_aa_dev_discovery_ui.c(167),INFO" ID="0xde46053d" />
+			<MSG STRUCTURE="diag_log_msg1" NAME="adv_handle = 0x%x @gle_aa_dev_discovery_ui.c(179),INFO" ID="0xde46059d" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="gle aa clear adv sets @gle_aa_dev_discovery_ui.c(189),INFO" ID="0xde4605ed" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="[GLE AA] adv terminated cbk par null error @gle_aa_dev_discovery_ui.c(199),ERROR" ID="0xde46063a" />
+			<MSG STRUCTURE="diag_log_msg1" NAME="op_ev = 0x%02X  @gle_aa_dev_discovery_ui.c(203),INFO" ID="0xde46065d" />
+			<MSG STRUCTURE="diag_log_msg2" NAME="[GLE AA] adv terminated get link is NULL. connection_handle: %02x, adv_handle: %02x @gle_aa_dev_discovery_ui.c(214),ERROR" ID="0xde4606b2" />
+			<MSG STRUCTURE="diag_log_msg2" NAME="[GLE AA] adv terminated mgr_adv_item is NULL. connection_handle: %02x, adv_handle: %02x @gle_aa_dev_discovery_ui.c(220),ERROR" ID="0xde4606e2" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="[GLE AA] scan_params is null @gle_aa_dev_discovery_ui.c(239),ERROR" ID="0xde46077a" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="cmd mem new failed @gle_aa_dev_discovery_ui.c(246),ERROR" ID="0xde4607b2" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="[GLE AA] scan_params is null @gle_aa_dev_discovery_ui.c(267),ERROR" ID="0xde46085a" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="cmd mem new failed @gle_aa_dev_discovery_ui.c(275),ERROR" ID="0xde46089a" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="[GLE AA] scan_enable is null @gle_aa_dev_discovery_ui.c(298),ERROR" ID="0xde460952" />
+			<MSG STRUCTURE="diag_log_msg2" NAME="scan_enable = 0x%x, filter_duplicates = 0x%x @gle_aa_dev_discovery_ui.c(306),INFO" ID="0xde460995" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="[GLE AA] adv report cbk par null error @gle_aa_dev_discovery_ui.c(317),ERROR" ID="0xde4609ea" />
+			<MSG STRUCTURE="diag_log_msg1" NAME="op_ev = 0x%02X  @gle_aa_dev_discovery_ui.c(321),INFO" ID="0xde460a0d" />
 			</MSG_LOG>

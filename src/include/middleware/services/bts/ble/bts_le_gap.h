@@ -1113,7 +1113,6 @@ errcode_t disable_ble(void);
  * @brief Use this funtion to check BLE stack status.
  * @par  Use this funtion to check BLE stack status.
  * @attention NULL
- * @param  NULL
  * @retval true BLE stack is enable, false BLE stack is not enable.
  * @par Dependency:
  * @li  bts_def.h
@@ -1121,7 +1120,6 @@ errcode_t disable_ble(void);
  * @brief  检测协议栈是否使能。
  * @par    检测协议栈是否使能。
  * @attention 无
- * @param  无
  * @retval true 协议栈已经使能，false协议栈未使能。
  * @par 依赖:
  * @li  bts_def.h
@@ -1660,17 +1658,17 @@ errcode_t gap_ble_connect_param_update(gap_conn_param_update_t *params);
 
 /**
  * @if Eng
- * @brief  Configure connection feature。
- * @par    Configure connection feature。
- * @param  [in]  feature Set the feature number. For details, see @ref ble_feature_type_t 。
- * @param  [in]  val Enable/disable the corresponding feature 。
+ * @brief  Configure connection feature.
+ * @par    Configure connection feature.
+ * @param  [in]  feature Set the feature number. For details, see @ref ble_feature_type_t
+ * @param  [in]  val Enable/disable the corresponding feature
  * @retval ERRCODE_SUCC Success。
  * @par 依赖:
  * @li  bts_def.h
  * @else
  * @brief  配置连接特性。
  * @par    配置连接特性。
- * @param  [in]  feature 表示要设置的特性编号，详情见 @ref ble_feature_type_t。
+ * @param  [in]  feature 表示要设置的特性编号，详情见 @ref ble_feature_type_t
  * @param  [in]  val 启用/禁用对应的特性。
  * @retval ERRCODE_SUCC 成功。
  * @par 依赖:

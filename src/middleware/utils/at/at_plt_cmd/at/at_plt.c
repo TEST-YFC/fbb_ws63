@@ -1509,98 +1509,38 @@ at_ret_t plt_task_heap_stats(const task_id_t *arg)
 }
 
 #ifdef _PRE_WLAN_FEATURE_MFG_TEST
-#define SIZE_2_BITS 2
-#define SIZE_5_BITS 5
-#define SIZE_8_BITS 8
-#define SIZE_10_BITS 10
-#define EFUSE_MAC_NUM 4
-#define EFUSE_GROUP_NUM 3
-#define EFUSE_BSLE_POWER_LOCK_NUM 2
-#define BIT_TO_BYTE 8
-#define WIFI_MAC_1_PG19 314
-#define WIFI_MAC_2_PG20 315
-#define WIFI_MAC_3_PG21 316
-#define WIFI_MAC_4_PG22 317
-#define BLSE_POWER_1_PG11 306
-#define BLSE_POWER_2_PG12 307
-#define EFUSE_MFG_FLAG_1_BIT 1295
-#define EFUSE_MFG_FLAG_2_BIT 1439
-#define EFUSE_MFG_FLAG_3_BIT 1583
-typedef struct {
-    td_u16 xo_trim;
-    td_u8 xo_temp;
-    td_u8 resv;
-} efuse_xo_trim_offset_stru;
-
-typedef struct {
-    td_u16 dsss_11b[2];
-    td_u16 ofdm_20m[2];
-    td_u16 ofdm_40m[2];
-} efuse_wifi_pwroff_stru;
-
-typedef struct {
-    td_u8 mac_addr[MAC_LEN];
-    td_u8 resv[2];
-} efuse_mac_stru;
-
-typedef struct {
-    td_u8 *data;
-    td_u8 len;
-} efuse_mfg_cali_data_status;
-
-typedef struct {
-    efuse_xo_trim_offset_stru xo_trim[3]; /* 频偏3组efuse */
-    efuse_wifi_pwroff_stru wifi_pwr_offset[3]; /* 功率校准3组efuse */
-    td_u16 wifi_rssi_offset[3];      /* rssi校准3组efuse */
-    td_u16 bsle_c_offset[3]; /* bsle功率3组efuse */
-    efuse_mac_stru wifi_mac[4];      /* wifi mac 4组efuse */
-    efuse_mac_stru sle_mac;
-} efuse_mfg_cali_data_stru;
-
-typedef struct {
-    uint16_t id_start_bit; /* 起始 bit位 */
-    uint8_t id_size;      /* 以bit为单位 */
-} efuse_data_stru;
-
 const efuse_data_stru g_efuse_mfg_cfg[] = {
-    {1152, 12}, /* xotrim 第一组 12--fine:0~7 coarse:8~11 */
-    {1176, 32}, /* wifi power 11b offset 第一组 */
-    {1208, 32}, /* wifi power ofdm 20M offset 第一组 */
-    {1240, 32}, /* wifi power ofdm 40M offset 第一组 */
-    {1272, 15}, /* rssi 第一组 15--band1:0~4 band2:5~9 band3:10~14 */
-    {1290, 4},  /* temp 第一组 */
+    {1152, 12, 0}, /* xotrim 第一组 12--fine:0~7 coarse:8~11 */
+    {1176, 32, 0}, /* wifi power 11b offset 第一组 */
+    {1208, 32, 0}, /* wifi power ofdm 20M offset 第一组 */
+    {1240, 32, 0}, /* wifi power ofdm 40M offset 第一组 */
+    {1272, 15, 0}, /* rssi 第一组 15--band1:0~4 band2:5~9 band3:10~14 */
+    {1290, 4, 0},  /* temp 第一组 */
 
-    {1296, 12}, /* xotrim 第二组 12--fine:0~7 coarse:8~11 */
-    {1320, 32}, /* wifi power 11b offset 第二组 */
-    {1352, 32}, /* wifi power ofdm 20M offset 第二组 */
-    {1384, 32}, /* wifi power ofdm 40M offset 第二组 */
-    {1416, 15}, /* rssi 第二组 15--band1:0~4 band2:5~9 band3:10~14 */
-    {1434, 4}, /* temp 第二组 */
+    {1296, 12, 0}, /* xotrim 第二组 12--fine:0~7 coarse:8~11 */
+    {1320, 32, 0}, /* wifi power 11b offset 第二组 */
+    {1352, 32, 0}, /* wifi power ofdm 20M offset 第二组 */
+    {1384, 32, 0}, /* wifi power ofdm 40M offset 第二组 */
+    {1416, 15, 0}, /* rssi 第二组 15--band1:0~4 band2:5~9 band3:10~14 */
+    {1434, 4, 0}, /* temp 第二组 */
 
-    {1440, 12}, /* xotrim 第三组 12--fine:0~7 coarse:8~11 */
-    {1464, 32}, /* wifi power 11b offset 第三组 */
-    {1496, 32}, /* wifi power ofdm 20M offset 第三组 */
-    {1528, 32}, /* wifi power ofdm 40M offset 第三组 */
-    {1560, 15}, /* rssi 第三组 15--band1:0~4 band2:5~9 band3:10~14 */
-    {1578, 4}, /* temp 第三组 */
+    {1440, 12, 0}, /* xotrim 第三组 12--fine:0~7 coarse:8~11 */
+    {1464, 32, 0}, /* wifi power 11b offset 第三组 */
+    {1496, 32, 0}, /* wifi power ofdm 20M offset 第三组 */
+    {1528, 32, 0}, /* wifi power ofdm 40M offset 第三组 */
+    {1560, 15, 0}, /* rssi 第三组 15--band1:0~4 band2:5~9 band3:10~14 */
+    {1578, 4, 0}, /* temp 第三组 */
 
-    {1584, 48}, /* wifi mac 第一组 */
-    {1632, 48}, /* wifi mac 第二组 */
-    {1680, 48}, /* wifi mac 第三组 */
-    {1728, 48}, /* wifi mac 第四组 */
+    {1584, 48, 0}, /* wifi mac 第一组 */
+    {1632, 48, 0}, /* wifi mac 第二组 */
+    {1680, 48, 0}, /* wifi mac 第三组 */
+    {1728, 48, 0}, /* wifi mac 第四组 */
 
-    {1040, 16}, /* bsle power offset 第一组 */
-    {1056, 16}, /* bsle power offset 第二组 */
-    {1072, 16}, /* bsle power offset 第三组 */
-    {1904, 48} /* sle mac */
+    {1040, 16, 0}, /* bsle power offset 第一组 */
+    {1056, 16, 0}, /* bsle power offset 第二组 */
+    {1072, 16, 0}, /* bsle power offset 第三组 */
+    {1904, 48, 0} /* sle mac */
 };
-
-typedef struct {
-    uint8_t xo_trim_cnt;
-    uint8_t wifi_mac_cnt;
-    uint8_t bsle_power_cnt;
-    uint8_t resv;
-} efuse_times_left_stru;
 efuse_times_left_stru g_efuse_times_left;
 
 td_u32 cmd_get_efuse_times(uint16_t lock_bit[], uint8_t lock_num, uint8_t *efuse_times_cnt)
@@ -1621,7 +1561,7 @@ td_u32 cmd_get_efuse_times(uint16_t lock_bit[], uint8_t lock_num, uint8_t *efuse
     return EXT_ERR_SUCCESS;
 }
 
-td_void cmd_efuse_print_wifi_calidata(efuse_mfg_cali_data_stru mfg_data)
+td_void cmd_efuse_print_wifi_calidata(const efuse_mfg_cali_data_stru *mfg_data)
 {
     uint8_t i;
     td_u8 rssi_offset_0 = 0, rssi_offset_1 = 0, rssi_offset_2 = 0;
@@ -1633,23 +1573,23 @@ td_void cmd_efuse_print_wifi_calidata(efuse_mfg_cali_data_stru mfg_data)
     uapi_at_print("Freq Param:  times left: %d\r\n", EFUSE_GROUP_NUM - g_efuse_times_left.xo_trim_cnt);
     for (i = 0; i < EFUSE_GROUP_NUM; i++) {
         uapi_at_print("    [%d] %4d %4d %4d\r\n", i,
-            ((mfg_data.xo_trim[i].xo_trim >> SIZE_8_BITS) & 0xF), (mfg_data.xo_trim[i].xo_trim & 0xFF),
-            ((mfg_data.xo_trim[i].xo_temp & 0x3C) >> SIZE_2_BITS));
+            ((mfg_data->xo_trim[i].xo_trim >> SIZE_8_BITS) & 0xF), (mfg_data->xo_trim[i].xo_trim & 0xFF),
+            ((mfg_data->xo_trim[i].xo_temp & 0x3C) >> SIZE_2_BITS));
     }
 
     uapi_at_print("WiFi Power Param:  times left: %d\r\n", EFUSE_GROUP_NUM - g_efuse_times_left.xo_trim_cnt);
     for (i = 0; i < EFUSE_GROUP_NUM; i++) {
         uapi_at_print("    [%d] %4d %4d %4d %4d %4d %4d\r\n", i,
-            (td_s16)(mfg_data.wifi_pwr_offset[i].dsss_11b[0]), (td_s16)(mfg_data.wifi_pwr_offset[i].dsss_11b[1]),
-            (td_s16)(mfg_data.wifi_pwr_offset[i].ofdm_20m[0]), (td_s16)(mfg_data.wifi_pwr_offset[i].ofdm_20m[1]),
-            (td_s16)(mfg_data.wifi_pwr_offset[i].ofdm_40m[0]), (td_s16)(mfg_data.wifi_pwr_offset[i].ofdm_40m[1]));
+            (td_s16)(mfg_data->wifi_pwr_offset[i].dsss_11b[0]), (td_s16)(mfg_data->wifi_pwr_offset[i].dsss_11b[1]),
+            (td_s16)(mfg_data->wifi_pwr_offset[i].ofdm_20m[0]), (td_s16)(mfg_data->wifi_pwr_offset[i].ofdm_20m[1]),
+            (td_s16)(mfg_data->wifi_pwr_offset[i].ofdm_40m[0]), (td_s16)(mfg_data->wifi_pwr_offset[i].ofdm_40m[1]));
     }
 
     uapi_at_print("WiFi Rssi Param:  times left: %d\r\n", EFUSE_GROUP_NUM - g_efuse_times_left.xo_trim_cnt);
     for (i = 0; i < EFUSE_GROUP_NUM; i++) {
-        rssi_offset_0 = (td_u8)(mfg_data.wifi_rssi_offset[i] & 0x1F);
-        rssi_offset_1 = (td_u8)((mfg_data.wifi_rssi_offset[i] & 0x3E0) >> SIZE_5_BITS);
-        rssi_offset_2 = (td_u8)((mfg_data.wifi_rssi_offset[i] & 0x7C00) >> SIZE_10_BITS);
+        rssi_offset_0 = (td_u8)(mfg_data->wifi_rssi_offset[i] & 0x1F);
+        rssi_offset_1 = (td_u8)((mfg_data->wifi_rssi_offset[i] & 0x3E0) >> SIZE_5_BITS);
+        rssi_offset_2 = (td_u8)((mfg_data->wifi_rssi_offset[i] & 0x7C00) >> SIZE_10_BITS);
         uapi_at_print("    [%d] %4d %4d %4d\r\n", i,
             (rssi_offset_0 & 0x10 ? (td_s8)(rssi_offset_0 | 0xE0) : (td_s8)rssi_offset_0),
             (rssi_offset_1 & 0x10 ? (td_s8)(rssi_offset_1 | 0xE0) : (td_s8)rssi_offset_1),
@@ -1657,7 +1597,7 @@ td_void cmd_efuse_print_wifi_calidata(efuse_mfg_cali_data_stru mfg_data)
     }
 }
 
-td_void  cmd_efuse_print_cali_info(efuse_mfg_cali_data_stru mfg_data)
+td_void  cmd_efuse_print_cali_info(const efuse_mfg_cali_data_stru *mfg_data)
 {
     uint8_t i;
     uint16_t lock_wifi_mac[] = {WIFI_MAC_1_PG19, WIFI_MAC_2_PG20, WIFI_MAC_3_PG21, WIFI_MAC_4_PG22};
@@ -1667,14 +1607,14 @@ td_void  cmd_efuse_print_cali_info(efuse_mfg_cali_data_stru mfg_data)
 
     cmd_efuse_print_wifi_calidata(mfg_data);
 
-    if (cmd_get_efuse_times(lock_wifi_mac, EFUSE_MAC_NUM, &g_efuse_times_left.wifi_mac_cnt) != EXT_ERR_SUCCESS) {
+    if (cmd_get_efuse_times(lock_wifi_mac, EFUSE_MAC_GROUP_NUM, &g_efuse_times_left.wifi_mac_cnt) != EXT_ERR_SUCCESS) {
         return;
     }
-    uapi_at_print("WiFi Mac Addr:  times left: %d\r\n", EFUSE_MAC_NUM - g_efuse_times_left.wifi_mac_cnt);
-    for (i = 0; i < EFUSE_MAC_NUM; i++) {
-        uapi_at_print("    [%d] %02x:%02x:%02x:%02x:%02x:%02x\r\n", i, mfg_data.wifi_mac[i].mac_addr[0],
-            mfg_data.wifi_mac[i].mac_addr[1], mfg_data.wifi_mac[i].mac_addr[2], mfg_data.wifi_mac[i].mac_addr[3], /* mac 0/1/2/3位 */
-            mfg_data.wifi_mac[i].mac_addr[4], mfg_data.wifi_mac[i].mac_addr[5]); /* mac 4/5位 */
+    uapi_at_print("WiFi Mac Addr:  times left: %d\r\n", EFUSE_MAC_GROUP_NUM - g_efuse_times_left.wifi_mac_cnt);
+    for (i = 0; i < EFUSE_MAC_GROUP_NUM; i++) {
+        uapi_at_print("    [%d] %02x:%02x:%02x:%02x:%02x:%02x\r\n", i, mfg_data->wifi_mac[i].mac_addr[0],
+            mfg_data->wifi_mac[i].mac_addr[1], mfg_data->wifi_mac[i].mac_addr[2], mfg_data->wifi_mac[i].mac_addr[3], /* mac 0/1/2/3位 */
+            mfg_data->wifi_mac[i].mac_addr[4], mfg_data->wifi_mac[i].mac_addr[5]); /* mac 4/5位 */
     }
 
     /* bsle power efuse共3组，但只有2个锁，第一组单独一个锁，第二、三组共用以一个锁 */
@@ -1689,7 +1629,7 @@ td_void  cmd_efuse_print_cali_info(efuse_mfg_cali_data_stru mfg_data)
         efuse_bsle_times_left = 0;
     }
     if (g_efuse_times_left.bsle_power_cnt == 1) {
-        if (mfg_data.bsle_c_offset[1] != 0) {
+        if (mfg_data->bsle_c_offset[1] != 0) {
             efuse_bsle_times_left = 1;
         } else {
             efuse_bsle_times_left = 2; /* 上锁了一个锁且第二组efuse值为0，说明剩余2组 */
@@ -1697,12 +1637,12 @@ td_void  cmd_efuse_print_cali_info(efuse_mfg_cali_data_stru mfg_data)
     }
     uapi_at_print("BSLE Power Param:  times left: %d\r\n", efuse_bsle_times_left);
     for (i = 0; i < EFUSE_GROUP_NUM; i++) {
-        uapi_at_print("    [%d] c_offset: 0x%x\r\n", i, (int16_t)(mfg_data.bsle_c_offset[i]));
+        uapi_at_print("    [%d] 0x%x\r\n", i, (int16_t)(mfg_data->bsle_c_offset[i]));
     }
 
-    uapi_at_print("SLE Mac Addr: %02x:%02x:%02x:%02x:%02x:%02x\r\n", mfg_data.sle_mac.mac_addr[0],
-        mfg_data.sle_mac.mac_addr[1], mfg_data.sle_mac.mac_addr[2], mfg_data.sle_mac.mac_addr[3], /* mac 0/1/2/3位 */
-        mfg_data.sle_mac.mac_addr[4], mfg_data.sle_mac.mac_addr[5]); /* mac 4/5位 */
+    uapi_at_print("SLE Mac Addr: %02x:%02x:%02x:%02x:%02x:%02x\r\n", mfg_data->sle_mac.mac_addr[0],
+        mfg_data->sle_mac.mac_addr[1], mfg_data->sle_mac.mac_addr[2], mfg_data->sle_mac.mac_addr[3], /* mac 0/1/2/3位 */
+        mfg_data->sle_mac.mac_addr[4], mfg_data->sle_mac.mac_addr[5]); /* mac 4/5位 */
 }
 
 at_ret_t cmd_efuse_read_cali_info(void)
@@ -1748,14 +1688,14 @@ at_ret_t cmd_efuse_read_cali_info(void)
         if (ptr[idex].data == NULL) {
             continue;
         }
-        ret = uapi_efuse_read_buffer(ptr[idex].data, g_efuse_mfg_cfg[idex].id_start_byte, ptr[idex].len);
+        ret = uapi_efuse_read_buffer(ptr[idex].data, g_efuse_mfg_cfg[idex].id_start_bit / BIT_TO_BYTE, ptr[idex].len);
         if (ret != EXT_ERR_SUCCESS) {
             uapi_at_print("cmd_efuse_read_cali_info: efuse read fail\n");
             return ret;
         }
     }
 
-    cmd_efuse_print_cali_info(mfg_data);
+    cmd_efuse_print_cali_info(&mfg_data);
 
     return AT_RET_OK;
 }

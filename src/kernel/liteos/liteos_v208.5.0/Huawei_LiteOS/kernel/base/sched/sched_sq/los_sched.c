@@ -40,10 +40,6 @@
 #include "los_perf_pri.h"
 #endif
 
-#ifdef LOSCFG_COMPAT_RT_THREAD
-UINT32 g_threadTick[MAX_TASKS];
-#endif
-
 VOID OsSchedResched(VOID)
 {
     LosTaskCB *runTask = NULL;

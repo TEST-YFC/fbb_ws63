@@ -49,8 +49,7 @@ typedef struct {
 } kv_crypto_iv_info_t;
 
 // section_key: (type || upgrade || key_id || enc_key || version || rnd || DIE_ID), use high 32 bits of DIE_ID
-static errcode_t nv_crypto_make_section_key(uint8_t *section_key, const kv_key_header_t *header,
-                                            uint32_t die_id_high32)
+static void nv_crypto_make_section_key(uint8_t *section_key, const kv_key_header_t *header, uint32_t die_id_high32)
 {
     kv_crypto_section_key_info_t *kv_crypto_key_info = (kv_crypto_section_key_info_t *)(uintptr_t)section_key;
     kv_crypto_key_info->type = header->type;
@@ -60,35 +59,30 @@ static errcode_t nv_crypto_make_section_key(uint8_t *section_key, const kv_key_h
     kv_crypto_key_info->version = header->version;
     kv_crypto_key_info->rnd = header->rnd;
     kv_crypto_key_info->die_id = die_id_high32;
-
-    return  ERRCODE_SUCC;
 }
 
 // iv: (enc_key || version || rnd || DIE_ID), use low 32 bits of DIE_ID
-static errcode_t nv_crypto_make_iv(uint8_t *iv, const kv_key_header_t *header, uint32_t die_id_low32)
+static void nv_crypto_make_iv(uint8_t *iv, const kv_key_header_t *header, uint32_t die_id_low32)
 {
     kv_crypto_iv_info_t *kv_crypto_iv_info = (kv_crypto_iv_info_t *)(uintptr_t)iv;
     kv_crypto_iv_info->enc_key = header->enc_key;
     kv_crypto_iv_info->version = header->version;
     kv_crypto_iv_info->rnd = header->rnd;
     kv_crypto_iv_info->die_id = die_id_low32;
-    
-    return  ERRCODE_SUCC;
 }
 
 // salt: (section_key || uuid), skip the low 4 bytes of section_key
 static errcode_t nv_crypto_make_salt(uint8_t *salt, uint32_t salt_len, uint32_t die_id_high32,
                                      const kv_key_header_t *header)
 {
-    errcode_t ret = ERRCODE_FAIL;
+    errno_t ret;
     uint8_t section_key[NV_SECTION_KEY_LEN] = {0};
     const uint8_t uuid[NV_UUID_LEN] = {
         0xCA, 0x2B, 0xF7, 0x6A, 0xFF, 0x79, 0x4E, 0xAC,
         0xA6, 0x3D, 0x4E, 0x0A, 0xAA, 0xEE, 0x6C, 0x77
     };
 
-    ret = nv_crypto_make_section_key(section_key, header, die_id_high32);
-    nv_chk_return(ret != ERRCODE_SUCC, ret, "[NV] make section_key failed!\r\n");
+    nv_crypto_make_section_key(section_key, header, die_id_high32);
 
     ret = memcpy_s(salt, NV_SECTION_KEY_OFFSET_LEN, section_key + NV_SECTION_KEY_OFFSET, NV_SECTION_KEY_OFFSET_LEN);
     nv_chk_return(ret != EOK, ERRCODE_FAIL, "[NV] section_key memcpy_s failed!\r\n");
@@ -193,8 +187,7 @@ errcode_t nv_crypto_claim_aes(uint32_t *crypto_handle, const kv_key_header_t *he
     ret = uapi_efuse_get_die_id((uint8_t *)(uintptr_t)die_id, NV_DIE_ID_LENGTH_BYTES);
     nv_chk_return(ret != ERRCODE_SUCC, ret, "[NV] get die_id failed! ret = 0x%x\r\n", ret);
 
-    ret = nv_crypto_make_iv(iv, header, die_id[NV_DIE_ID_LOW_32]);
-    nv_chk_return(ret != ERRCODE_SUCC, ret, "[NV] make iv failed!\r\n");
+    nv_crypto_make_iv(iv, header, die_id[NV_DIE_ID_LOW_32]);
 
     uapi_drv_cipher_symc_config_aes_ccm_gcm_t gcm_cfg = {
         .aad_buf.phys_addr = (uintptr_t)header,
@@ -212,8 +205,8 @@ errcode_t nv_crypto_claim_aes(uint32_t *crypto_handle, const kv_key_header_t *he
         .param = &gcm_cfg
     };
 
-    ret = memcpy_s(symc_ctrl.iv, sizeof(symc_ctrl.iv), iv, sizeof(iv));
-    nv_chk_return(ret != EOK, ERRCODE_FAIL, "[NV] iv memcpy_s failed!\r\n");
+    errno_t res = memcpy_s(symc_ctrl.iv, sizeof(symc_ctrl.iv), iv, sizeof(iv));
+    nv_chk_return(res != EOK, ERRCODE_FAIL, "[NV] iv memcpy_s failed!\r\n");
     
     ret = nv_crypto_cipher_create(&symc_handle, &g_keyslot);
     nv_chk_return(ret != ERRCODE_SUCC, ret, "[NV] symc and keyslot create failed!\r\n");
@@ -303,7 +296,7 @@ errcode_t nv_crypto_set_tag(uint32_t crypto_handle, uint8_t *tag, uint32_t tag_l
         return ERRCODE_NV_INVALID_PARAMS;
     }
 
-    errcode_t ret =  memcpy_s(g_nv_encrypt_tag, NV_TAG_LENGTH, tag, NV_TAG_LENGTH);
+    errno_t ret =  memcpy_s(g_nv_encrypt_tag, NV_TAG_LENGTH, tag, NV_TAG_LENGTH);
     nv_chk_return(ret != EOK, ERRCODE_FAIL, "[NV] set tag failed!\r\n");
 
     return ERRCODE_SUCC;
@@ -318,8 +311,8 @@ errcode_t nv_crypto_validate_tag(uint32_t crypto_handle)
     ret = uapi_drv_cipher_symc_get_tag(crypto_handle, decrypt_tag, NV_TAG_LENGTH);
     nv_chk_return(ret != ERRCODE_SUCC, ret, "[NV] get tag failed! ret = 0x%x\r\n", ret);
 
-    ret = memcmp(g_nv_encrypt_tag, decrypt_tag, NV_TAG_LENGTH);
-    nv_chk_return(ret != 0, ERRCODE_FAIL, "[NV] validate tag failed!\r\n");
+    int32_t res = memcmp(g_nv_encrypt_tag, decrypt_tag, NV_TAG_LENGTH);
+    nv_chk_return(res != 0, ERRCODE_FAIL, "[NV] validate tag failed!\r\n");
 
     return ERRCODE_SUCC;
 }

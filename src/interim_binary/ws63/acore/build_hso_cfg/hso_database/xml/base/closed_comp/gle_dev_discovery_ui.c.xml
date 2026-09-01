@@ -19,4 +19,7 @@
 			<MSG STRUCTURE="diag_log_msg0" NAME="gle_set_public_addr new fail @gle_dev_discovery_ui.c(242),ERROR" ID="0xde400792" />
 			<MSG STRUCTURE="diag_log_msg0" NAME="addr pointer null @gle_dev_discovery_ui.c(256),ERROR" ID="0xde400802" />
 			<MSG STRUCTURE="diag_log_msg3" NAME="addr:0x%02x:**:**:**:%02x:%02x @gle_dev_discovery_ui.c(261),INFO" ID="0xde40082d" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="sapi_gle_private_set_adv_data new fail @gle_dev_discovery_ui.c(293),ERROR" ID="0xde40092a" />
+			<MSG STRUCTURE="diag_log_msg1" NAME="sapi_gle_private_set_adv_data adv_data len %u new fail @gle_dev_discovery_ui.c(302),ERROR" ID="0xde400972" />
+			<MSG STRUCTURE="diag_log_msg1" NAME="sapi_gle_private_set_adv_data scan_rsp_data len %u new fail @gle_dev_discovery_ui.c(315),ERROR" ID="0xde4009da" />
 			</MSG_LOG>

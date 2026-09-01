@@ -35,7 +35,7 @@ extern "C" {
 
 #define MAX_HASH_HARD_CTX_NUM   4
 
-#ifndef CONFIG_SUPPORT_HILINK
+#if !defined(CONFIG_SUPPORT_HILINK) && !defined(CONFIG_SUPPORT_MBEDTLS_SAMPLE)
 #undef MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED
 
 #undef MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
@@ -106,7 +106,6 @@ extern "C" {
 
 #define MBEDTLS_NO_PLATFORM_ENTROPY
 /*******************************************algorithm cfg macro*******************************************/
-
 #ifdef __cplusplus
 }
 #endif

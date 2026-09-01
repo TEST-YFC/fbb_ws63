@@ -14,7 +14,7 @@ set(PUBLIC_HEADER
 )
 
 set(PRIVATE_HEADER
-    ${ROOT_DIR}/middleware/utils/update/inner_include
+    ${CMAKE_SOURCE_DIR}/middleware/utils/update/inner_include
 )
 
 set(PRIVATE_DEFINES

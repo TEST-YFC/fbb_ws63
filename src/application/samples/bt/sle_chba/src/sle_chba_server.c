@@ -435,6 +435,7 @@ int sle_chba_sample_init(void)
     }
 #endif
     sle_chba_sample_user_init_start_discovery(g_chba_cfg);
+    sle_chba_sample_recv_pkt_thread();
     return 0;
 }
 

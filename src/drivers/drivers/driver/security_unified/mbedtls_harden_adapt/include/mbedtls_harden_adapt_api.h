@@ -10,7 +10,7 @@
  
 #include "mbedtls_harden_struct.h"
 #if defined(MBEDTLS_RSA_ALT)
-#include "rsa_alt.h"
+#include "mbedtls/rsa.h"
 #endif
  
 /* Hash. */

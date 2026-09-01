@@ -3,7 +3,6 @@ import os
 import sys
 import shutil
 import platform
-import contextlib
 
 
 file_dir = os.path.dirname(os.path.realpath(__file__))
@@ -16,18 +15,15 @@ import param_packet
 current_path = os.getcwd()
 cwd_path = os.path.split(os.path.realpath(__file__))[0]
 os.chdir(cwd_path)
-build_root_path = g_root
-if os.environ.get('FBB_BUILD_ROOT_PATH'):
-    build_root_path = os.environ.get('FBB_BUILD_ROOT_PATH')
 if "windows" in platform.platform().lower():
     sign_tool = "../../../../../tools/bin/sign_tool/sign_tool_pltuni.exe"
 else:
     sign_tool = "../../../../../tools/bin/sign_tool/sign_tool_pltuni"
-out_put = os.path.join(build_root_path, 'output', 'ws63', 'acore')
-pktbin = os.path.join(build_root_path, 'output', 'ws63', 'pktbin')
+out_put = "../../../../../output/ws63/acore"
+pktbin = "../../../../../output/ws63/pktbin"
 inter_bin = "../../../../../interim_binary/ws63/bin/boot_bin"
 efuse_csv = "../script/efuse.csv"
-boot_bin = os.path.join(build_root_path, 'output', 'ws63', 'acore', 'boot_bin')
+boot_bin = "../../../../../output/ws63/acore/boot_bin"
 mfg_bin = "../../../../../application/ws63/ws63_liteos_mfg"
 
 def merge(file_first, file_second, file_out):
@@ -55,36 +51,12 @@ def move_file(src_path, dst_path, file_name):
     dst_file = os.path.join(dst_path, file_name)
     shutil.move(src_file, dst_file)
 
-@contextlib.contextmanager
-def temp_cfg_with_absolute_paths(cfg_name):
-    """Context manager: yield a temp .cfg whose SDK-relative output path is
-    rewritten to an absolute path under build_root_path, and always remove
-    that temp file on exit -- even if the signing subprocess raises.
-
-    Out-of-tree builds need absolute output paths because the sign tool runs
-    with a cwd that differs from the SDK source tree.
-    """
-    temp_cfg_name = cfg_name + '.temp'
-    try:
-        with open(cfg_name, 'r') as f:
-            content = f.read()
-        content = content.replace(
-            '../../../../../output/ws63/acore',
-            os.path.join(build_root_path, 'output', 'ws63', 'acore')
-        )
-        with open(temp_cfg_name, 'w') as f:
-            f.write(content)
-        yield temp_cfg_name
-    finally:
-        if os.path.exists(temp_cfg_name):
-            os.remove(temp_cfg_name)
 
 def sign_app(file_path, type, cfg_name):
     if os.path.isfile(file_path):
         print("sign name: ", file_path)
         dd64c(file_path)
-        with temp_cfg_with_absolute_paths(cfg_name) as temp_cfg:
-            ret = subprocess.run([sign_tool, type, temp_cfg], stdout=subprocess.DEVNULL)
+        ret = subprocess.run([sign_tool, type, cfg_name], stdout=subprocess.DEVNULL)
         if ret.returncode == 0:
             print(file_path, " generated successfully!!!")
         else:
@@ -163,8 +135,7 @@ if os.path.isfile(os.path.join(mfg_bin, "ws63-liteos-mfg.bin")):
 if os.path.isfile(os.path.join(out_put, "ws63-ssb/ssb.bin")):
     dd64c(os.path.join(out_put, "ws63-ssb/ssb.bin"))
     shutil.copy(os.path.join(out_put, "ws63-ssb/ssb.bin"), pktbin)
-    with temp_cfg_with_absolute_paths("ssb_bin_ecc.cfg") as temp_cfg:
-        ret1 = subprocess.run([sign_tool, "0", temp_cfg], stdout=subprocess.DEVNULL)
+    ret1 = subprocess.run([sign_tool, "0", "ssb_bin_ecc.cfg"], stdout=subprocess.DEVNULL)
     if ret1.returncode == 0:
         print("ssb_sign.bin generated successfully!!!")
         shutil.copy(os.path.join(out_put, "ws63-ssb/ssb_sign.bin"), boot_bin)
@@ -188,10 +159,8 @@ if os.path.isfile(os.path.join(inter_bin, 'ssb.bin')):
 if os.path.isfile(os.path.join(out_put, "ws63-flashboot/flashboot.bin")):
     dd64c(os.path.join(out_put, "ws63-flashboot/flashboot.bin"))
     shutil.copy(os.path.join(out_put, "ws63-flashboot/flashboot.bin"), pktbin)
-    with temp_cfg_with_absolute_paths("flash_bin_ecc.cfg") as temp_cfg:
-        ret1 = subprocess.run([sign_tool, "0", temp_cfg], stdout=subprocess.DEVNULL)
-    with temp_cfg_with_absolute_paths("flash_backup_bin_ecc.cfg") as temp_cfg:
-        ret2 = subprocess.run([sign_tool, "0", temp_cfg], stdout=subprocess.DEVNULL)
+    ret1 = subprocess.run([sign_tool, "0", "flash_bin_ecc.cfg"], stdout=subprocess.DEVNULL)
+    ret2 = subprocess.run([sign_tool, "0", "flash_backup_bin_ecc.cfg"], stdout=subprocess.DEVNULL)
     if ret1.returncode == 0 and ret2.returncode == 0:
         print("flash_sign.bin generated successfully!!!")
     else:
@@ -204,8 +173,7 @@ if os.path.isfile(os.path.join(out_put, "ws63-flashboot/flashboot.bin")):
 
 if os.path.isfile(os.path.join(out_put, "ws63-ate-flash", "ws63-ate-flash.bin")):
     dd64c(os.path.join(out_put, "ws63-ate-flash", "ws63-ate-flash.bin"))
-    with temp_cfg_with_absolute_paths("flash_htol_bin_ecc.cfg") as temp_cfg:
-        ret1 = subprocess.run([sign_tool, "0", temp_cfg], stdout=subprocess.DEVNULL)
+    ret1 = subprocess.run([sign_tool, "0", "flash_htol_bin_ecc.cfg"], stdout=subprocess.DEVNULL)
     if ret1.returncode == 0:
         print("ws63_ate_flash.bin generated successfully!!!")
     else:
@@ -214,8 +182,7 @@ if os.path.isfile(os.path.join(out_put, "ws63-ate-flash", "ws63-ate-flash.bin"))
 if os.path.isfile(os.path.join(out_put, "ws63-loaderboot", "loaderboot.bin")):
     dd64c(os.path.join(out_put, "ws63-loaderboot", "loaderboot.bin"))
     shutil.copy(os.path.join(out_put, "ws63-loaderboot", "loaderboot.bin"), pktbin)
-    with temp_cfg_with_absolute_paths("loaderboot_bin_ecc.cfg") as temp_cfg:
-        ret1 = subprocess.run([sign_tool, "0", temp_cfg], stdout=subprocess.DEVNULL)
+    ret1 = subprocess.run([sign_tool, "0", "loaderboot_bin_ecc.cfg"], stdout=subprocess.DEVNULL)
     if ret1.returncode == 0:
         print("loaderboot_sign.bin generated successfully!!!")
     else:
@@ -307,7 +274,11 @@ sign_app(os.path.join(out_put, "ws63-liteos-slp-radar/ws63-liteos-slp-radar.bin"
 
 sign_app(os.path.join(out_put, "ws63-liteos-slp-radar-perf/ws63-liteos-slp-radar-perf.bin"), "0", "liteos_slp_radar_perf_bin_ecc.cfg")
 
+sign_app(os.path.join(out_put, "ws63-liteos-slp-radar-perf-single/ws63-liteos-slp-radar-perf.bin"), "0", "liteos_slp_radar_perf_single_bin_ecc.cfg")
+
 sign_app(os.path.join(boot_bin, "ws63-liteos-mfg.bin"), "0", "liteos_mfg_bin_factory_ecc.cfg")
+
+sign_app(os.path.join(out_put, "ws63-liteos-sle-mesh-one-touch-sample/ws63-liteos-sle-mesh-one-touch-sample.bin"), "0", "liteos_sle_mesh_one_touch_start_sample_ecc.cfg")
 
 move_file(cwd_path, os.path.join(out_put, "param_bin"), "params.bin")
 # clean middle files

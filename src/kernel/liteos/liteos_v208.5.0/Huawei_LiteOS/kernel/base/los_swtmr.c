@@ -49,7 +49,7 @@ LITE_OS_SEC_BSS LOS_DL_LIST     g_swtmrFreeList;            /* Free list of Soft
 LITE_OS_SEC_BSS  SPIN_LOCK_INIT(g_swtmrSpin);
 #define SWTMR_LOCK(state)       LOS_SpinLockSave(&g_swtmrSpin, &(state))
 #define SWTMR_UNLOCK(state)     LOS_SpinUnlockRestore(&g_swtmrSpin, (state))
-
+#define LOSBLD_ATTRIB_UNUSED __attribute__((unused))
 /*
  * Description: Start Software Timer
  * Input      : swtmr --- Need to start software timer
@@ -393,10 +393,12 @@ LITE_OS_SEC_TEXT_INIT UINT32 LOS_SwtmrCreate(UINT32 interval,
     *swtmrId = swtmr->timerId;
  
 #ifdef LOSCFG_DEBUG_RESOURCE_INFO
+    SWTMR_LOCK(intSave);
     g_swtmrUsed += 1;
     if (g_swtmrUsed > g_swtmrPeak) {
         g_swtmrPeak = g_swtmrUsed;
     }
+    SWTMR_UNLOCK(intSave);
 #endif
  
     LOS_TRACE(SWTMR_CREATE, swtmr->timerId);

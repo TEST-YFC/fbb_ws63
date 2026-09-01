@@ -46,8 +46,10 @@ LITE_OS_SEC_BSS STATIC CPUP_INFO_S g_taskCpupOneRecord[LOSCFG_BASE_CORE_TSK_LIMI
 #endif
 
 LITE_OS_SEC_BSS STATIC UINT32      g_taskWaterLine[LOSCFG_BASE_CORE_TSK_LIMIT];
+#ifdef LOSCFG_KERNEL_SAVE_TASK2FLASH
 LITE_OS_SEC_BSS STATIC LosTaskCB   g_osTaskCBArrayBackup[LOSCFG_BASE_CORE_TSK_LIMIT + 1];
 LITE_OS_SEC_DATA LosTaskCB         * const g_taskCBArrayBackup = &g_osTaskCBArrayBackup[0];
+#endif
 
 typedef struct {
     UINT16 status;
@@ -217,9 +219,10 @@ UINT32 OsDbgTskInfoGet(UINT32 taskId)
 {
     BOOL lockFlag = FALSE;
     UINT32 intSave;
+#ifdef LOSCFG_KERNEL_SAVE_TASK2FLASH
     LosTaskCB *tcbArray = g_taskCBArrayBackup;
     size_t size = (LOSCFG_BASE_CORE_TSK_LIMIT + 1) * sizeof(LosTaskCB);
-
+#endif
     if (g_osTaskCBArray == NULL) {
         return LOS_NOK;
     }
@@ -236,21 +239,22 @@ UINT32 OsDbgTskInfoGet(UINT32 taskId)
             SCHEDULER_LOCK(intSave);
             lockFlag = TRUE;
         }
+#ifdef LOSCFG_KERNEL_SAVE_TASK2FLASH
         (VOID)memcpy(tcbArray, g_osTaskCBArray, size);
-
+#endif
 #ifdef LOSCFG_KERNEL_CPUP
         (VOID)LOS_AllCpuUsage(LOSCFG_BASE_CORE_TSK_LIMIT, g_taskCpupAll, CPUP_ALL_TIME, 1);
         (VOID)LOS_AllCpuUsage(LOSCFG_BASE_CORE_TSK_LIMIT, g_taskCpupMultiRecord, CPUP_LAST_MULIT_RECORD, 1);
         (VOID)LOS_AllCpuUsage(LOSCFG_BASE_CORE_TSK_LIMIT, g_taskCpupOneRecord, CPUP_LAST_ONE_RECORD, 1);
 #endif
-        OsTaskWaterLineGet(tcbArray);
+        OsTaskWaterLineGet(g_osTaskCBArray);
 
         if (lockFlag == TRUE) {
             SCHEDULER_UNLOCK(intSave);
         }
 
         OsDebugTskInfoTitle();
-        OsDebugTskInfoData(tcbArray);
+        OsDebugTskInfoData(g_osTaskCBArray);
     } else {
         OsTaskBackTrace(taskId);
     }
@@ -266,6 +270,11 @@ VOID OsTaskWaterLineArrayGet(UINT32 *array, UINT32 *len)
 
 VOID OsTaskCBArrayGet(UINT32 *array, UINT32 *len)
 {
+#ifdef LOSCFG_KERNEL_SAVE_TASK2FLASH
     *array = (UINT32)(uintptr_t)g_osTaskCBArrayBackup;
     *len = sizeof(g_osTaskCBArrayBackup);
+#else
+    *array = (UINT32)(uintptr_t)g_osTaskCBArray;
+    *len = (LOSCFG_BASE_CORE_TSK_LIMIT + 1) * sizeof(LosTaskCB);
+#endif
 }

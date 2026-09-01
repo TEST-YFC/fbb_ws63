@@ -1,4 +1,3 @@
-# Copyright (c) 2020 HiSilicon (Shanghai) Technologies CO.; LIMITED.
 
 
 import argparse
@@ -9,12 +8,10 @@ import shutil
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="copy_files_to_interim")
     parser.add_argument('proj_root_dir', help="proj root dir")
-    parser.add_argument('output_root', nargs='?', help="build output directory")
 
     args = parser.parse_args()
 
     proj_root_dir = args.proj_root_dir
-    output_root = args.output_root or os.path.join(proj_root_dir, "output")
 
     target_dir = os.path.join(proj_root_dir, "interim_binary", "ws63", "bin", "boot_bin")
     if not os.path.isdir(target_dir):
@@ -39,7 +36,7 @@ if __name__ == '__main__':
     }
 
     for src_file, dest in copy_map.items():
-        src_file = os.path.join(output_root, os.path.relpath(src_file, 'output'))
+        src_file = os.path.join(proj_root_dir, src_file)
         if not os.path.isfile(src_file):
             print(f'[!][copy_files_to_interim] File `{src_file}` not found, will skip it !')
             continue
@@ -51,3 +48,4 @@ if __name__ == '__main__':
         except BaseException as e:
             print(e)
             exit(-1)
+        

@@ -3,11 +3,11 @@
 			<MSG STRUCTURE="diag_log_msg0" NAME="[ATT]att item modify value core memcpy error @att_pdu.c(822),ERROR" ID="0xdc5019b2" />
 			<MSG STRUCTURE="diag_log_msg0" NAME="att read multiple rsp memcpy error @att_pdu.c(945),ERROR" ID="0xdc501d8a" />
 			<MSG STRUCTURE="diag_log_msg0" NAME="[ATT]attc pendind response multi memcpy error @att_pdu.c(1184),ERROR" ID="0xdc502502" />
-			<MSG STRUCTURE="diag_log_msg2" NAME="mtu_cfm, mtu = %d , le_max = %d @att_pdu.c(1311),WARNING" ID="0xdc5028fb" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="[ATT]att read rsp memcpy error @att_pdu.c(1592),ERROR" ID="0xdc5031c2" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="[ATT]att general write req memcpy error @att_pdu.c(1814),ERROR" ID="0xdc5038b2" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="att prepare write pdu memcpy error @att_pdu.c(1891),ERROR" ID="0xdc503b1a" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="[ATT]att prepare write ind memcpy error @att_pdu.c(1949),ERROR" ID="0xdc503cea" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="[ATT]att handle range rsp memcpy error @att_pdu.c(2204),ERROR" ID="0xdc5044e2" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="[ATT]att handle range rsp memcpy error @att_pdu.c(2213),ERROR" ID="0xdc50452a" />
+			<MSG STRUCTURE="diag_log_msg2" NAME="mtu_cfm, remaining_mtu = %d , le_max = %d @att_pdu.c(1312),WARNING" ID="0xdc502903" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="[ATT]att read rsp memcpy error @att_pdu.c(1593),ERROR" ID="0xdc5031ca" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="[ATT]att general write req memcpy error @att_pdu.c(1815),ERROR" ID="0xdc5038ba" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="att prepare write pdu memcpy error @att_pdu.c(1892),ERROR" ID="0xdc503b22" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="[ATT]att prepare write ind memcpy error @att_pdu.c(1950),ERROR" ID="0xdc503cf2" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="[ATT]att handle range rsp memcpy error @att_pdu.c(2205),ERROR" ID="0xdc5044ea" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="[ATT]att handle range rsp memcpy error @att_pdu.c(2214),ERROR" ID="0xdc504532" />
 			</MSG_LOG>

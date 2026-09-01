@@ -18,7 +18,6 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/library/mbedtls_harden_adapt.c
     ${CMAKE_CURRENT_SOURCE_DIR}/library/pbkdf2_hmac_harden.c
     ${CMAKE_CURRENT_SOURCE_DIR}/library/rsa_harden_adapt.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/library/rsa.c
     ${CMAKE_CURRENT_SOURCE_DIR}/library/sha1.c
     ${CMAKE_CURRENT_SOURCE_DIR}/library/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/library/sha512.c
@@ -52,6 +51,18 @@ set(PUBLIC_DEFINES
 # use this when you want to add ccflags like -include xxx
 set(COMPONENT_PUBLIC_CCFLAGS
 )
+
+if("mbedtls_v3.6.0" IN_LIST RAM_COMPONENT)
+    list(APPEND SOURCES 
+        ${ROOT_DIR}/open_source/mbedtls/mbedtls_v3.6.0/mbedtls_harden_adapt/library/rsa.c
+    )
+endif()
+
+if("mbedtls_v3.1.0" IN_LIST RAM_COMPONENT)
+    list(APPEND SOURCES 
+        ${ROOT_DIR}/open_source/mbedtls/mbedtls_v3.1.0/harden/src/connect_src/rsa.c
+    )
+endif()
 
 set(COMPONENT_CCFLAGS
 	-Wno-error=switch-default

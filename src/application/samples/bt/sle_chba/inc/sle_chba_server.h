@@ -53,6 +53,11 @@ typedef struct {
     bool link_ready;
 } sle_chba_user_link_t;
 
+typedef struct {
+    uint16_t data_len;
+    uint8_t *data_ptr;
+} sle_chba_recv_pkt_t;
+
 extern chba_cfg_t g_chba_cfg;
 
 sle_chba_user_link_t *sle_chba_user_get_new_linkinfo(void);

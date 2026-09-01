@@ -18,6 +18,7 @@
 
 struct netif g_sle_chba_netdev = {0};
 uint32_t g_rx_dropped_cnt = 0;
+unsigned long g_msgqueue_id = 0xFFFF;
 
 static uint8_t chba_adapter_netdev_set_hwaddr_cb(struct netif *netif, u8_t *addr, u8_t len)
 {
@@ -31,7 +32,6 @@ errcode_t sle_chba_netdev_input_cb(uint8_t *data, uint16_t len)
 {
     errcode_t rc = ERRCODE_SUCC;
     struct pbuf *p;
-    struct netif *dev = sle_chba_netdev_get();
     /*
      * The packet has been retrieved from the transmission
      * medium. Build an skb around it, so upper layers can handle it
@@ -56,6 +56,7 @@ errcode_t sle_chba_netdev_input_cb(uint8_t *data, uint16_t len)
 #endif
     rc = pbuf_take(p, data, len);
     if (rc != ERRCODE_SUCC) {
+        pbuf_free(p);
         chba_err_log("pbuf_take fail(%d)!!!\r\n", rc);
         g_rx_dropped_cnt++;
         return ERRCODE_MEMCPY;
@@ -77,9 +78,14 @@ errcode_t sle_chba_netdev_input_cb(uint8_t *data, uint16_t len)
 #if defined(ETH_PAD_SIZE) && ETH_PAD_SIZE
     pbuf_header(p, ETH_PAD_SIZE);
 #endif
-
+    sle_chba_recv_pkt_t recv_pkt = {.data_len = p->len,
+                                    .data_ptr = (uint8_t *)(uintptr_t)p};
     /* Write metadata, and then pass to the receive level */
-    driverif_input(dev, p);
+    int ret = osal_msg_queue_write_copy(g_msgqueue_id, &recv_pkt, sizeof(sle_chba_recv_pkt_t), 0);
+    if (ret != 0) {
+        pbuf_free(p);
+        g_rx_dropped_cnt++;
+    }
     return ERRCODE_SUCC;
 }
 
@@ -174,5 +180,23 @@ errcode_t sle_chba_sample_netdev_register_callbacks(void)
                                         .netdev_input_cb = sle_chba_netdev_input_cb,
                                         };
     return sle_chba_netdev_register_callbacks(&cbk);
+}
+
+void sle_chba_sample_recv_pkt_thread(void)
+{
+#define SLE_CHBA_RECV_QUE_LEN 10
+    int ret = osal_msg_queue_create("chba_recv_queue", SLE_CHBA_RECV_QUE_LEN,
+        &g_msgqueue_id, 0, sizeof(sle_chba_recv_pkt_t));
+    sle_chba_recv_pkt_t recv_pkt = {0};
+    struct netif *dev = sle_chba_netdev_get();
+    unsigned int len = sizeof(sle_chba_recv_pkt_t);
+    while (1) {
+        ret = osal_msg_queue_read_copy(g_msgqueue_id, &recv_pkt, &len, OSAL_MSGQ_WAIT_FOREVER);
+        if (ret != OSAL_SUCCESS || len < sizeof(sle_chba_recv_pkt_t)) {
+            chba_err_log("osal_msg_queue_read_copy fail(0x%x)\r\n", ret);
+            continue;
+        }
+        driverif_input(dev, (struct pbuf *)recv_pkt.data_ptr);
+    }
 }
 #endif

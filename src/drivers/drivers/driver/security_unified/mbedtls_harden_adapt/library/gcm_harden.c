@@ -300,30 +300,30 @@ int mbedtls_gcm_update(mbedtls_gcm_context *ctx, const unsigned char *input, siz
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    if (output_size < input_length)
-        return (MBEDTLS_ERR_GCM_BUFFER_TOO_SMALL);
-    GCM_VALIDATE_RET(output_length != NULL);
+    if (output_size < input_length) {
+        return MBEDTLS_ERR_GCM_BUFFER_TOO_SMALL;
+    }
+
+    if (output_length == NULL) {
+        return MBEDTLS_ERR_GCM_BAD_INPUT;
+    }
     *output_length = input_length;
 
-    /* Exit early if input_length==0 so that we don't do any pointer arithmetic
-     * on a potentially null pointer.
-     * Returning early also means that the last partial block of AD remains
-     * untouched for mbedtls_gcm_finish */
-    if (input_length == 0)
-        return (0);
+    if (input_length == 0) {
+        return 0;
+    }
 
-    GCM_VALIDATE_RET(ctx != NULL);
-    GCM_VALIDATE_RET(input != NULL);
-    GCM_VALIDATE_RET(output != NULL);
+    if (ctx == NULL || input == NULL || output == NULL) {
+        return MBEDTLS_ERR_GCM_BAD_INPUT;
+    }
 
-    if (output > input && (size_t) (output - input) < input_length)
-        return (MBEDTLS_ERR_GCM_BAD_INPUT);
+    if (output > input && (size_t) (output - input) < input_length) {
+        return MBEDTLS_ERR_GCM_BAD_INPUT;
+    }
 
-    /* Total length is restricted to 2^39 - 256 bits, ie 2^36 - 2^5 bytes
-     * Also check for possible overflow */
     if (ctx->len + input_length < ctx->len ||
         (uint64_t) ctx->len + input_length > 0xFFFFFFFE0ull) {
-        return (MBEDTLS_ERR_GCM_BAD_INPUT);
+        return MBEDTLS_ERR_GCM_BAD_INPUT;
     }
 
     ret = mbedtls_gcm_update_harden(ctx, input, input_length, output);
@@ -350,26 +350,27 @@ int mbedtls_gcm_crypt_and_tag(mbedtls_gcm_context *ctx, int mode, size_t length,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t olen;
 
-    GCM_VALIDATE_RET(ctx != NULL);
-    GCM_VALIDATE_RET(iv != NULL);
-    GCM_VALIDATE_RET(add_len == 0 || add != NULL);
-    GCM_VALIDATE_RET(length == 0 || input != NULL);
-    GCM_VALIDATE_RET(length == 0 || output != NULL);
-    GCM_VALIDATE_RET(tag != NULL);
+    ret = mbedtls_gcm_starts(ctx, mode, iv, iv_len);
+    if (ret != 0) {
+        return ret;
+    }
 
-    if ((ret = mbedtls_gcm_starts(ctx, mode, iv, iv_len)) != 0)
-        return (ret);
+    ret = mbedtls_gcm_update_ad(ctx, add, add_len);
+    if (ret != 0) {
+        return ret;
+    }
 
-    if ((ret = mbedtls_gcm_update_ad(ctx, add, add_len)) != 0)
-        return (ret);
+    ret = mbedtls_gcm_update(ctx, input, length, output, length, &olen);
+    if (ret != 0) {
+        return ret;
+    }
 
-    if ((ret = mbedtls_gcm_update(ctx, input, length, output, length, &olen)) != 0)
-        return (ret);
+    ret = mbedtls_gcm_finish(ctx, NULL, 0, &olen, tag, tag_len);
+    if (ret != 0) {
+        return ret;
+    }
 
-    if ((ret = mbedtls_gcm_finish(ctx, NULL, 0, &olen, tag, tag_len)) != 0)
-        return (ret);
-
-    return (0);
+    return 0;
 }
 
 VMP_TAG
@@ -379,37 +380,29 @@ int mbedtls_gcm_auth_decrypt(mbedtls_gcm_context *ctx, size_t length, const unsi
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char check_tag[16];
-    size_t i;
     int diff;
 
-    GCM_VALIDATE_RET(ctx != NULL);
-    GCM_VALIDATE_RET(iv != NULL);
-    GCM_VALIDATE_RET(add_len == 0 || add != NULL);
-    GCM_VALIDATE_RET(tag != NULL);
-    GCM_VALIDATE_RET(length == 0 || input != NULL);
-    GCM_VALIDATE_RET(length == 0 || output != NULL);
-
-    if ((ret = mbedtls_gcm_crypt_and_tag(ctx, MBEDTLS_GCM_DECRYPT, length, iv, iv_len, add, add_len, input, output,
-        tag_len, check_tag)) != 0) {
-        return (ret);
+    ret = mbedtls_gcm_crypt_and_tag(ctx, MBEDTLS_GCM_DECRYPT, length,
+                                    iv, iv_len, add, add_len,
+                                    input, output, tag_len, check_tag);
+    if (ret != 0) {
+        return ret;
     }
 
-    /* Check tag in "constant-time" */
-    for (diff = 0, i = 0; i < tag_len; i++)
-        diff |= tag[i] ^ check_tag[i];
-
+    diff = mbedtls_ct_memcmp(tag, check_tag, tag_len);
     if (diff != 0) {
         mbedtls_platform_zeroize(output, length);
-        return (MBEDTLS_ERR_GCM_AUTH_FAILED);
+        return MBEDTLS_ERR_GCM_AUTH_FAILED;
     }
 
-    return (0);
+    return 0;
 }
 
 void mbedtls_gcm_free(mbedtls_gcm_context *ctx)
 {
-    if (ctx == NULL)
+    if (ctx == NULL) {
         return;
+    }
 
     mbedtls_gcm_free_harden(ctx);
 

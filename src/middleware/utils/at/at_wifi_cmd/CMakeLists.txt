@@ -19,6 +19,12 @@ list (APPEND SOURCES
 )
 endif()
 
+if(DEFINED CONFIG_SUPPORT_WIFI_TEST)
+list (APPEND SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/at/at_wifi_test.c
+)
+endif()
+
 set(PUBLIC_HEADER
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )

@@ -77,6 +77,12 @@ if [ -f $out_put"/ws63-loaderboot/loaderboot.bin" ]; then
 fi
 
 #sign app
+if [ -f $out_put"/ws63-liteos-sle-mesh-one-touch-sample/ws63-liteos-sle-mesh-one-touch-sample.bin" ]; then
+    padd_align_64byte $out_put"/ws63-liteos-sle-mesh-one-touch-sample/ws63-liteos-sle-mesh-one-touch-sample.bin"
+    $sign_tool 0 liteos_sle_mesh_one_touch_start_sample_ecc.cfg
+    echo "ws63-liteos-sle-mesh-one-touch-sample copy generate succed!!!"
+fi
+
 if [ -f $out_put"/ws63-liteos-testsuite/ws63-liteos-testsuite.bin" ]; then
     padd_align_64byte $out_put"/ws63-liteos-testsuite/ws63-liteos-testsuite.bin"
     $sign_tool 0 testsuit_app_bin_ecc.cfg
@@ -155,6 +161,12 @@ if [ -f $out_put"/ws63-liteos-slp-radar-perf/ws63-liteos-slp-radar-perf.bin" ]; 
     padd_align_64byte $out_put"/ws63-liteos-slp-radar-perf/ws63-liteos-slp-radar-perf.bin"
     $sign_tool 0 liteos_slp_radar_perf_bin_ecc.cfg
     echo "liteos_slp_radar_perf_bin_ecc generate succed!!!"
+fi
+
+if [ -f $out_put"/ws63-liteos-slp-radar-perf-single/ws63-liteos-slp-radar-perf.bin" ]; then
+    padd_align_64byte $out_put"/ws63-liteos-slp-radar-perf-single/ws63-liteos-slp-radar-perf.bin"
+    $sign_tool 0 liteos_slp_radar_perf_single_bin_ecc.cfg
+    echo "liteos_slp_radar_perf_single_bin_ecc generate succed!!!"
 fi
 
 if [ -f $out_put"/ws63-liteos-btc-only/ws63-liteos-btc-only.bin" ]; then
@@ -240,19 +252,19 @@ if [ -f $out_put"/ws63-liteos-mesh-onoff-server/ws63-liteos-mesh-onoff-server.bi
     $sign_tool 0 ws63_liteos_mesh_onoff_server_bin_ecc.cfg
     echo "liteos_bgle_all_bin_ecc copy generate succed!!!"
 fi
- 
+
 if [ -f $out_put"/ws63-liteos-mesh-provisioner-adv/ws63-liteos-mesh-provisioner-adv.bin" ]; then
     padd_align_64byte $out_put"/ws63-liteos-mesh-provisioner-adv/ws63-liteos-mesh-provisioner-adv.bin"
     $sign_tool 0 ws63_liteos_mesh_provisioner_adv_bin_ecc.cfg
     echo "liteos_bgle_all_bin_ecc copy generate succed!!!"
 fi
- 
+
 if [ -f $out_put"/ws63-liteos-mesh-onoff-client/ws63-liteos-mesh-onoff-client.bin" ]; then
     padd_align_64byte $out_put"/ws63-liteos-mesh-onoff-client/ws63-liteos-mesh-onoff-client.bin"
     $sign_tool 0 ws63_liteos_mesh_onoff_client_bin_ecc.cfg
     echo "liteos_bgle_all_bin_ecc copy generate succed!!!"
 fi
- 
+
 #deal tmp param file
 rm -rf params_sign.bin
 rm -rf root_pubk.bin

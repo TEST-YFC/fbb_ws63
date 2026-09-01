@@ -449,9 +449,9 @@ def get_group_owner(data_dict, save_name):
             'BTH': 10, 'MESH': 150,
             'UNKNOWN': 0.5, 'STACK':7,'PKTRAM':50},
             # ws63 A flash
-            'ws63-liteos-app.map_flash':{'PLAT' : 204.9,
+            'ws63-liteos-app.map_flash':{'PLAT' : 215,
             # WIFI
-            'WIFI':590.93,
+            'WIFI':625.21,
             # RADAR
             'RADAR':50,
             # BTC
@@ -459,7 +459,7 @@ def get_group_owner(data_dict, save_name):
             # BTC_CHBA
             'BTC_CHBA': 16,
             # BTH
-            'BTH': 234.31, 'MESH': 340.5, 'UNKNOWN': 34.7}}
+            'BTH': 235, 'MESH': 340.5, 'UNKNOWN': 0.1}}
         lim_i = 0
         for owner, size in group_dict.items():
             size_t = size/BIT_SIZE
