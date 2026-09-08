@@ -11,23 +11,3 @@ config SUPPORT_RADAR_SOFTAP_SAMPLE
 
 config SUPPORT_RADAR_WIRELESS_SAMPLE
     bool "Support RADAR WIRELESS Sample"
-
-config SUPPORT_RADAR_SLP_SAMPLE
-    bool "Support RADAR SLP Sample"
-
-config SUPPORT_RADAR_SLP_WIRELESS_SAMPLE
-    bool "Support RADAR SLP WIRELESS Sample"
-
-    if SUPPORT_RADAR_SLP_WIRELESS_SAMPLE
-        config PC_OUT_NUM
-            int
-            prompt "cfg PC_OUT_NUM"
-            range 30 60
-            default 48
-
-        config RADAR_ANT_PAIR_NUM
-            int
-            prompt "cfg RADAR_ANT_PAIR_NUM"
-            range 1 4
-            default 4
-    endif
