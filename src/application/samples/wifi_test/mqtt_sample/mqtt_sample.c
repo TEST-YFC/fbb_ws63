@@ -28,12 +28,12 @@ static const td_u8 g_mqtt_client_crt[] = "\
 ";
 static const td_u8 g_mqtt_client_key[] = "\
 -----BEGIN PRIVATE KEY-----\r\n\
-**********************[private key body]**********************\r\n
+**********************[private key body]**********************\r\n\
 -----END PRIVATE KEY-----\r\n\
 ";
 static const td_u8 g_mqtt_ca_crt[] = "\
 -----BEGIN CERTIFICATE-----\r\n\
-**********************[CA body]**********************\r\n
+**********************[CA body]**********************\r\n\
 -----END CERTIFICATE-----\r\n\
 ";
 static const td_char g_mqtt_uri[] = ""; /* example:"ssl://192.168.80.50:8883" */
