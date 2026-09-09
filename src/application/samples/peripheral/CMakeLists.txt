@@ -18,10 +18,6 @@ if(DEFINED CONFIG_SAMPLE_SUPPORT_BUTTON)
     add_subdirectory_if_exist(button)
 endif()
 
-if(DEFINED CONFIG_SAMPLE_SUPPORT_TASKS)
-    add_subdirectory_if_exist(tasks)
-endif()
-
 if(DEFINED CONFIG_SAMPLE_SUPPORT_TCXO)
     add_subdirectory_if_exist(tcxo)
 endif()
@@ -52,6 +48,10 @@ endif()
 
 if(DEFINED CONFIG_SAMPLE_SUPPORT_PINCTRL)
     add_subdirectory_if_exist(pinctrl)
+endif()
+
+if(DEFINED CONFIG_SAMPLE_SUPPORT_PMP)
+    add_subdirectory_if_exist(pmp)
 endif()
 
 if(DEFINED CONFIG_SAMPLE_SUPPORT_QDEC)
