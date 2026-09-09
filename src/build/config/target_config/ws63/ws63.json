@@ -114,6 +114,14 @@
 			"cpu 0 entering scheduler"
 		]
 	},
+	"examples": {
+		"roots": [
+			"application/samples/peripheral",
+			"application/samples/bt/ble",
+			"application/samples/bt/sle",
+			"application/samples/bt/sle_chba"
+		]
+	},
 	"flash": {
 		"backend": "hsflash",
 		"transport": "serial",
@@ -122,14 +130,6 @@
 		"switch_after_loader": true,
 		"before_reset": true,
 		"after_reset": true
-	},
-	"examples": {
-		"roots": [
-			"application/samples/peripheral",
-			"application/samples/bt/ble",
-			"application/samples/bt/sle",
-			"application/samples/bt/sle_chba"
-		]
 	},
 	"need_sdk": true,
 	"need_project_path": true,

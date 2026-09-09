@@ -102,6 +102,21 @@ target = {
         'generate_efuse_bin': True,
         'copy_files_to_interim': True
     },
+    'ws63-liteos-matter': {
+        'base_target_name': 'ws63-liteos-app',
+        'liteos_kconfig': 'ws63_matter',
+        'std_libs': ['stdc++', 'atomic'],
+        'defines': [
+            "CONFIG_SUPPORT_MATTER",
+        ],
+        'ram_component': [
+            "-:radar_sensing",
+            "-:radar_at",
+            "-:radar_ai",
+            "matter",
+        ],
+    },
+
     'ws63-flashboot': {
         'base_target_name': 'target_ws63_boot_template',
         'CONFIG_TIMER_USING_V150': 'y',
