@@ -38,6 +38,7 @@ INCLUDES += -I$(BASEDIR)/include/middleware/utils
 INCLUDES += -I$(BASEDIR)/middleware/chips/ws63/dfx/include
 INCLUDES += -I$(BASEDIR)/middleware/chips/ws63/update/include
 INCLUDES += -I$(BASEDIR)/middleware/chips/ws63/partition/include
+INCLUDES += -I$(BASEDIR)/middleware/chips/ws63/nv/include
 INCLUDES += -I$(BASEDIR)/middleware/chips/ws63/nv/nv_config/include
 INCLUDES += -I$(BASEDIR)/middleware/utils/common_headers
 
