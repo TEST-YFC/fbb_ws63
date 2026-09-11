@@ -166,11 +166,13 @@ connectedhomeip
 2.  下载带本平台适配后的matter源码的ws63 SDK软件包：
     ```bash
     git clone https://gitcode.com/HiSpark/fbb_ws63.git -b master
+    # Matter源码适配从WS63 108版本开始
     cd fbb_ws63
     git submodule update --init --remote --force
     cd src/middleware/services/matter/connectedhomeip
     ./scripts/checkout_submodules.py --shallow --platform hisilicon
     ```
+    注：如果执行脚本过程出现网络连接问题，一般情况下需要配置VPN。
 3.  安装Matter编译依赖环境。
     在connectedhomeip目录下执行脚本：
     ```bash
@@ -383,6 +385,14 @@ AT+MATTERPROVISION
 DAC私钥：0x6005
 
 DAC公钥：0x6028
+
+### 恢复出厂设置<a name="ZH-CN_TOPIC_0000002558124918"></a>
+
+命令：
+```bash
+AT+MATTERRESET
+```
+作用：重置Matter配网信息及Matter证书，便于开发测试重新配网及证书验证。
 
 ### 显示Matter配置信息<a name="ZH-CN_TOPIC_0000002526965092"></a>
 
