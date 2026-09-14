@@ -28,6 +28,8 @@
 #include "nv.h"
 #include "KeyValueStoreManagerImpl.h"
 
+extern "C" errcode_t uapi_nv_delete_key(uint16_t key);
+
 namespace chip {
 namespace DeviceLayer {
 namespace PersistedStorage {
@@ -299,6 +301,12 @@ CHIP_ERROR KeyValueStoreManagerImpl::_Delete(const char * key)
     if (attr.permanent) {
         ChipLogError(DeviceLayer, "Cannot delete permanent key: %s", key);
         return CHIP_ERROR_ACCESS_DENIED;
+    }
+
+    errcode_t ret = uapi_nv_delete_key(keyID);
+    if (ret != ERRCODE_SUCC) {
+        ChipLogError(DeviceLayer, "Cannot delete key: %s, ret=0x%x", key, ret);
+        return (ret == ERRCODE_NV_KEY_NOT_FOUND) ? CHIP_NO_ERROR : CHIP_ERROR_INTERNAL;
     }
 
     return CHIP_NO_ERROR;

@@ -110,6 +110,7 @@ target = {
         'std_libs': ['stdc++', 'atomic'],
         'defines': [
             "CONFIG_SUPPORT_MATTER",
+            "CONFIG_NV_SUPPORT_DELETE_KEY",
         ],
         'ram_component': [
             "-:radar_sensing",
