@@ -434,3 +434,193 @@ AT+SYSINFO
 ```
 作用：查看系统所有线程状态，如优先级，堆栈状态，内存、CPU使用状态，方便查看和定位问题
 
+# Matter常见问题（FAQ）<a name="ZH-CN_TOPIC_MATTER_FAQ"></a>
+
+## 哪些安装失败需要开启VPN
+
+Matter环境准备会下载Git子模块、CIPD工具包和Python依赖。是否需要VPN，首先看失败发生在下载阶段还是本地安装阶段。
+
+**通常需要开启VPN或配置WSL代理的情况：**
+
+- 执行 `git clone`、`git submodule update` 或 `checkout_submodules.py` 时出现 `Failed to connect`、`Could not resolve host`、`Connection timed out`、`curl: (28)` 或返回 `000`。
+- 执行 `source scripts/activate.sh` 时，CIPD无法连接下载服务，出现下载超时、域名解析失败、连接被拒绝或多次重试失败。
+- 安装Python依赖时出现 `Read timed out`、`Temporary failure in name resolution`、`Could not fetch URL` 或 `Max retries exceeded`。
+- 初始化Matter环境时，GN工具通过CIPD下载失败，随后执行编译出现 `gn: not found`。
+
+**通常不需要通过VPN解决的情况：**
+
+- `lstat ... qMemTags.html: no such file or directory`：通常是CIPD在Windows挂载盘解包导致，应将SDK和环境移到WSL的Linux文件系统。
+- `ImportError: cannot import name 'get_loader' from 'pkgutil'`：是旧版 `pgi` 与Python版本不兼容，应使用Python 3.11或跳过 `pgi`。
+- `error: externally-managed-environment`：是系统Python禁止直接安装第三方包，应使用虚拟环境，或仅编译固件时使用 `--platform none`。
+
+**需要根据前面日志判断的情况：**
+
+- `gn: not found` 本身不能直接判断是否需要VPN。
+- 如果前面的环境初始化日志出现CIPD下载超时、域名解析失败或连接失败，需要开启VPN或配置WSL代理，然后重新执行环境初始化。
+- 如果环境初始化没有网络错误，但执行 `source scripts/activate.sh` 后仍然找不到GN，应检查是否在正确的 `connectedhomeip` 目录、环境是否已激活，以及GN所在目录是否已加入PATH。
+
+注意：Windows显示VPN已连接，不代表WSL流量一定经过VPN。只有WSL中的网络检查也能访问依赖下载地址时，后续安装才具备网络条件。
+
+---
+
+## WSL中VPN已连接，但GitHub、GitCode或ZAP/CIPD下载超时
+
+Windows显示VPN已连接，但WSL中执行网络检查时出现：
+
+```text
+curl: (28) Failed to connect ...
+000
+```
+
+**原因：** `curl` 返回 `000` 表示没有收到HTTP响应，不是目标网站返回的HTTP状态码。Windows主机的VPN连接成功，也不代表WSL2的NAT网络流量一定经过VPN。VPN分流策略、DNS、代理、系统防火墙或目标域名限制都可能造成此现象。
+
+**检查方法：**
+
+Windows PowerShell：
+
+```powershell
+curl.exe -I --connect-timeout 10 https://github.com
+curl.exe -I --connect-timeout 10 https://gitcode.com
+curl.exe -I --connect-timeout 10 https://chrome-infra-packages.appspot.com
+```
+
+WSL：
+
+```bash
+curl -I --connect-timeout 10 https://github.com
+curl -I --connect-timeout 10 https://gitcode.com
+curl -I --connect-timeout 10 https://chrome-infra-packages.appspot.com
+getent hosts github.com gitcode.com chrome-infra-packages.appspot.com
+env | grep -i proxy
+git config --global --get-regexp 'http.*proxy'
+```
+
+**判断方法：**
+
+- Windows成功、WSL超时：VPN没有正确接管WSL网络，或WSL的DNS/代理配置不正确。
+- Windows和WSL都超时：VPN、系统防火墙、网络出口或目标域名仍被拦截。
+- 返回 `200`、`301`、`302`、`403` 或 `404` 都说明已经收到HTTP响应，网络路径基本可用。
+- `000` 且连接超时，说明连接没有建立。
+
+Matter依赖下载不只访问GitHub，还可能访问GitCode、CIPD和ZAP相关服务，因此需要分别检查这些域名。使用代理时，应在WSL中为 `curl`、`git` 和 `pip` 配置同一个可访问的代理。
+
+---
+
+## CIPD在`/mnt/d`解包时报`qMemTags.html`不存在
+
+典型错误如下：
+
+```text
+failed to install fuchsia/third_party/armgcc/linux-amd64
+lstat .../.environment/cipd/packages/.../share/doc/gdb/qMemTags.html:
+no such file or directory
+```
+
+**原因：** `/mnt/d` 是WSL访问Windows D盘的NTFS挂载路径，不是WSL的Linux文件系统。CIPD解包ARM GCC、ZAP等工具包时会并发处理大量文件，并可能涉及文件属性、符号链接、大小写和重命名。在 `/mnt/d` 上解包可能导致文件不完整或 `lstat` 找不到文件。
+
+这个错误属于本地文件系统兼容问题，即使VPN已经连接也不能直接解决。`qMemTags.html` 通常只是第一个暴露问题的文件，不代表GDB源码本身损坏。
+
+**解决方案：** SDK、Matter `.environment` 和CIPD缓存都放到Linux文件系统中：
+
+```text
+$HOME/fbb_ws63
+$HOME/fbb_ws63_matter_environment
+$HOME/.cipd-cache-dir
+```
+
+推荐直接在Linux文件系统中重新克隆：
+
+```bash
+cd "$HOME"
+git clone https://gitcode.com/HiSpark/fbb_ws63.git
+```
+
+如果需要使用已有SDK，请先将其复制到Linux文件系统中的目录，再进入该副本的
+`src/middleware/services/matter/connectedhomeip` 子目录。不要从Windows挂载盘中的SDK目录执行Matter环境安装或编译。
+
+如果挂载盘中的 `.environment` 已经解包失败，应在Linux路径中重新生成环境。确认路径时，`pwd` 必须以 `/home/`、`/opt/` 等Linux文件系统路径开头；以 `/mnt/` 开头仍然是Windows挂载盘。
+
+---
+
+## 已显示`Environment passes all checks`，为什么后面仍然失败
+
+执行Matter环境脚本时可能看到：
+
+```text
+Environment passes all checks!
+Environment looks good, you are ready to go!
+Installing pip requirements for all...
+```
+
+**原因：** `Environment passes all checks!` 只表示Pigweed完成了当前阶段的环境检查，例如工具路径、CIPD基础环境和必要环境变量检查通过。它不是整个 `source scripts/activate.sh` 流程的最终成功标志，也不代表后续所有Python包和CIPD工具包已经安装成功。
+
+脚本后面还可能执行：
+
+- 额外平台Python依赖安装；
+- `pgi`、`dbus-python`、`PyGObject` 等Linux控制器依赖安装；
+- CIPD工具包补充安装。
+
+如果后续出现网络超时、域名解析失败或CIPD下载失败，先按本FAQ前面的VPN检查方法处理；如果出现本地路径、Python版本或系统Python错误，则按对应FAQ处理。
+
+因此，如果这句话后面继续出现 `error`、`failed` 或Python traceback，整体环境准备仍然失败。
+
+**验证方法：** 当前WS63 Matter固件编译建议执行：
+
+```bash
+cd "$HOME/fbb_ws63/src/middleware/services/matter/connectedhomeip"
+source scripts/activate.sh --platform none
+
+command -v gn
+command -v ninja
+gn --version
+
+cd "$HOME/fbb_ws63/src"
+fbb build ws63-liteos-matter
+```
+
+只有以下条件同时满足，才可以认为环境真正可用于编译：
+
+1. `source scripts/activate.sh --platform none` 后没有新的Python traceback或pip安装错误。
+2. `command -v gn` 和 `command -v ninja` 能找到Linux环境中的工具。
+3. `gn --version` 能正常执行。
+4. `fbb build ws63-liteos-matter` 能进入并完成Matter的GN/Ninja编译阶段。
+
+---
+
+## WSL编译Matter时pgi安装失败
+
+!!! warning "重要：pgi必须使用Python 3.11"
+    对当前仓库锁定的 `pgi==0.0.11.2`，Python 3.11 是最后推荐且可复现的兼容环境。Python 3.12/3.13不是本文的兼容基线，Python 3.14已明确不兼容；如果只编译WS63 Matter固件，请使用 `--platform none` 跳过 `pgi`。
+
+执行 `source scripts/activate.sh` 时，可能出现以下错误：
+
+```text
+Installing pip requirements for all...
+python setup.py egg_info did not run successfully
+ImportError: cannot import name 'get_loader' from 'pkgutil'
+metadata-generation-failed
+```
+
+**原因：** Matter的Linux Python依赖中包含旧版 `pgi`，当前仓库锁定的版本为 `pgi==0.0.11.2`。该版本使用了 `pkgutil.get_loader`，而Python 3.14已经移除了这个接口，因此会在生成 `pgi` 包元数据时失败。
+
+`pgi` 是Linux主机侧的Python依赖，用于Matter控制器的BlueZ/GObject蓝牙功能，不是WS63固件的C/C++编译库。Matter代码优先使用 `gi.repository`，`pgi` 只是旧的回退依赖。
+
+如果日志是下载超时、域名解析失败或 `Could not fetch URL`，先检查VPN或WSL代理；如果已经下载到 `pgi` 并出现 `pkgutil.get_loader` 错误，则与VPN无关，是Python版本兼容问题。
+
+**解决方案：** 当前只编译WS63 Matter固件时，跳过额外平台依赖：
+
+```bash
+cd "$HOME/fbb_ws63/src/middleware/services/matter/connectedhomeip"
+
+unset PYTHONHOME
+unset PYTHONPATH
+
+source scripts/activate.sh --platform none
+
+cd "$HOME/fbb_ws63/src"
+fbb build ws63-liteos-matter
+```
+
+如果需要使用Matter Linux Controller或 `chip-repl`，请固定使用Python 3.11独立虚拟环境，并优先使用 `PyGObject`/`gi.repository`。`--break-system-packages` 只能绕过系统Python的安装限制，不能解决旧版 `pgi` 与Python 3.14的接口兼容问题。
+
+如果日志显示环境检查通过，但后面紧跟 `pgi` 安装失败，应使用 `--platform none`，或使用Python 3.11重新准备需要完整控制器依赖的环境。
