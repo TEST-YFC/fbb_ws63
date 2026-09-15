@@ -147,16 +147,7 @@ LITE_OS_SEC_TEXT_MINOR UINT32 LOS_MS2Tick(UINT32 millisec)
 
 LITE_OS_SEC_TEXT_MINOR UINT32 LOS_Tick2MS(UINT32 tick)
 {
-    UINT64 delayMs;
-
-    delayMs = ((UINT64)tick * OS_SYS_MS_PER_SECOND) / KERNEL_TICK_PER_SECOND;
-
-    /* Returns UINT32_MAX if flipping occurs */
-    if (delayMs > UINT32_MAX) {
-        return UINT32_MAX;
-    } else {
-        return (UINT32)delayMs;
-    }
+    return (UINT32)(((UINT64)tick * OS_SYS_MS_PER_SECOND) / KERNEL_TICK_PER_SECOND);
 }
 
 LITE_OS_SEC_TEXT_MINOR VOID LOS_Udelay(UINT32 usecs)

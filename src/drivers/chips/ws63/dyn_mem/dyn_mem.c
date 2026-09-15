@@ -5,9 +5,6 @@
  * Create:  2023-04-09
  */
 
-#include <stdint.h>
-
-#include "chip_io.h"
 #include "dyn_mem.h"
 
 /**

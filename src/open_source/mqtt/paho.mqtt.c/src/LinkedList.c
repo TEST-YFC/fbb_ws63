@@ -104,11 +104,7 @@ ListElement* ListAppend(List* aList, void* content, size_t size)
  * @param index the position in the list. If NULL, this function is equivalent
  * to ListAppend.
  */
-#if defined(WEAR_LITEOS_ADAPT)
-ListElement* _ListInsert(List* aList, void* content, size_t size, ListElement* index)
-#else
 ListElement* ListInsert(List* aList, void* content, size_t size, ListElement* index)
-#endif
 {
 	ListElement* newel = malloc(sizeof(ListElement));
 
@@ -368,11 +364,7 @@ int ListRemoveItem(List* aList, void* content, int(*callback)(void*, void*))
  * Removes and frees all items in a list, leaving the list ready for new items.
  * @param aList the list to which the operation is to be applied
  */
-#if defined(WEAR_LITEOS_ADAPT)
-void _ListEmpty(List* aList)
-#else
 void ListEmpty(List* aList)
-#endif
 {
 	while (aList->first != NULL)
 	{
@@ -396,11 +388,7 @@ void ListEmpty(List* aList)
  */
 void ListFree(List* aList)
 {
-#if defined(WEAR_LITEOS_ADAPT)
-	_ListEmpty(aList);
-#else
 	ListEmpty(aList);
-#endif
 	free(aList);
 }
 

@@ -478,9 +478,19 @@ STATIC void uart_rx_buffer_report(uart_bus_t bus, bool error);
 STATIC timer_handle_t g_uart_timer[UART_BUS_MAX_NUMBER] = {0};
 STATIC uint32_t g_timer_delay_time = 0;
 
+/**
+ * 在定时器到期时，先检查UART接收FIFO是否为空：
+ * - 如果FIFO为空，说明数据已全部接收，可以安全上报
+ * - 如果FIFO非空，说明对端可能正在发送数据，本次定时器到期不上报
+ */
 STATIC void uart_rx_conditon_timer_callback(uintptr_t data)
 {
-    uart_rx_buffer_report((uart_bus_t)data, false);
+    bool rx_fifo_empty = false;
+    uart_bus_t bus = (uart_bus_t)data;
+    hal_uart_ctrl(bus, UART_CTRL_CHECK_RX_FIFO_EMPTY, (uintptr_t)&rx_fifo_empty);
+    if (rx_fifo_empty == true) {
+        uart_rx_buffer_report((uart_bus_t)data, false);
+    }
 }
 
 STATIC errcode_t uart_rx_conditon_timer_init(uart_bus_t bus, uint32_t baud_rate)
@@ -549,7 +559,6 @@ errcode_t uapi_uart_init(uart_bus_t bus, const uart_pin_config_t *pins, const ua
 #if defined(CONFIG_UART_SUPPORT_LPC)
     uart_port_clock_enable(bus, true);
 #endif
-    uart_claim_pins(bus, pins);
 
 #if defined(CONFIG_UART_SUPPORT_RX)
     if (uart_config_rx_state(bus, uart_buffer_config) == false) {
@@ -581,6 +590,8 @@ errcode_t uapi_uart_init(uart_bus_t bus, const uart_pin_config_t *pins, const ua
 #if defined(CONFIG_UART_SUPPORT_RX_FRAME_CALLBACK)
     ret = uart_rx_conditon_timer_init(bus, attr->baud_rate);
 #endif
+
+    uart_claim_pins(bus, pins);
     return ret;
 }
 
@@ -816,14 +827,14 @@ errcode_t uapi_uart_write_int(uart_bus_t bus, const uint8_t *buffer, uint32_t le
         return ret;
     }
 
-    uint32_t irq_sts = uart_porting_lock(bus);
+    uint32_t irq_sts = osal_irq_lock();
     if (uart_helper_are_there_fragments_to_process(bus) == true) {
         uapi_uart_data_send(bus);
     }
 
     bool fragment_added = uart_helper_add_fragment(bus, buffer, length, params, finished_with_buffer_func);
     if (!fragment_added) {
-        uart_porting_unlock(bus, irq_sts);
+        osal_irq_restore(irq_sts);
         return ERRCODE_UART_ADD_QUEUE_FAIL;
     }
     /* If it is the first on the list process it */
@@ -835,7 +846,7 @@ errcode_t uapi_uart_write_int(uart_bus_t bus, const uint8_t *buffer, uint32_t le
             hal_uart_ctrl(bus, UART_CTRL_EN_TX_INT, true);
         }
     }
-    uart_porting_unlock(bus, irq_sts);
+    osal_irq_restore(irq_sts);
     return ERRCODE_SUCC;
 }
 #endif
@@ -1298,7 +1309,7 @@ static void uart_claim_pins(uart_bus_t bus, const uart_pin_config_t *pins)
 
 static void uart_release_pins(uart_bus_t bus)
 {
-    unused(bus);
+    uart_port_release_pinmux(bus);
 }
 
 #if defined(CONFIG_UART_SUPPORT_RX)

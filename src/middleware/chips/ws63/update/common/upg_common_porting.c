@@ -432,7 +432,7 @@ STATIC errcode_t verify_public_rootkey_etc(root_public_key *rootkey_buff)
     }
 
     /* check hash */
-    ret = memcmp(hash_from_otp, hash_result, (uint32_t)SHA_256_LENGTH);
+    ret = (uint32_t)memcmp(hash_from_otp, hash_result, (uint32_t)SHA_256_LENGTH);
     if (ret != 0) {
         upg_log_err("verify_rootkey hash memcmp fail!");
         return ERRCODE_FAIL;

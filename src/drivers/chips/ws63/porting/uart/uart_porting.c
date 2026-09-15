@@ -12,11 +12,13 @@
 #include "pinctrl_porting.h"
 #include "pinctrl.h"
 #endif
+#include "panic.h"
 #include "uart.h"
 #include "platform_core.h"
 #include "securec.h"
 #include "osal_interrupt.h"
 #include "soc_osal.h"
+#include "tcxo.h"
 #if (defined(SUPPORT_DFX_LOG) && defined(LOG_SUPPORT))
 #include "dfx_channel.h"
 #include "diag_filter.h"
@@ -61,8 +63,6 @@
 #define UART_BUS_0_BASE_ADDR (UART0_BASE - 4)
 #define UART_BUS_1_BASE_ADDR (UART1_BASE - 4)
 #define UART_BUS_2_BASE_ADDR (UART2_BASE - 4)
-#define GPIO12_PAD_CTRL_GROUP_ADDR 0x4400D030
-#define GPIO13_PAD_CTRL_GROUP_ADDR 0x4400D034
 
 #define UART_TRANS_LEN_MAX   128
 
@@ -149,14 +149,6 @@ uint32_t uart_port_get_clock_value(uart_bus_t bus)
 #define UART_0_MODE   1
 void uart_port_config_pinmux(uart_bus_t bus)
 {
-#ifndef BOARD_ASIC
-    // uart2需要配管脚复用
-    if (bus == UART_BUS_2) {
-        uapi_reg_write32(GPIO12_PAD_CTRL_GROUP_ADDR, 0x1);
-        uapi_reg_write32(GPIO13_PAD_CTRL_GROUP_ADDR, 0x1);
-    }
-    return;
-#else
     if (bus == UART_BUS_2) {
         writel(GPIO_07_SEL, UART_2_MODE);
         writel(GPIO_08_SEL, UART_2_MODE);
@@ -167,10 +159,40 @@ void uart_port_config_pinmux(uart_bus_t bus)
         writel(UART0_TXD_SEL, UART_0_MODE);
         writel(UART0_RXD_SEL, UART_0_MODE);
     }
-#endif
+
 #if !defined(BUILD_NOOSAL)
     if (bus < UART_BUS_MAX_NUMBER && g_uart_support_mutex[bus] == true && g_uart_tx_mutex[bus].mutex == NULL) {
         osal_mutex_init(&g_uart_tx_mutex[bus]);
+    }
+#endif
+}
+
+#define UART_SOFT_RESET_ADDR        0x44001138
+#define UART_SOFT_RESET_DELAY_1US   1
+void uart_port_release_pinmux(uart_bus_t bus)
+{
+    if (bus >= UART_BUS_MAX_NUM) {
+        return;
+    }
+ 
+    if (bus == UART_BUS_2) {
+        writel(GPIO_07_SEL, 0);
+        writel(GPIO_08_SEL, 0);
+    } else if (bus == UART_BUS_1) {
+        writel(UART1_TXD_SEL, 0);
+        writel(UART1_RXD_SEL, 0);
+    } else if (bus == UART_BUS_0) {
+        writel(UART0_TXD_SEL, 0);
+        writel(UART0_RXD_SEL, 0);
+    }
+ 
+    uapi_reg_clrbit(UART_SOFT_RESET_ADDR, (uint32_t)bus);
+    uapi_tcxo_delay_us(UART_SOFT_RESET_DELAY_1US);
+    uapi_reg_setbit(UART_SOFT_RESET_ADDR, (uint32_t)bus);
+ 
+#if !defined(BUILD_NOOSAL)
+    if (bus < UART_BUS_MAX_NUMBER && g_uart_support_mutex[bus] == true && g_uart_tx_mutex[bus].mutex != NULL) {
+        osal_mutex_destroy(&g_uart_tx_mutex[bus]);
     }
 #endif
 }

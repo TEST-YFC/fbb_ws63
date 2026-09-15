@@ -307,7 +307,11 @@ sign_app(os.path.join(out_put, "ws63-liteos-slp-radar/ws63-liteos-slp-radar.bin"
 
 sign_app(os.path.join(out_put, "ws63-liteos-slp-radar-perf/ws63-liteos-slp-radar-perf.bin"), "0", "liteos_slp_radar_perf_bin_ecc.cfg")
 
+sign_app(os.path.join(out_put, "ws63-liteos-slp-radar-perf-single/ws63-liteos-slp-radar-perf.bin"), "0", "liteos_slp_radar_perf_single_bin_ecc.cfg")
+
 sign_app(os.path.join(boot_bin, "ws63-liteos-mfg.bin"), "0", "liteos_mfg_bin_factory_ecc.cfg")
+
+sign_app(os.path.join(out_put, "ws63-liteos-sle-mesh-one-touch-sample/ws63-liteos-sle-mesh-one-touch-sample.bin"), "0", "liteos_sle_mesh_one_touch_start_sample_ecc.cfg")
 
 move_file(cwd_path, os.path.join(out_put, "param_bin"), "params.bin")
 # clean middle files

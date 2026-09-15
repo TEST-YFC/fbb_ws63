@@ -176,7 +176,6 @@ typedef volatile INT64     Atomic64;
  * but using the unused attribute should stop warnings.
  */
 #define LOSBLD_ATTRIB_USED __attribute__((used))
-#define LOSBLD_ATTRIB_UNUSED __attribute__((unused))
 
 #ifdef __cplusplus
 }

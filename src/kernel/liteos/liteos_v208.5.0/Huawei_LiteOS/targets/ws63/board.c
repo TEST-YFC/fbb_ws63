@@ -250,8 +250,8 @@ CHAR *OsCurTaskNameGetExt(VOID)
 #define ROM_START  0x109000
 #define ROM_LENGTH 0x43000
 #define ROM_END    (ROM_START + ROM_LENGTH)
-#define RAM_END    0xa85f00
-/* 放在SRAM运行的代码的text&rodata段在初始阶段需要从flash拷贝到ram */
+#define RAM_END    0xA90000
+/* 鏀惧湪SRAM杩愯鐨勪唬鐮佺殑text&rodata娈靛湪鍒濆闃舵闇�瑕佷粠flash鎷疯礉鍒皉am */
 static bool check_txt_addr_range(uint32_t pc, uint32_t text_start, uint32_t text_end)
 {
     if (pc >= text_start && pc < text_end) {

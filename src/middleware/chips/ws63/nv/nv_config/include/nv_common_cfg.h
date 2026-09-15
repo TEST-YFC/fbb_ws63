@@ -29,6 +29,8 @@
 #define BT_SRRC_CHANNEL_NUM 8
 #define SLP_RADAR_MFG_PHASE_CALI_NUM        2
 #define SLP_RADAR_MFG_DELAY_CALI_NUM        4
+#define SLP_RADAR_AI_OFFSET_PARA_NUM        8
+#define SLP_RADAR_MAX_SENSITIVITY_ARR_LEN   60
 /* 基础类型无需在此文件中定义，直接引用即可，对应app.json中的sample0 */
 
 /* 普通结构体，对应app.json中的sample1 */
@@ -199,6 +201,32 @@ typedef struct {
     int16_t phs_cali_q[SLP_RADAR_MFG_PHASE_CALI_NUM];
     uint16_t ant_space[SLP_RADAR_MFG_PHASE_CALI_NUM];
 } slp_radar_mfg_para_t;
+
+typedef struct {
+    uint32_t rpt_mode;
+    uint32_t sensitivity;
+    uint32_t rng_boundary;
+    uint32_t delay_time;
+    uint16_t ant_space_amp_coef;
+    uint16_t static_create_range;
+    uint8_t is_wire_down;
+    uint8_t angle_boundary;
+    uint8_t anti_multipath_mode;
+    uint8_t cali_res_save_mode;
+} slp_radar_alg_basic_para_t;
+
+typedef struct {
+    int32_t dynamic_offset_direction[SLP_RADAR_AI_OFFSET_PARA_NUM];
+    int32_t static_offset_direction[SLP_RADAR_AI_OFFSET_PARA_NUM];
+    uint16_t ai_status;
+} slp_radar_ai_para_t;
+
+typedef struct {
+    uint8_t para_len;
+    uint8_t dyn_sensitivity_0[SLP_RADAR_MAX_SENSITIVITY_ARR_LEN];
+    uint8_t dyn_sensitivity_1[SLP_RADAR_MAX_SENSITIVITY_ARR_LEN];
+    uint8_t sta_sensitivity_0[SLP_RADAR_MAX_SENSITIVITY_ARR_LEN];
+} slp_radar_sensitivity_para_t;
 
 /* hilink配网 ssid与密码 */
 typedef struct {

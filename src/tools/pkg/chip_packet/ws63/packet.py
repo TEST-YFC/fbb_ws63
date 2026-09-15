@@ -214,7 +214,31 @@ def make_all_in_one_packet(pack_style_str, extr_defines):
         'ws63-liteos-slp-radar-perf': [
             'ws63-liteos-slp-radar-perf.bin',
             'ws63-liteos-slp-radar-perf-sign.bin',
-        ]
+        ],
+        'ws63-liteos-slp-radar-perf-single': [
+            'ws63-liteos-slp-radar-perf.bin',
+            'ws63-liteos-slp-radar-perf-sign.bin',
+        ],
+        'ws63-liteos-app-mesh': [
+            'ws63-liteos-app-mesh_rom.bin',
+            'ws63-liteos-app-mesh-sign.bin',
+        ],
+        'ws63-liteos-mesh-sample-prov': [
+            'ws63-liteos-mesh-sample-prov_rom.bin',
+            'ws63-liteos-mesh-sample-prov-sign.bin',
+        ],
+        'ws63-liteos-mesh-sample-server': [
+            'ws63-liteos-mesh-sample-server_rom.bin',
+            'ws63-liteos-mesh-sample-server-sign.bin',
+        ],
+        'ws63-liteos-mesh-sample-client': [
+            'ws63-liteos-mesh-sample-client_rom.bin',
+            'ws63-liteos-mesh-sample-client-sign.bin',
+        ],
+        'ws63-liteos-sle-mesh-one-touch-sample': [
+            'ws63-liteos-sle-mesh-one-touch-sample_rom.bin',
+            'ws63-liteos-sle-mesh-one-touch-sample-sign.bin',
+        ],
     }
 
     if pack_style_str in available_targets_map:
@@ -296,7 +320,7 @@ def make_all_in_one_packet(pack_style_str, extr_defines):
                     packet_bin(fpga_fwpkg, packet_post_agvs)
                 else:
                     fpga_fwpkg = os.path.join(fwpkg_outdir, f"{pack_style_str}_all.fwpkg")
-                    packet_bin(fpga_fwpkg, packet_post_agvs)                   
+                    packet_bin(fpga_fwpkg, packet_post_agvs)
             else:
                 print("warning: don't find ws63-liteos-mfg-sign.bin...")
         else:

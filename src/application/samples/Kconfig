@@ -39,6 +39,7 @@ if ENABLE_OS_SAMPLE
 osource "application/samples/os/Kconfig"
 endif
 
+
 config ENABLE_WIFI_SAMPLE
     bool
     prompt "Enable the Sample of WIFI."
@@ -48,7 +49,7 @@ config ENABLE_WIFI_SAMPLE
         This option means enable the sample of WIFI.
 
 if ENABLE_WIFI_SAMPLE
-osource "application/samples/wifi/Kconfig"
+osource "application/samples/wifi_test/Kconfig"
 endif
 
 config ENABLE_PRODUCTS_SAMPLE
@@ -72,7 +73,7 @@ config ENABLE_RADAR_SAMPLE
         This option means enable the sample of RADAR.
 
 if ENABLE_RADAR_SAMPLE
-osource "application/samples/radar/Kconfig"
+osource "application/samples/radar_test/Kconfig"
 endif
 
 config ENABLE_NFC_SAMPLE

@@ -19,7 +19,6 @@ __attribute__((section(".text.runtime.init"))) void init_mem_value(unsigned int 
     const unsigned int *const end_addr, unsigned int init_val);
 __attribute__((section(".text.runtime.init"))) void do_relocation(void);
 __attribute__((section(".text.runtime.init"))) void runtime_init(void);
-
 int external_board_init(void);
 
 extern void LOS_PrepareMainTask(void);

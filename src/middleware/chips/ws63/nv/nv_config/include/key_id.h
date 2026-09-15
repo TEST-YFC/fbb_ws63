@@ -97,6 +97,7 @@
 #define NV_ID_BTC_CHANNEL_SCAN_SWITCH      0x20AB /* channel scan switch */
 #define NV_ID_BTC_BLE_SCAN_CHANNEL_MAP     0x20AC /* ble scan Channel_Map bit[0-2] */
 #define NV_ID_BTC_BLE_CALI_SWITCH          0x20AD /* btc_ble_poweron_cali_switch */
+#define NV_ID_BTC_SLE_CFRAME_STATS         0x20AE /* btc sle cframe statistic */
 
 #define NV_ID_RADAR_1M_HOME_STA_PLATSIC    0x2100
 #define NV_ID_RADAR_1M_HALL_STA_PLATSIC    0x2101
@@ -133,6 +134,9 @@
 #define NV_ID_RADAR_MWO_MODE               0x2120
 #define NV_ID_RADAR_THRU_WALL_MODE         0x2124
 #define NV_ID_RADAR_CHN_SWITCH             0x2130
+#define NV_ID_RADAR_SLP_BASIC_PARA         0x2135
+#define NV_ID_RADAR_SLP_AI_PARA            0x2136
+#define NV_ID_RADAR_SLP_SENSITIVITY_PARA   0x2137
 #define NV_ID_RADAR_SLP_MFG_PARA           0x2138
 #define NV_ID_RADAR_SLP_MFG_STATUS         0x2139
 #define NV_ID_RADAR_CTRL                   0x2140

@@ -13,5 +13,6 @@ errcode_t chba_adapter_netdev_deinit(void);
 errcode_t sle_chba_sample_netdev_register_callbacks(void);
 struct netif *sle_chba_netdev_get(void);
 void sle_chba_send_pkt(struct netif *dev, struct pbuf *pbuf);
+void sle_chba_sample_recv_pkt_thread(void);
 #endif
 #endif

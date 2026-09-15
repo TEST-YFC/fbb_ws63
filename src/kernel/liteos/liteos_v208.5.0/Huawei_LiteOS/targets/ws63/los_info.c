@@ -32,7 +32,9 @@
 #include "los_task_pri.h"
 #include "los_tick_pri.h"
 #include "los_init_pri.h"
+#ifdef LOSCFG_DEBUG_RESOURCE_INFO
 #include "los_resource.h"
+#endif
 #if (defined(LOSCFG_MEM_LEAKCHECK_CUSTOM) && defined(LOSCFG_MEM_LEAKCHECK)) || defined(LOSCFG_MEM_DEBUG)
 #include "los_memory_pri.h"
 #endif
@@ -73,6 +75,7 @@ static VOID sys_mem_info_show(VOID)
         pool_status.uwFreeNodeNum);
 }
 
+#ifdef LOSCFG_DEBUG_RESOURCE_INFO
 static VOID print_resource_info(const char *name, const ResourceInfo *info)
 {
     SYS_PRINT("%-7s %-5u  %-5u  %-5u  %-5u\n", name, info->maxNum, info->peak, info->used, info->unused);
@@ -96,6 +99,7 @@ static VOID sys_resource_info_show(VOID)
     print_resource_info("Queue", &info);
     SYS_PRINT("\n");
 }
+#endif
 
 static VOID sys_task_show(VOID)
 {
@@ -118,7 +122,9 @@ VOID sys_info_show(VOID)
 {
     sys_run_time_show();
     sys_mem_info_show();
+#ifdef LOSCFG_DEBUG_RESOURCE_INFO
     sys_resource_info_show();
+#endif
     sys_task_show();
     sys_mem_show();
 }

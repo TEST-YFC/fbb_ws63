@@ -48,8 +48,14 @@ set(PRIVATE_DEFINES
 )
 
 if(CONFIG_RADAR_SLP_MFG IN_LIST PRIVATE_DEFINES)
-    list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/client/ws63/slp_radar_timer.c")
-    list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/client/ws63/parse_radar_mfg_msg.c")
+list(APPEND SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/client/ws63/mfg/slp_radar_timer.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/client/ws63/mfg/parse_radar_mfg_msg.c
+)
+set(PRIVATE_HEADER
+    ${PRIVATE_HEADER}
+    ${CMAKE_CURRENT_SOURCE_DIR}/client/ws63/mfg/
+)
 endif()
 
 # use this when you want to add ccflags like -include xxx

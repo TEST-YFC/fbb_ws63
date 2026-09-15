@@ -34,6 +34,10 @@ elseif(EXISTS ${ROOT_DIR}/libs_url/${_CHIP}/cmake/bth.cmake)
     include(${ROOT_DIR}/libs_url/${_CHIP}/cmake/bth.cmake)
 endif()
 
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/bt/mesh/CMakeLists.txt)
+add_subdirectory(bt/mesh sle_mesh)
+endif()
+
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/bt/host/audio/bth_audio/CMakeLists.txt)
     add_subdirectory(bt/host/audio/bth_audio)
 endif()

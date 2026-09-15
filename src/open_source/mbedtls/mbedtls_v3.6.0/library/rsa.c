@@ -413,7 +413,7 @@ end_of_export:
     return (int) len;
 }
 
-#if defined(MBEDTLS_PKCS1_V15) && defined(MBEDTLS_RSA_C) && !defined(MBEDTLS_RSA_ALT)
+#if defined(MBEDTLS_PKCS1_V15) && defined(MBEDTLS_RSA_C) && !defined(MBEDTLS_RSA_ALT) && !defined(MBEDTLS_RSA_ENC_DEC_ALT)
 
 /** This function performs the unpadding part of a PKCS#1 v1.5 decryption
  *  operation (EME-PKCS1-v1_5 decoding).
@@ -1755,7 +1755,7 @@ static int compute_hash(mbedtls_md_type_t md_alg,
 }
 #endif /* MBEDTLS_PKCS1_V21 */
 
-#if defined(MBEDTLS_PKCS1_V21)
+#if defined(MBEDTLS_PKCS1_V21) && !defined(MBEDTLS_RSA_ENC_DEC_ALT)
 /*
  * Implementation of the PKCS#1 v2.1 RSAES-OAEP-ENCRYPT function
  */
@@ -1827,7 +1827,7 @@ int mbedtls_rsa_rsaes_oaep_encrypt(mbedtls_rsa_context *ctx,
 }
 #endif /* MBEDTLS_PKCS1_V21 */
 
-#if defined(MBEDTLS_PKCS1_V15)
+#if defined(MBEDTLS_PKCS1_V15) && !defined(MBEDTLS_RSA_ENC_DEC_ALT)
 /*
  * Implementation of the PKCS#1 v2.1 RSAES-PKCS1-V1_5-ENCRYPT function
  */
@@ -1910,7 +1910,7 @@ int mbedtls_rsa_pkcs1_encrypt(mbedtls_rsa_context *ctx,
     }
 }
 
-#if defined(MBEDTLS_PKCS1_V21)
+#if defined(MBEDTLS_PKCS1_V21) && !defined(MBEDTLS_RSA_ENC_DEC_ALT)
 /*
  * Implementation of the PKCS#1 v2.1 RSAES-OAEP-DECRYPT function
  */
@@ -2037,7 +2037,7 @@ cleanup:
 }
 #endif /* MBEDTLS_PKCS1_V21 */
 
-#if defined(MBEDTLS_PKCS1_V15)
+#if defined(MBEDTLS_PKCS1_V15) && !defined(MBEDTLS_RSA_ENC_DEC_ALT)
 /*
  * Implementation of the PKCS#1 v2.1 RSAES-PKCS1-V1_5-DECRYPT function
  */
@@ -2255,6 +2255,7 @@ int mbedtls_rsa_rsassa_pss_sign_no_mode_check(mbedtls_rsa_context *ctx,
                                              hashlen, hash, MBEDTLS_RSA_SALT_LEN_ANY, sig);
 }
 
+#if !defined(MBEDTLS_RSA_SIGN_VERIFY_ALT)
 /*
  * Implementation of the PKCS#1 v2.1 RSASSA-PSS-SIGN function with
  * the option to pass in the salt length.
@@ -2286,9 +2287,10 @@ int mbedtls_rsa_rsassa_pss_sign(mbedtls_rsa_context *ctx,
     return rsa_rsassa_pss_sign(ctx, f_rng, p_rng, md_alg,
                                hashlen, hash, MBEDTLS_RSA_SALT_LEN_ANY, sig);
 }
+#endif
 #endif /* MBEDTLS_PKCS1_V21 */
 
-#if defined(MBEDTLS_PKCS1_V15)
+#if defined(MBEDTLS_PKCS1_V15) && !defined(MBEDTLS_RSA_SIGN_VERIFY_ALT)
 /*
  * Implementation of the PKCS#1 v2.1 RSASSA-PKCS1-V1_5-SIGN function
  */
@@ -2530,7 +2532,7 @@ int mbedtls_rsa_pkcs1_sign(mbedtls_rsa_context *ctx,
     }
 }
 
-#if defined(MBEDTLS_PKCS1_V21)
+#if defined(MBEDTLS_PKCS1_V21) && !defined(MBEDTLS_RSA_SIGN_VERIFY_ALT)
 /*
  * Implementation of the PKCS#1 v2.1 RSASSA-PSS-VERIFY function
  */
@@ -2678,7 +2680,7 @@ int mbedtls_rsa_rsassa_pss_verify(mbedtls_rsa_context *ctx,
 }
 #endif /* MBEDTLS_PKCS1_V21 */
 
-#if defined(MBEDTLS_PKCS1_V15)
+#if defined(MBEDTLS_PKCS1_V15) && !defined(MBEDTLS_RSA_SIGN_VERIFY_ALT)
 /*
  * Implementation of the PKCS#1 v2.1 RSASSA-PKCS1-v1_5-VERIFY function
  */

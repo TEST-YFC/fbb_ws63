@@ -73,10 +73,6 @@
 #include "atiny_mqtt_commu.h"
 #endif
 
-#if defined(WEAR_LITEOS_ADAPT)
-#include "lwip/sockets.h"
-#endif
-
 #if defined(OPENSSL)
 #include <openssl/ssl.h>
 #elif defined(MBEDTLS)
@@ -476,7 +472,7 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 		int persistence_type, void* persistence_context, MQTTClient_createOptions* options)
 {
 	int rc = 0;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	int mem_ret = -1;
 #endif
 	MQTTClients *m = NULL;
@@ -488,7 +484,7 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 	FUNC_ENTRY;
 	if ((rc = Thread_lock_mutex(mqttclient_mutex)) != 0)
 		goto nounlock_exit;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (handle == NULL || serverURI == NULL || clientId == NULL)
 #else
 	if (serverURI == NULL || clientId == NULL)
@@ -538,11 +534,11 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 		#if !defined(NO_HEAP_TRACKING)
 			Heap_initialize();
 		#endif
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
 			Log_initialize((Log_nameValue*)MQTTClient_getVersionInfo());
 #endif
 		bstate->clients = ListInitialize();
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		rc = Socket_outInitialize();
 #else
 		Socket_outInitialize();
@@ -551,10 +547,10 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 		Socket_setWriteContinueCallback(MQTTClient_writeContinue);
 		Socket_setWriteAvailableCallback(MQTTProtocol_writeAvailable);
 		handles = ListInitialize();
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		if (bstate->clients == NULL || rc != 0 || handles == NULL)
 		{
-			#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
+			#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
 				Log_terminate();
 			#endif
 			if (bstate->clients != NULL)
@@ -582,7 +578,7 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 #endif
 #endif
 		library_initialized = 1;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 #if defined(OPENSSL)
 		if (SSLSocket_initialize() != 1)
 #elif defined(MBEDTLS)
@@ -600,7 +596,7 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 
 	if ((m = malloc(sizeof(MQTTClients))) == NULL)
 	{
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		if (bstate->clients->count == 0)
 			MQTTClient_terminate();
 #endif
@@ -608,7 +604,7 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 		goto exit;
 	}
 	*handle = m;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	mem_ret = memset_s(m, sizeof(MQTTClients), '\0', sizeof(MQTTClients));
 	if (mem_ret != 0)
 	{
@@ -637,7 +633,7 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 		serverURI += strlen(URI_SSL);
 		m->ssl = 1;
 #else
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		free(m);
 		if (bstate->clients->count == 0)
 			MQTTClient_terminate();
@@ -648,15 +644,10 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 	}
 	else if (strncmp(URI_MQTTS, serverURI, strlen(URI_MQTTS)) == 0)
 	{
-#if defined(OPENSSL) || defined(MBEDTLS)
+#if defined(OPENSSL)
 		serverURI += strlen(URI_MQTTS);
 		m->ssl = 1;
 #else
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
-		free(m);
-		if (bstate->clients->count == 0)
-			MQTTClient_terminate();
-#endif
 		rc = MQTTCLIENT_SSL_NOT_SUPPORTED;
 		goto exit;
 #endif
@@ -668,7 +659,7 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 		m->ssl = 1;
 		m->websocket = 1;
 #else
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		free(m);
 		if (bstate->clients->count == 0)
 			MQTTClient_terminate();
@@ -678,7 +669,7 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 #endif
 	}
 	m->serverURI = MQTTStrdup(serverURI);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (m->serverURI == NULL)
 	{
 		free(m);
@@ -702,18 +693,18 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 
 	if ((m->c = malloc(sizeof(Clients))) == NULL)
 	{
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		free(m->serverURI);
 #endif
 		ListRemove(handles, m); //m has been free in ListRemove.
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		if (bstate->clients->count == 0)
 			MQTTClient_terminate();
 #endif
 		rc = PAHO_MEMORY_ERROR;
 		goto exit;
 	}
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	mem_ret = memset_s(m->c, sizeof(Clients), '\0', sizeof(Clients));
 	if (mem_ret != 0)
 	{
@@ -757,7 +748,7 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 			MQTTPersistence_restoreMessageQueue(m->c);
 	}
 #endif
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (m->c->outboundMsgs == NULL ||
 		m->c->inboundMsgs == NULL  ||
 		m->c->messageQueue == NULL ||
@@ -803,7 +794,7 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 	}
 #endif
 
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (!ListAppend(bstate->clients, m->c, sizeof(Clients) + 3*sizeof(List)))
 	{
 #if !defined(NO_PERSISTENCE)
@@ -841,7 +832,7 @@ int MQTTClient_createWithOptions(MQTTClient* handle, const char* serverURI, cons
 #endif
 
 exit:
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (handle != NULL && rc != 0)
 		*handle = NULL;
 #endif
@@ -873,7 +864,7 @@ static void MQTTClient_terminate(void)
 		#if !defined(NO_HEAP_TRACKING)
 			Heap_terminate();
 		#endif
-#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
+#if !defined(IOT_CONNECT) && !defined(IOT_LITEOS_ADAPT)
 		Log_terminate();
 #endif
 		library_initialized = 0;
@@ -917,7 +908,7 @@ void MQTTClient_destroy(MQTTClient* handle)
 	if (m->c)
 	{
 		SOCKET saved_socket = m->c->net.socket;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		char* saved_clientid = NULL;
 		if (m->c->clientID != NULL)
 			saved_clientid = MQTTStrdup(m->c->clientID);
@@ -929,7 +920,7 @@ void MQTTClient_destroy(MQTTClient* handle)
 #endif
 		MQTTClient_emptyMessageQueue(m->c);
 		MQTTProtocol_freeClient(m->c);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		if (bstate != NULL && bstate->clients != NULL)
 		{
 			if (!ListRemove(bstate->clients, m->c))
@@ -954,14 +945,14 @@ void MQTTClient_destroy(MQTTClient* handle)
 	Thread_destroy_sem(m->connack_sem);
 	Thread_destroy_sem(m->suback_sem);
 	Thread_destroy_sem(m->unsuback_sem);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (handles != NULL && ListRemove(handles, m) == 0)
 #else
 	if (!ListRemove(handles, m))
 #endif
 		Log(LOG_ERROR, -1, "free error");
 	*handle = NULL;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (bstate != NULL && bstate->clients != NULL && bstate->clients->count == 0)
 #else
 	if (bstate->clients->count == 0)
@@ -1181,7 +1172,7 @@ static thread_return_type WINAPI MQTTClient_run(void* n)
 	{
 #if defined(IOT_LITEOS_ADAPT)
         if (err_connack_sem_send == 1) {
-            osal_msleep(20); /* 20: Sleep for 20 milliseconds to prevent the watchdog from getting stuck */
+            osal_msleep(20); /* 20:睡眠20毫秒. tcp连接已建立，超时未收到connack时,让出cpu 20ms,防止此场景下看门狗挂死 */
         }
 #endif
 		int rc = SOCKET_ERROR;
@@ -1192,7 +1183,7 @@ static thread_return_type WINAPI MQTTClient_run(void* n)
 		Thread_unlock_mutex(mqttclient_mutex);
 		pack = MQTTClient_cycle(&sock, timeout, &rc);
 		Thread_lock_mutex(mqttclient_mutex);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		if (tostop != 0 || handles == NULL)
 #else
 		if (tostop)
@@ -1212,7 +1203,7 @@ static thread_return_type WINAPI MQTTClient_run(void* n)
 			/* assert: should not happen */
 			continue;
 		}
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		if (m->c != NULL && m->c->messageQueue != NULL && m->c->messageQueue->count > 0)
 			timeout = 0L;
 #endif
@@ -1233,7 +1224,7 @@ static thread_return_type WINAPI MQTTClient_run(void* n)
 					Log(TRACE_MIN, -1, "Posting connack semaphore for client %s", m->c->clientID);
 					m->c->connect_state = NOT_IN_PROGRESS;
 #if defined(IOT_LITEOS_ADAPT)
-					err_connack_sem_send = 1;
+                    err_connack_sem_send = 1;
 #endif
 					Thread_post_sem(m->connack_sem);
 				}
@@ -1343,9 +1334,6 @@ static thread_return_type WINAPI MQTTClient_run(void* n)
 					m->rc = error;
 				Log(TRACE_MIN, -1, "Posting connect semaphore for client %s rc %d", m->c->clientID, m->rc);
 				m->c->connect_state = NOT_IN_PROGRESS;
-#if defined(IOT_LITEOS_ADAPT)
-				err_connack_sem_send = 1;
-#endif
 				Thread_post_sem(m->connect_sem);
 			}
 #if defined(OPENSSL) || defined(MBEDTLS)
@@ -1597,7 +1585,7 @@ static MQTTResponse MQTTClient_connectURIVersion(MQTTClient handle, MQTTClient_c
 		int count = 0;
 
 		Thread_start(MQTTClient_run, handle);
-#if defined(IOT_CONNECT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT)
 		MQTTTime_sleep(100L);
 #endif
 		if (MQTTTime_elapsed(start) >= millisecsTimeout)
@@ -1869,7 +1857,7 @@ exit:
 		}
 	}
 	else
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		MQTTClient_disconnect1(handle, 0, 0, MQTTVersion == 3, MQTTREASONCODE_SUCCESS, NULL); /* don't want to call connection lost */
 #else
 		MQTTClient_disconnect1(handle, 0, 0, (MQTTVersion == 3), MQTTREASONCODE_SUCCESS, NULL); /* don't want to call connection lost */
@@ -1901,7 +1889,7 @@ static MQTTResponse MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectO
 	ELAPSED_TIME_TYPE millisecsTimeout = 30000L;
 	MQTTResponse rc = MQTTResponse_initializer;
 	int MQTTVersion = 0;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	int mem_ret = -1;
 #endif
 
@@ -1975,7 +1963,7 @@ static MQTTResponse MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectO
 			if ((m->c->will->payload = malloc(m->c->will->payloadlen)) == NULL)
 			{
 				free(m->c->will);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 				m->c->will = NULL;
 #endif
 				rc.reasonCode = PAHO_MEMORY_ERROR;
@@ -2022,7 +2010,7 @@ static MQTTResponse MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectO
 			rc.reasonCode = PAHO_MEMORY_ERROR;
 			goto exit;
 		}
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		mem_ret = memset_s(m->c->sslopts, sizeof(MQTTClient_SSLOptions), '\0', sizeof(MQTTClient_SSLOptions));
 		if (mem_ret != 0)
 		{
@@ -2070,7 +2058,7 @@ static MQTTResponse MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectO
 		    m->c->sslopts->protos = options->ssl->protos;
 		    m->c->sslopts->protos_len = options->ssl->protos_len;
 		}
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 #if defined(MBEDTLS_USE_CRT)
 		if (options->ssl->los_trustStore != NULL)
 			m->c->sslopts->los_trustStore = options->ssl->los_trustStore;
@@ -2127,7 +2115,7 @@ static MQTTResponse MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectO
 		MQTTVersion = options->MQTTVersion;
 	else
 		MQTTVersion = MQTTVERSION_DEFAULT;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (MQTTVersion == MQTTVERSION_DEFAULT)
 		MQTTVersion = MQTTVERSION_3_1_1;
 
@@ -2411,7 +2399,7 @@ static int MQTTClient_disconnect1(MQTTClient handle, int timeout, int call_conne
 exit:
 	if (stop)
 		MQTTClient_stop();
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (call_connection_lost && was_connected && m->cl != NULL)
 #else
 	if (call_connection_lost && m->cl && was_connected)
@@ -2419,7 +2407,7 @@ exit:
 	{
 		sync.sem = Thread_create_sem(&rc);
 		Log(TRACE_MIN, -1, "Calling connectionLost for client %s", m->c->clientID);
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		connectionLost_call(&sync);
 #else
 		Thread_start(connectionLost_call, &sync);
@@ -2486,7 +2474,7 @@ int MQTTClient_isConnected(MQTTClient handle)
 	return rc;
 }
 
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 int MQTTClient_getConnectState(MQTTClient handle)
 {
 	MQTTClients* m = handle;
@@ -2549,7 +2537,7 @@ MQTTResponse MQTTClient_subscribeMany5(MQTTClient handle, int count, char* const
 	}
 
 	topics = ListInitialize();
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (topics == NULL)
 	{
 		rc = PAHO_MEMORY_ERROR;
@@ -2557,7 +2545,7 @@ MQTTResponse MQTTClient_subscribeMany5(MQTTClient handle, int count, char* const
 	}
 #endif
 	qoss = ListInitialize();
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (qoss == NULL)
 	{
 		ListFreeNoContent(topics);
@@ -2740,7 +2728,7 @@ MQTTResponse MQTTClient_unsubscribeMany5(MQTTClient handle, int count, char* con
 	}
 
 	topics = ListInitialize();
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (topics == NULL)
 	{
 		rc = PAHO_MEMORY_ERROR;
@@ -2871,7 +2859,7 @@ MQTTResponse MQTTClient_publish5(MQTTClient handle, const char* topicName, int p
 	while (m->c->outboundMsgs->count >= m->c->maxInflightMessages ||
          Socket_noPendingWrites(m->c->net.socket) == 0) /* wait until the socket is free of large packets being written */
 	{
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		rc = MQTTCLIENT_FAILURE;
 		goto exit;
 #else
@@ -2959,7 +2947,7 @@ MQTTResponse MQTTClient_publish5(MQTTClient handle, const char* topicName, int p
 		}
 		rc = (qos > 0 || m->c->connected == 1) ? MQTTCLIENT_SUCCESS : MQTTCLIENT_FAILURE;
 	}
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	else if (rc == PAHO_MEMORY_ERROR)
 	{
 		goto exit_and_free;
@@ -3060,11 +3048,7 @@ static void MQTTClient_retry(void)
 {
 	static START_TIME_TYPE last = START_TIME_ZERO;
 	START_TIME_TYPE now;
-#if defined(WEAR_LITEOS_ADAPT)
-	if (bstate == NULL || bstate->clients == NULL || bstate->clients->count == 0) {
-		return;
-	}
-#endif
+
 	FUNC_ENTRY;
 	now = MQTTTime_now();
 	if (MQTTTime_difftime(now, last) >= (DIFF_TIME_TYPE)(retryLoopIntervalms))
@@ -3074,7 +3058,7 @@ static void MQTTClient_retry(void)
 		MQTTProtocol_retry(now, 1, 0);
 	}
 	else
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		MQTTProtocol_retry(now, 1, 0);
 #else
 		MQTTProtocol_retry(now, 0, 0);
@@ -3099,7 +3083,7 @@ static MQTTPacket* MQTTClient_cycle(SOCKET* sock, ELAPSED_TIME_TYPE timeout, int
 		start = MQTTTime_start_clock();
 		*sock = Socket_getReadySocket(0, (int)timeout, socket_mutex, rc);
 		*rc = rc1;
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 		if (*sock == SOCKET_ERROR && timeout >= 100L && MQTTTime_elapsed(start) < (int64_t)10)
 #else
 		if (*sock == 0 && timeout >= 100L && MQTTTime_elapsed(start) < (int64_t)10)
@@ -3130,7 +3114,7 @@ static MQTTPacket* MQTTClient_cycle(SOCKET* sock, ELAPSED_TIME_TYPE timeout, int
 				if (*rc == TCPSOCKET_INTERRUPTED)
 					*rc = 0;
 #if !defined(ZERO_SOCK_FD_IS_INVALID)
-#if !defined(IOT_LITEOS_ADAPT) && !defined(WEAR_LITEOS_ADAPT)
+#if !defined(IOT_LITEOS_ADAPT)
 				if (*rc == EXT_SOCKET_RET_INVALID_SOCKET)
 					*rc = SOCKET_ERROR;
 #endif

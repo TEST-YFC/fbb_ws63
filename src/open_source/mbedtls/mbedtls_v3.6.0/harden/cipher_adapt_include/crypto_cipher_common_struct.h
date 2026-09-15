@@ -138,7 +138,7 @@ typedef enum {
 
 typedef enum {
     DRV_PKE_LEN_192 = 24,
-    DRV_PKE_LEN_224 = 32,
+    DRV_PKE_LEN_224 = 28,
     DRV_PKE_LEN_256 = 32,
     DRV_PKE_LEN_384 = 48,
     DRV_PKE_LEN_448 = 56,
@@ -154,25 +154,25 @@ typedef enum {
 } drv_pke_len;
 
 typedef enum {
-    DRV_PKE_ECC_TYPE_RFC5639_P256 = 0,      /* RFC 5639 - Brainpool P256/384/512 */
-    DRV_PKE_ECC_TYPE_RFC5639_P384,          /* RFC 5639 - Brainpool P256/384/512 */
-    DRV_PKE_ECC_TYPE_RFC5639_P512,          /* RFC 5639 - Brainpool P256/384/512 */
-    DRV_PKE_ECC_TYPE_FIPS_P256K,            /* NIST FIPS 186-4 P192/224/256/384/521, suggest not to use */
+    DRV_PKE_ECC_TYPE_RFC5639_P256 = 0x20,      /* RFC 5639 - Brainpool P256/384/512 */
+    DRV_PKE_ECC_TYPE_RFC5639_P384 = 0x430,          /* RFC 5639 - Brainpool P256/384/512 */
+    DRV_PKE_ECC_TYPE_RFC5639_P512 = 0x840,          /* RFC 5639 - Brainpool P256/384/512 */
+    DRV_PKE_ECC_TYPE_FIPS_P256K = 0xc20,            /* NIST FIPS 186-4 P192/224/256/384/521, suggest not to use */
 #if defined(MBEDTLS_SECP192R1_USE_HARDWARE)
-    DRV_PKE_ECC_TYPE_FIPS_P192R,            /* NIST FIPS 186-4 P192/224/256/384/521, suggest not to use */
+    DRV_PKE_ECC_TYPE_FIPS_P192R = 0x1018,            /* NIST FIPS 186-4 P192/224/256/384/521, suggest not to use */
 #endif
 #if defined(MBEDTLS_SECP224R1_USE_HARDWARE)
-    DRV_PKE_ECC_TYPE_FIPS_P224R,            /* NIST FIPS 186-4 P192/224/256/384/521, suggest not to use */
+    DRV_PKE_ECC_TYPE_FIPS_P224R = 0x141c,            /* NIST FIPS 186-4 P192/224/256/384/521, suggest not to use */
 #endif
-    DRV_PKE_ECC_TYPE_FIPS_P256R,            /* NIST FIPS 186-4 P192/224/256/384/521, suggest not to use */
-    DRV_PKE_ECC_TYPE_FIPS_P384R,            /* NIST FIPS 186-4 P192/224/256/384/521, suggest not to use */
-    DRV_PKE_ECC_TYPE_FIPS_P521R,            /* NIST FIPS 186-4 P192/224/256/384/521, suggest not to use */
-    DRV_PKE_ECC_TYPE_RFC7748,               /* RFC 7748 - Curve25519 */
+    DRV_PKE_ECC_TYPE_FIPS_P256R = 0x1820,            /* NIST FIPS 186-4 P192/224/256/384/521, suggest not to use */
+    DRV_PKE_ECC_TYPE_FIPS_P384R = 0x1c30,            /* NIST FIPS 186-4 P192/224/256/384/521, suggest not to use */
+    DRV_PKE_ECC_TYPE_FIPS_P521R = 0x2048,            /* NIST FIPS 186-4 P192/224/256/384/521, suggest not to use */
+    DRV_PKE_ECC_TYPE_RFC7748 = 0x2420,               /* RFC 7748 - Curve25519 */
 #if defined(MBEDTLS_CURVE448_USE_HARDWARE)
-    DRV_PKE_ECC_TYPE_RFC7748_448,           /* RFC 7748 - Curve448 */
+    DRV_PKE_ECC_TYPE_RFC7748_448 = 0x2838,           /* RFC 7748 - Curve448 */
 #endif
-    DRV_PKE_ECC_TYPE_RFC8032,               /* RFC 8032 - ED25519 */
-    DRV_PKE_ECC_TYPE_SM2,                   /* GMT 0003.2-2012 */
+    DRV_PKE_ECC_TYPE_RFC8032 = 0x2c20,               /* RFC 8032 - ED25519 */
+    DRV_PKE_ECC_TYPE_SM2 = 0x3020,                   /* GMT 0003.2-2012 */
     DRV_PKE_ECC_TYPE_MAX,
     DRV_PKE_ECC_TYPE_INVALID = 0xffffffff,
 } drv_pke_ecc_curve_type;

@@ -388,7 +388,10 @@ errcode_t hal_dma_v151_add_lli_transfer(dma_channel_t ch,
                                         hal_dma_transfer_peri_config_t *periph_cfg)
 {
     bool dma_flag = false;
-
+    // 防止客户误操作，传入长度超过最大值，导致后续流程异常
+    if (base_cfg->transfer_num >= HAL_DMA_CH_MAX_TRANSFER_NUM) {
+        return ERRCODE_DMA_RET_TOO_MANY_DATA_TO_TRANSFER;
+    }
     if (g_dma_node_cfg[ch] == NULL) {
         dma_flag = true;
     }

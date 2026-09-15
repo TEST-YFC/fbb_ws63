@@ -11,8 +11,6 @@ import os
 import shutil
 import re
 import sys
-import platform
-
 root_dir = os.path.split(os.path.realpath(__file__))[0]
 sys.path.append(os.path.join(root_dir, '..', 'config'))
 sys.path.append(root_dir)
@@ -49,10 +47,7 @@ class statistics(object):
                     self.group[i] = name_g
 
     def data_set(self, file_name, index):
-        if platform.system() == "Windows":
-            cmds = 'riscv32-linux-musl-size.exe ' + file_name
-        else:
-            cmds = 'size ' + file_name
+        cmds = 'size ' + file_name
         string = os.popen(cmds).read()
         for line in string.splitlines():
             number = re.findall("\d+",line)

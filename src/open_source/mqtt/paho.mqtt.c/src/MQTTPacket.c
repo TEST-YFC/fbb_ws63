@@ -219,16 +219,11 @@ int MQTTPacket_send(networkHandles* net, Header header, char* buffer, size_t buf
 			header.bits.type, msgId, 0, MQTTVersion);
 	}
 #endif
-    if (buffer == NULL) {
-		packetbufs.count = 0;
-    } else {
-        packetbufs.count = 1;
-        packetbufs.buffers = &buffer;
-        packetbufs.buflens = &buflen;
-        packetbufs.frees = &freeData;
-    }
-
-    memset(packetbufs.mask, '\0', sizeof(packetbufs.mask));
+	packetbufs.count = 1;
+	packetbufs.buffers = &buffer;
+	packetbufs.buflens = &buflen;
+	packetbufs.frees = &freeData;
+	memset(packetbufs.mask, '\0', sizeof(packetbufs.mask));
 	rc = WebSocket_putdatas(net, &buf, &buf0len, &packetbufs);
 
 	if (rc == TCPSOCKET_COMPLETE)
@@ -594,7 +589,7 @@ void* MQTTPacket_publish(int MQTTVersion, unsigned char aHeader, char* data, siz
 		pack->properties = props;
 		if (MQTTProperties_read(&pack->properties, &curdata, enddata) != 1)
 		{
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 			if (pack->topic != NULL)
 				free(pack->topic);
 #endif
@@ -912,7 +907,7 @@ int MQTTPacket_send_publish(Publish* pack, int dup, int qos, int retained, netwo
 		rc = MQTTPacket_sends(net, header, &packetbufs, pack->MQTTVersion);
 		memcpy(pack->mask, packetbufs.mask, sizeof(pack->mask));
 	}
-#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT) || defined(WEAR_LITEOS_ADAPT)
+#if defined(IOT_CONNECT) || defined(IOT_LITEOS_ADAPT)
 	if (qos == 0)
 		Log(LOG_PROTOCOL, 27, NULL, net->socket, clientID, rc);
 	else
@@ -1090,3 +1085,4 @@ int MQTTPacket_decodeBuf(char* buf, unsigned int* value)
 	bufptr = buf;
 	return MQTTPacket_VBIdecode(bufchar, value);
 }
+

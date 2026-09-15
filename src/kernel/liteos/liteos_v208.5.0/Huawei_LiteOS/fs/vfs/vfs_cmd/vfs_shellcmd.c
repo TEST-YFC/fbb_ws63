@@ -616,13 +616,14 @@ STATIC INT32 OsShellCmdDoCp(const CHAR *srcFilepath, const CHAR *dstFilename)
     }
 
     /* Copy begins. */
-    srcFd = open(srcFullpath, O_RDONLY, 0777);
+    srcFd = open(srcFullpath, O_RDONLY | O_NOFOLLOW, 0777);
     if (srcFd < 0) {
         PRINTK("cp error: can't open %s. errno:%d.\n", srcFullpath, errno);
         goto ERROUT_WITH_PATH;
     }
 
-    dstFd = open(dstFullpath, O_CREAT | O_RDWR, 0777);
+    /* Open dest with O_NOFOLLOW to avoid symlink attack (TOCTOU) */
+    dstFd = open(dstFullpath, O_CREAT | O_WRONLY | O_TRUNC | O_NOFOLLOW, 0777);
     if (dstFd < 0) {
         PRINTK("cp error: can't open %s. errno%d\n", dstFullpath, errno);
         goto ERROUT_WITH_SRC_FD;

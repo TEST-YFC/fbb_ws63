@@ -8,6 +8,8 @@
 #ifndef DYN_MEM_H
 #define DYN_MEM_H
 
+#include "chip_io.h"
+
 #ifdef __cplusplus
 #if __cplusplus
 extern "C" {

@@ -17,7 +17,7 @@
 #define SPI_CLK_PHASE                   0
 #define SPI_FRAME_FORMAT                0
 #define SPI_FRAME_FORMAT_STANDARD       0
-#define SPI_FRAME_SIZE_8                0x07
+#define SPI_FRAME_SIZE_8                0x1f
 #define SPI_TMOD                        0
 #define SPI_WAIT_CYCLES                 0x10
 #if defined(CONFIG_SPI_SUPPORT_DMA) && !(defined(CONFIG_SPI_SUPPORT_POLL_AND_DMA_AUTO_SWITCH))

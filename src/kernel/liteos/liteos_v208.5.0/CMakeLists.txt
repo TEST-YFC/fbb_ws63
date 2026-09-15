@@ -134,6 +134,7 @@ install_sdk(${LITEOSTOPDIR}/lib/libm "*")
 install_sdk(${LITEOSTOPDIR}/lib/libc "*")
 install_sdk(${LITEOSTOPDIR}/targets/ "Kconfig*")
 install_sdk(${CMAKE_CURRENT_SOURCE_DIR}/show_menuconfig.py "*")
+install_sdk(${LITEOSTOPDIR}/doc "*")
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_COMMAND})
     file(GLOB LOS_LIBS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_COMMAND} "${TARGET_COMMAND}/lib*.a")

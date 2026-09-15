@@ -8,7 +8,7 @@
 
 #define NV_TASKS_MAX_NUM             64             /* 可支持的NV保存任务的最大数（多核系统使用） */
 #define NV_NORMAL_KVALUE_MAX_LEN     4060           /* 普通NV的最大数据长度 */
-#define NV_ENCRYPTED_KVALUE_MAX_LEN  4048           /* 加密NV的最大数据长度 */
+#define NV_ENCRYPTED_KVALUE_MAX_LEN  4032           /* 加密NV的最大数据长度 */
 
 /* Flash 物理地址起始和结束 */
 #define FLASH_PHYSICAL_ADDR_START     0x200000

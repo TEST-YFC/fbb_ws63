@@ -643,6 +643,25 @@ typedef struct {
  */
 errcode_t sle_connect_remote_device(const sle_addr_t *addr);
 
+ /**
+ * @if Eng
+ * @brief  Cancels the creation of a connection.
+ * @par Description: Cancels the creation of a connection.
+ * @retval ERRCODE_SUCC Success.
+ * @retval Other        Failure. For details, see @ref errcode_t
+ * @par Depends:
+ * @li sle_common.h
+ * @else
+ * @brief  取消创建连接。
+ * @par Description: 取消创建连接。
+ * @retval ERRCODE_SUCC 成功。
+ * @retval Other        失败。参考 @ref errcode_t
+ * @par 依赖：
+ * @li sle_common.h
+ * @endif
+ */
+errcode_t sle_create_connection_cancel(void);
+
 /**
  * @if Eng
  * @brief  Send disconnect request to remote device.

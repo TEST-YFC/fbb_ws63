@@ -2,9 +2,10 @@
 			<MSG STRUCTURE="diag_log_msg0" NAME="[GAP]memset failed @gap_ui.c(1347),ERROR" ID="0xdb5c2a1a" />
 			<MSG STRUCTURE="diag_log_msg0" NAME="[GAP]memcpy failed @gap_ui.c(1351),ERROR" ID="0xdb5c2a3a" />
 			<MSG STRUCTURE="diag_log_msg0" NAME="[GAP]gap get local name memcpy failed @gap_ui.c(1356),ERROR" ID="0xdb5c2a62" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="[GAP]gap set simple pairing oob data memcpy failed @gap_ui.c(2140),ERROR" ID="0xdb5c42e2" />
-			<MSG STRUCTURE="diag_log_msg0" NAME="gap create connection whitelist start @gap_ui.c(2464),INFO" ID="0xdb5c4d05" />
-			<MSG STRUCTURE="diag_log_msg1" NAME="set_adv_random_delay, ret: 0x%x @gap_ui.c(2749),INFO" ID="0xdb5c55ed" />
-			<MSG STRUCTURE="diag_log_msg4" NAME="set adv filter memcpy failed,[%p %d %p %d] @gap_ui.c(2846),ERROR" ID="0xdb5c58f2" />
-			<MSG STRUCTURE="diag_log_msg1" NAME="[SADP][GAP] gap set local addr cbk result is %u @gap_ui.c(3113),INFO" ID="0xdb5c614d" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="param memcpy failed @gap_ui.c(1456),ERROR" ID="0xdb5c2d82" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="[GAP]gap set simple pairing oob data memcpy failed @gap_ui.c(2142),ERROR" ID="0xdb5c42f2" />
+			<MSG STRUCTURE="diag_log_msg0" NAME="gap create connection whitelist start @gap_ui.c(2466),INFO" ID="0xdb5c4d15" />
+			<MSG STRUCTURE="diag_log_msg1" NAME="set_adv_random_delay, ret: 0x%x @gap_ui.c(2751),INFO" ID="0xdb5c55fd" />
+			<MSG STRUCTURE="diag_log_msg4" NAME="set adv filter memcpy failed,[%p %d %p %d] @gap_ui.c(2848),ERROR" ID="0xdb5c5902" />
+			<MSG STRUCTURE="diag_log_msg1" NAME="[SADP][GAP] gap set local addr cbk result is %u @gap_ui.c(3115),INFO" ID="0xdb5c615d" />
 			</MSG_LOG>

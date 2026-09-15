@@ -150,6 +150,10 @@ typedef enum {
                                                                  @else   雷达波形参数：波形扩频前的三元码序列 @endif */
     ERRCODE_RC_RADAR_VERSION_NOT_INIT,                     /*!< @if Eng Radar version not initialized
                                                                  @else   雷达版本未初始化 @endif */
+    ERRCODE_RC_NV_WRITE_FAILED,                             /*!< @if Eng Radar nv write failed
+                                                                 @else   雷达写NV失败 @endif */
+    ERRCODE_RC_NV_READ_FAILED,                              /*!< @if Eng Radar nv read failed
+                                                                 @else   雷达读NV失败 @endif */
     ERRCODE_RC_START_UP = ERRCODE_RADAR_CLIENT_SW_BASE,    /*!< @if Eng Startup exception
                                                                  @else   启动异常 @endif */
     ERRCODE_RC_CLOSE,                                      /*!< @if Eng Shutdown exception

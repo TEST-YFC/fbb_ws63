@@ -402,12 +402,18 @@ SECTIONS
     .plat_bss_tcm : ALIGN(8) {
         __tcm_bss_begin__ = .;
         PLAT_TCM_NONROM(.bss*)
+#if defined(CONFIG_BGLE_RAM_SIZE_16K) && !defined(WIFI_PERF_DTCM_16K)
+        PLAT_DTCM_BSS
+#endif
     } > DTCM
 
     .btc_bss_tcm : ALIGN(8) {
         FILL(0xFF)
         . = ALIGN(8);
         BTC_TCM_NONROM(.bss*)
+#if defined(CONFIG_BGLE_RAM_SIZE_16K) && !defined(WIFI_PERF_DTCM_16K)
+        BTC_NONROM(.bss*)
+#endif
     } > DTCM
 
     .wifi_bss_tcm : ALIGN(8) {
@@ -521,6 +527,11 @@ SECTIONS
         BTH_NONROM(.text* .rodata*)
     } > PROGRAM
 
+    .mesh_text_flash : ALIGN(8) {
+        FILL(0xFF)
+        BTH_MESH_NONROM(.text* .rodata*)
+    } > PROGRAM
+
     .radar_text_flash : ALIGN(8) {
         FILL(0xFF)
         RADAR_NONROM(.text* .rodata*)
@@ -632,6 +643,10 @@ SECTIONS
         BTH_NONROM(.data*)
         __bth_flashdata_end__ = .;
 
+        __bth_mesh_flashdata_start__ = .;
+        BTH_MESH_NONROM(.data*)
+        __bth_mesh_flashdata_end__ = .;
+
         __other_data_start__ = .;
         *(.data)
         *(.data*)
@@ -661,6 +676,7 @@ SECTIONS
     __radar_ai_flashdata_size__ = __radar_ai_flashdata_end__ - __radar_ai_flashdata_start__;
     __btc_flashdata_size__ = __btc_flashdata_end__ - __btc_flashdata_start__;
     __bth_flashdata_size__ = __bth_flashdata_end__ - __bth_flashdata_start__;
+    __bth_mesh_flashdata_size__ = __bth_mesh_flashdata_end__ - __bth_mesh_flashdata_start__;
     __other_data_size__ = __other_data_end__ - __other_data_start__;
 
     /* sram bss */
@@ -716,6 +732,10 @@ SECTIONS
 
     .bth_bss_flash (NOLOAD) : ALIGN(8) {
         BTH_NONROM(.bss*)
+    } > SRAM
+
+    .mesh_bss_flash (NOLOAD) : ALIGN(8) {
+        BTH_MESH_NONROM(.bss*)
     } > SRAM
 
     .bss  (NOLOAD) : ALIGN(8) {
