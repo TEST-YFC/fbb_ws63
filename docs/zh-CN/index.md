@@ -46,23 +46,23 @@ WS63 系列是一款高度集成的 2.4GHz Combo 芯片，同时支持 Wi-Fi 6�
 
 ## 开发流程
 
-从零开始开发 WS63 应用，只需以下步骤：
+从快速入门选择 CLI 或 VS Code，完成第一次开发后再查阅参考案例和常见问题：
 
 <nav class="grid cards" markdown>
 
--   [**1. 开发板选型**](get-started/board-introduction.md)
+-   [**1. 快速入门**](get-started/index.md)
 
     ---
 
-    根据应用场景选择合适的芯片型号的开发板。
+    确认开发板、Target 和 Hello World 完成判据，选择开发方式。
 
--   [**2. 环境搭建**](get-started/environment-setup.md)
+-   [**2. 使用 CLI 完成第一次开发**](get-started/cli/index.md)
 
     ---
 
-    安装 VS Code + HiSpark Studio 插件，下载工具链和 SDK，完成开发环境配置。
+    使用 Windows PowerShell 或 Linux Bash 完成环境准备、配置、构建、烧录和串口验证。
 
--   [**3. 快速开始**](get-started/quick-start.md)
+-   [**3. 使用 VS Code 完成第一次开发**](get-started/vscode/index.md)
 
     ---
 

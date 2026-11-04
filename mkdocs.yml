@@ -45,6 +45,11 @@ extra:
 
 nav:
   - 概览: zh-CN/index.md
+  - 发布说明:
+      - 版本索引: zh-CN/software/release-notes/index.md
+      - WS63 1.10.108: zh-CN/software/release-notes/WS63-1.10.108.md
+      - WS63 1.10.106: zh-CN/software/release-notes/WS63-1.10.106.md
+      - WS63 1.10.103: zh-CN/software/release-notes/WS63-1.10.103.md
   - 整体架构:
       - 整体架构: zh-CN/overall-architecture/index.md
       - 软件架构介绍: zh-CN/overall-architecture/software-introduction.md
@@ -58,9 +63,8 @@ nav:
       - Flash 与 RAM: zh-CN/overall-architecture/memory-layout/index.md
   - 快速入门:
       - 快速入门: zh-CN/get-started/index.md
-      - 开发板选型: zh-CN/get-started/board-introduction.md
-      - 环境搭建: zh-CN/get-started/environment-setup.md
-      - 快速开始: zh-CN/get-started/quick-start.md
+      - 使用 CLI 完成第一次开发: zh-CN/get-started/cli/index.md
+      - 使用 VS Code 完成第一次开发: zh-CN/get-started/vscode/index.md
   - 参考案例:
       - 参考案例: zh-CN/samples/index.md
       - 无线连接:
