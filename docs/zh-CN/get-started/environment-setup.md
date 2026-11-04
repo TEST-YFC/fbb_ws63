@@ -150,7 +150,7 @@ HiSpark Studio 插件编译工程需要依赖工具链、Python 及 pip 依赖�
 
 ## 快速开始
 
-环境已搭建完成，快速开始第一个程序：[快速开始](quick-start.md)
+环境已搭建完成，继续[使用 VS Code 完成第一次开发](vscode/index.md)。
 
 
 ## 常见问题
