@@ -6,7 +6,6 @@ applies_to:
   sdk: 1.10.108
   target: ws63-liteos-app
   board: ws63
-status: draft
 owner: 待确认
 verification_level: static
 source_refs:
@@ -38,7 +37,7 @@ source_refs:
 | CLI | 使用 Windows PowerShell 或 Linux Bash，命令可用于本地开发和 CI | [使用 CLI 完成第一次开发](cli/index.md) |
 | VS Code 插件 | 使用 Windows 图形界面完成配置、构建、烧录和串口监视 | [使用 VS Code 完成第一次开发](vscode/index.md) |
 
-如果需要其他开发环境的安装支持，请查看[配置 WS63 开发环境](environment-setup.md)。
+如果需要其他开发环境的安装支持，请查看[配置 WS63 开发环境](../guides/sdk-development/environment-setup/index.md)。
 
 ## 完成判据
 

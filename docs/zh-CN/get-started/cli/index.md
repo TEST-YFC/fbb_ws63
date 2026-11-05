@@ -5,7 +5,6 @@ product: WS63
 applies_to:
   target: ws63-liteos-app
   board: ws63
-status: draft
 owner: 待确认
 verification_level: static
 source_refs:
@@ -89,7 +88,7 @@ cd src
     curl -fsSL https://dl.hispark.hisilicon.com/bootstrap.sh | sh
     ```
 
-详细安装说明和手动配置方式见[FBB CLI 安装说明](https://gitcode.com/HiSpark/hs-fbb-cli)。WS63 SDK 要求 `fbb` 不低于 `1.1.0`。
+详细安装说明和手动配置方式见[配置 WS63 开发环境](../../guides/sdk-development/environment-setup/index.md)。WS63 SDK 要求 `fbb` 不低于 `1.1.0`。
 
 检查 CLI：
 

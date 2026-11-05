@@ -6,7 +6,6 @@ applies_to:
   sdk: 1.10.108
   target: ws63-liteos-app
   board: ws63
-status: draft
 owner: 待确认
 verification_level: static
 source_refs:
@@ -48,7 +47,7 @@ source_refs:
 
 ![VS Code 扩展市场中的 HiSpark Studio](../figures/扩展市场搜索安装HiSparkStudio.png)
 
-遇到安装或插件入口问题时，参见 [Windows（VS Code 插件）环境配置](../environment-setup.md)。
+遇到安装或插件入口问题时，参见 [Windows（VS Code 插件）环境配置](../../guides/sdk-development/environment-setup/windows.md)。
 
 ### 步骤二：准备工具链和 SDK
 
@@ -60,7 +59,7 @@ source_refs:
 
 预期结果：HiSpark Studio 不再提示环境缺失，工程配置可以识别芯片 `WS63` 和 Target `WS63-LITEOS-APP`。
 
-工具链或 SDK 下载失败时，参见 [Windows（VS Code 插件）环境配置](../environment-setup.md)中的下载和常见问题。
+工具链或 SDK 下载失败时，参见 [Windows（VS Code 插件）环境配置](../../guides/sdk-development/environment-setup/windows.md)中的下载和常见问题。
 
 ### 步骤三：创建工程
 
@@ -88,7 +87,7 @@ source_refs:
 
 ![HiSpark Studio 命令面板中的 Hello World 编译操作](../figures/编译helloworld-sample.png)
 
-预期结果：终端显示 `SUCCESS`，并生成与当前配置对应的 ELF 和完整固件包。构建失败时，保留终端日志并参见[配置 WS63 开发环境](../environment-setup.md)。
+预期结果：终端显示 `SUCCESS`，并生成与当前配置对应的 ELF 和完整固件包。构建失败时，保留终端日志并参见[配置 WS63 开发环境](../../guides/sdk-development/environment-setup/index.md)。
 
 固件包位于：
 
@@ -103,7 +102,7 @@ src/output/ws63/fwpkg/ws63-liteos-app/ws63-liteos-app_all.fwpkg
 
 ![Windows 设备管理器中显示开发板串口的页面](../figures/设备管理器-新设备端口.png)
 
-预期结果：设备管理器显示开发板串口，后续烧录和监视使用同一个 COM 口。没有新串口时，参见 [Windows 环境配置中的串口驱动说明](../environment-setup.md#安装串口驱动)。
+预期结果：设备管理器显示开发板串口，后续烧录和监视使用同一个 COM 口。没有新串口时，参见 [Windows 环境配置中的串口驱动说明](../../guides/sdk-development/environment-setup/windows.md#serial-driver)。
 
 ### 步骤七：烧录固件
 
@@ -144,7 +143,7 @@ hello world
 
 ## 故障处理
 
-- 工程未打开：返回[Windows 环境配置](../environment-setup.md)检查 SDK 路径。
+- 工程未打开：返回[Windows 环境配置](../../guides/sdk-development/environment-setup/windows.md)检查 SDK 路径。
 - 编译失败：保留终端日志，确认 Target、SDK 路径和 Hello World 配置。
 - 烧录或监视器无法连接：关闭占用 COM 口的程序，确认端口、波特率和开发板供电。
 - 未出现 `hello world`：保留构建、烧录和串口日志，检查 Target、固件包和串口配置。
