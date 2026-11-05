@@ -45,6 +45,10 @@ extra:
 
 nav:
   - 概览: zh-CN/index.md
+  - 快速入门:
+      - 快速入门: zh-CN/get-started/index.md
+      - 使用 CLI 完成第一次开发: zh-CN/get-started/cli/index.md
+      - 使用 VS Code 完成第一次开发: zh-CN/get-started/vscode/index.md
   - 整体架构:
       - 整体架构: zh-CN/overall-architecture/index.md
       - 软件架构介绍: zh-CN/overall-architecture/software-introduction.md
@@ -56,11 +60,45 @@ nav:
       - 启动流程: zh-CN/overall-architecture/boot-flow/index.md
       - 运行时架构: zh-CN/overall-architecture/runtime-architecture/index.md
       - Flash 与 RAM: zh-CN/overall-architecture/memory-layout/index.md
-  - 快速入门:
-      - 快速入门: zh-CN/get-started/index.md
-      - 开发板选型: zh-CN/get-started/board-introduction.md
-      - 环境搭建: zh-CN/get-started/environment-setup.md
-      - 快速开始: zh-CN/get-started/quick-start.md
+  - 开发指南:
+      - 开发指南: zh-CN/guides/index.md
+      - SDK 开发:
+          - SDK 开发: zh-CN/guides/sdk-development/index.md
+          - 配置开发环境:
+              - 选择开发平台: zh-CN/guides/sdk-development/environment-setup/index.md
+              - Linux: zh-CN/guides/sdk-development/environment-setup/linux.md
+              - Windows: zh-CN/guides/sdk-development/environment-setup/windows.md
+              - Windows（WSL）: zh-CN/guides/sdk-development/environment-setup/wsl.md
+              - Windows（开发者驱动器）: zh-CN/guides/sdk-development/environment-setup/dev-drive.md
+          - 软件开发指南: zh-CN/guides/sdk-development/manual/index.md
+      - 无线连接:
+          - 无线连接: zh-CN/guides/connectivity/index.md
+          - Matter: zh-CN/guides/connectivity/matter/index.md
+      - 网络协议:
+          - 网络协议: zh-CN/guides/network/index.md
+          - lwIP: zh-CN/guides/network/lwip/index.md
+          - MQTT: zh-CN/guides/network/mqtt/index.md
+          - CoAP: zh-CN/guides/network/coap/index.md
+          - HTTP: zh-CN/guides/network/http/index.md
+      - 操作系统:
+          - 操作系统: zh-CN/guides/os/index.md
+          - LiteOS: zh-CN/guides/os/liteos/index.md
+          - 死机问题定位: zh-CN/guides/os/crash-debugging/index.md
+      - 设备驱动开发: zh-CN/guides/peripherals/index.md
+      - 安全:
+          - 安全: zh-CN/guides/security/index.md
+          - 安全软件开发: zh-CN/guides/security/crypto/index.md
+          - TLS/DTLS: zh-CN/guides/security/tls/index.md
+      - 系统服务:
+          - 系统服务: zh-CN/guides/system/index.md
+          - cJSON: zh-CN/guides/system/cjson/index.md
+          - NV 存储: zh-CN/guides/system/nv/index.md
+          - 文件系统: zh-CN/guides/system/filesystem/index.md
+      - AT 命令: zh-CN/guides/commands/index.md
+      - 第三方软件移植: zh-CN/guides/open-source/index.md
+      - 测试与验证:
+          - 测试与验证: zh-CN/guides/test/index.md
+          - 射频测试: zh-CN/guides/test/rf/index.md
   - 参考案例:
       - 参考案例: zh-CN/samples/index.md
       - 无线连接:
@@ -367,6 +405,10 @@ nav:
       - 产线测试: zh-CN/FAQ/production-testing/production-testing.md
   - 其他:
       - 其他: zh-CN/others/index.md
-      - 版本说明: zh-CN/others/versions/index.md
+      - 版本说明:
+          - 版本索引: zh-CN/others/versions/index.md
+          - WS63 1.10.108: zh-CN/software/release-notes/WS63-1.10.108.md
+          - WS63 1.10.106: zh-CN/software/release-notes/WS63-1.10.106.md
+          - WS63 1.10.103: zh-CN/software/release-notes/WS63-1.10.103.md
       - 贡献指南: zh-CN/others/Instruction-manual/Instruction-manual.md
       - 术语汇总表: zh-CN/others/terminology.md
