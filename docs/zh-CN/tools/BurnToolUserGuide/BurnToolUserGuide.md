@@ -1,3 +1,7 @@
+---
+docs-build.title: "BurnTool"
+---
+
 # 前言<a name="ZH-CN_TOPIC_0000001161963484"></a>
 
 **概述<a name="section4537382116410"></a>**

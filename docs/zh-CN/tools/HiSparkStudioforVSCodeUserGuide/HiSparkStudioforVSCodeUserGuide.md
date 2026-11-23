@@ -1,4 +1,8 @@
-﻿# 工具简介<a name="ZH-CN_TOPIC_0000002293219986"></a>
+---
+docs-build.title: "HiSpark插件"
+---
+
+# 工具简介<a name="ZH-CN_TOPIC_0000002293219986"></a>
 
 HiSpark Studio for VS Code插件面向智能设备开发者提供一站式集成开发环境。它为开发者提供代码编辑、编译、烧录和调试等功能，并支持C/C++语言，兼容64位Windows 10/Windows 11和Ubuntu 20.04及以上版本的Linux/WSL环境。该插件具有以下特点：
 
