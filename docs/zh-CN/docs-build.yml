@@ -33,7 +33,7 @@ html_context:
   download:
     href: fbb_ws63-master.zip
     tooltip: 下载HTML
-  feedback_url: https://gitcode.com/HiSpark/fbb_ws63/issues
+  feedback_url: https://atomgit.com/HiSpark/fbb_ws63/issues
   version_selector:
     repo_path: fbb_ws63
     version: master
