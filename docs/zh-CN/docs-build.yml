@@ -26,7 +26,6 @@ exclude_patterns:
   - samples/peripherals/sdio/sdio.md
   - samples/system/power/power.md
   - docker
-  - software
 
 html_context:
   # 「下载HTML」按钮
